@@ -1,0 +1,17 @@
+# Render.com Blueprint — SafeRoute Backend
+# Push to GitHub and connect to Render for auto-deploy
+
+services:
+  - type: web
+    name: saferoute-api
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm run seed && npm start
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false  # set manually in Render dashboard
+      - key: NODE_ENV
+        value: production
