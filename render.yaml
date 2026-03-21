@@ -1,7 +1,5 @@
 # Render.com Blueprint — SafeRoute / Sapa Jol
-# Деплой: push в GitHub → Render автоматически подхватит этот файл
-#
-# Сервис: Web Service (Node.js) + PostgreSQL база данных
+# Python FastAPI backend with PostGIS
 
 databases:
   - name: saferoute-db
@@ -13,12 +11,12 @@ databases:
 services:
   - type: web
     name: saferoute-api
-    runtime: node
-    region: frankfurt
+    env: python
     plan: free
+    region: frankfurt
     rootDir: backend
-    buildCommand: npm install
-    startCommand: node migrate.js && npm start
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -26,7 +24,13 @@ services:
           property: connectionString
       - key: OPENAI_API_KEY
         sync: false   # добавь вручную в Render Dashboard
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 8000
+      - key: DEBUG
+        value: "false"
+      - key: BUFFER_ZONE_KM
+        value: "5.0"
+      - key: ALERT_RADIUS_KM
+        value: "15.0"
+      - key: DANGER_THRESHOLD_KM
+        value: "3.0"
+      - key: SIMULATOR_INTERVAL_SECONDS
+        value: "5"

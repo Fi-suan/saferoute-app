@@ -40,7 +40,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+          "apiKey": "AIzaSyC9i_naMZTp0Th9S0Rc-uMeGzG0jKsUYF0"
         }
       }
     },
@@ -62,11 +62,6 @@
         }
       ],
       "expo-secure-store"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
-      }
-    }
+    ]
   }
 }

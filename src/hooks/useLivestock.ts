@@ -48,12 +48,38 @@ function isNearAnyRoad(lat: number, lon: number): { near: boolean; distM: number
     return { near: false, distM: 9999 };
 }
 
+/** Маппинг HerdOut (FastAPI backend) → Livestock (мобильное приложение) */
+function mapHerdToLivestock(herd: any): Livestock {
+    const lat = herd.current_location?.latitude ?? herd.lat ?? 0;
+    const lon = herd.current_location?.longitude ?? herd.lon ?? 0;
+    const road = isNearAnyRoad(lat, lon);
+    return {
+        id: `ls-${herd.id}`,
+        ownerId: String(herd.id),
+        ownerName: herd.owner_name ?? 'Белгісіз иесі',
+        ownerPhone: '',
+        type: herd.animal_type ?? 'horse',
+        count: herd.estimated_count ?? 1,
+        name: herd.name,
+        latitude: lat,
+        longitude: lon,
+        lastUpdated: herd.created_at ?? new Date().toISOString(),
+        isNearRoad: road.near,
+        distanceToRoadM: road.distM,
+        routeId: road.routeId,
+        trackingMode: 'chip' as const,
+    };
+}
+
 async function fetchLivestockFromServer(): Promise<Livestock[]> {
     try {
-        const res = await axios.get<Livestock[]>(`${Config.BACKEND_URL}/api/v1/livestock`, {
-            timeout: 3000,
+        // FastAPI backend: /api/v1/herds/
+        const res = await axios.get<any[]>(`${Config.BACKEND_URL}/api/v1/herds/`, {
+            timeout: 5000,
         });
-        if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+        if (Array.isArray(res.data) && res.data.length > 0) {
+            return res.data.map(mapHerdToLivestock);
+        }
     } catch { /* offline */ }
     return MOCK_LIVESTOCK;
 }

@@ -66,12 +66,13 @@ async function fetchFromServer(tab: 'active' | 'all'): Promise<{ data: Incident[
     const endpoint = tab === 'active' ? '/api/v1/incidents/active' : '/api/v1/incidents/feed';
     try {
         const res = await axios.get<Incident[]>(`${Config.BACKEND_URL}${endpoint}`, {
-            timeout: 4000,
+            timeout: 8000, // Render free tier может спать — даём 8 сек
         });
         if (Array.isArray(res.data) && res.data.length > 0) {
             return { data: res.data, online: true };
         }
     } catch { /* offline */ }
+
     const all = normalizeMockData(MOCK_INCIDENTS);
     return {
         data: tab === 'active' ? all.filter(i => i.is_active) : all,

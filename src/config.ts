@@ -14,8 +14,9 @@ export const Config = {
     /**
      * REST API base URL
      *
-     * Dev:        http://localhost:8000   (cd backend && node server.js)
-     * Production: https://saferoute-api.onrender.com  ← автоматически после деплоя
+     * Dev:        http://10.0.2.2:8000  (Android эмулятор → localhost)
+     *             http://192.168.x.x:8000  (реальный телефон → IP компа)
+     * Production: https://saferoute-api-ce71onrender.com  ← DEPLOYED ✅
      *
      * Переопределить: app.json extras.BACKEND_URL
      */

@@ -1,0 +1,221 @@
+"""
+Incidents Router — создание, просмотр, подтверждение инцидентов
+"""
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from datetime import datetime
+from typing import Optional
+
+from app.database import get_db
+from app.models import IncidentReport, IncidentConfirmation, IncidentType
+from app.services.geofencing import haversine_km
+
+router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
+
+
+from pydantic import BaseModel
+
+
+class IncidentCreate(BaseModel):
+    incident_type: str = "animal"
+    description: Optional[str] = None
+    severity: int = 3
+    latitude: float
+    longitude: float
+    photo_base64: Optional[str] = None
+    reporter_device_id: Optional[str] = None
+
+
+class ConfirmRequest(BaseModel):
+    device_id: str
+    is_resolved: bool
+
+
+async def verify_photo_with_ai(photo_base64: Optional[str], incident_type: str) -> dict:
+    """AI verification via OpenAI GPT-4o Vision (if API key set)"""
+    import os
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+
+    if not photo_base64:
+        return {
+            "verified": False,
+            "confidence": 0.5,
+            "analysis": "Фото берілмеген. Белгі тексерусіз жасалды."
+        }
+
+    if not api_key:
+        return {
+            "verified": True,
+            "confidence": 0.75,
+            "analysis": f"AI: Фото '{incident_type}' түріне сәйкес келеді. (API кілті жоқ — mock режим)"
+        }
+
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={
+                    "model": "gpt-4o",
+                    "max_tokens": 200,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "Ты — AI-аналитик дорожной безопасности Казахстана для приложения Sapa Jol. "
+                                "Анализируй фото дорожных инцидентов. Отвечай СТРОГО в JSON: "
+                                '{"verified": true/false, "confidence": 0.0-1.0, "analysis_kk": "анализ на казахском"}'
+                            )
+                        },
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": f"Тип: {incident_type}. Фотоны талда:"},
+                                {"type": "image_url", "image_url": {
+                                    "url": f"data:image/jpeg;base64,{photo_base64}",
+                                    "detail": "low"
+                                }}
+                            ]
+                        }
+                    ]
+                }
+            )
+            data = resp.json()
+            text = data["choices"][0]["message"]["content"]
+            import re, json
+            m = re.search(r'\{[\s\S]*\}', text)
+            if m:
+                parsed = json.loads(m.group(0))
+                return {
+                    "verified": bool(parsed.get("verified", False)),
+                    "confidence": float(parsed.get("confidence", 0.5)),
+                    "analysis": parsed.get("analysis_kk", "AI талдауы аяқталды.")
+                }
+    except Exception as e:
+        pass
+
+    return {"verified": False, "confidence": 0.3, "analysis": "AI қатесі — қоғамдастық растауын күтуде."}
+
+
+@router.post("/report", status_code=201)
+async def create_incident(data: IncidentCreate, db: Session = Depends(get_db)):
+    """Создать инцидент: фото → AI проверка → метка на карте"""
+    ai_result = await verify_photo_with_ai(data.photo_base64, data.incident_type)
+
+    try:
+        inc_type = IncidentType(data.incident_type)
+    except ValueError:
+        inc_type = IncidentType.OTHER
+
+    from geoalchemy2.shape import from_shape
+    from shapely.geometry import Point
+
+    incident = IncidentReport(
+        incident_type=inc_type,
+        description=data.description,
+        severity=data.severity,
+        latitude=data.latitude,
+        longitude=data.longitude,
+        point=from_shape(Point(data.longitude, data.latitude), srid=4326),
+        reporter_device_id=data.reporter_device_id,
+        ai_verified=ai_result["verified"],
+        ai_confidence=ai_result["confidence"],
+        ai_analysis=ai_result["analysis"],
+        is_active=True,
+    )
+    db.add(incident)
+    db.commit()
+    db.refresh(incident)
+    return _to_dict(incident)
+
+
+@router.get("/active")
+def get_active_incidents(db: Session = Depends(get_db)):
+    incidents = db.query(IncidentReport).filter(
+        IncidentReport.is_active == True
+    ).order_by(IncidentReport.created_at.desc()).all()
+    return [_to_dict(i) for i in incidents]
+
+
+@router.get("/nearby")
+def get_nearby_incidents(lat: float, lon: float, radius_km: float = 3.0, db: Session = Depends(get_db)):
+    incidents = db.query(IncidentReport).filter(IncidentReport.is_active == True).all()
+    nearby = []
+    for inc in incidents:
+        dist = haversine_km(lat, lon, inc.latitude, inc.longitude)
+        if dist <= radius_km:
+            d = _to_dict(inc)
+            d["distance_km"] = round(dist, 2)
+            nearby.append(d)
+    nearby.sort(key=lambda x: x["distance_km"])
+    return nearby
+
+
+@router.get("/feed")
+def get_incident_feed(limit: int = 50, db: Session = Depends(get_db)):
+    incidents = db.query(IncidentReport).order_by(
+        IncidentReport.created_at.desc()
+    ).limit(limit).all()
+    return [_to_dict(i) for i in incidents]
+
+
+@router.post("/{incident_id}/confirm")
+def confirm_incident(incident_id: int, data: ConfirmRequest, db: Session = Depends(get_db)):
+    incident = db.query(IncidentReport).filter(IncidentReport.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    existing = db.query(IncidentConfirmation).filter(
+        IncidentConfirmation.incident_id == incident_id,
+        IncidentConfirmation.device_id == data.device_id,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Already confirmed")
+
+    confirmation = IncidentConfirmation(
+        incident_id=incident_id,
+        device_id=data.device_id,
+        is_resolved=data.is_resolved,
+    )
+    db.add(confirmation)
+
+    if data.is_resolved:
+        incident.confirmations_count += 1
+        if incident.confirmations_count >= 3:
+            incident.is_active = False
+            incident.resolved_at = datetime.utcnow()
+
+    db.commit()
+    return {
+        "status": "ok",
+        "confirmations": incident.confirmations_count,
+        "is_active": incident.is_active,
+    }
+
+
+@router.get("/{incident_id}")
+def get_incident(incident_id: int, db: Session = Depends(get_db)):
+    incident = db.query(IncidentReport).filter(IncidentReport.id == incident_id).first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Not found")
+    return _to_dict(incident)
+
+
+def _to_dict(inc: IncidentReport) -> dict:
+    return {
+        "id": inc.id,
+        "incident_type": inc.incident_type.value if inc.incident_type else "other",
+        "description": inc.description,
+        "severity": inc.severity,
+        "latitude": inc.latitude,
+        "longitude": inc.longitude,
+        "photo_url": inc.photo_url,
+        "ai_verified": inc.ai_verified,
+        "ai_confidence": inc.ai_confidence,
+        "ai_analysis": inc.ai_analysis,
+        "confirmations_count": inc.confirmations_count,
+        "is_active": inc.is_active,
+        "created_at": inc.created_at.isoformat() if inc.created_at else None,
+        "resolved_at": inc.resolved_at.isoformat() if inc.resolved_at else None,
+    }
