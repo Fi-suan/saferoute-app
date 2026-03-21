@@ -4,36 +4,37 @@
     "slug": "saferoute-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/image.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/image.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0A0E1A"
+      "backgroundColor": "#0A0F1C"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "kz.saferoute.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "SafeRoute использует геолокацию для предупреждения о животных на вашем маршруте.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "SafeRoute использует фоновую геолокацию для предупреждений даже когда приложение свёрнуто."
+        "NSLocationWhenInUseUsageDescription": "Sapa Jol геолокацияңызды жол бойындағы жануарлар туралы ескертулер үшін пайдаланады.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Sapa Jol қосымша жабық кезде де ескертулер алу үшін фондық геолокацияны пайдаланады.",
+        "NSCameraUsageDescription": "Оқиғаларды хабарлау үшін фото түсіру қажет.",
+        "NSPhotoLibraryUsageDescription": "Оқиға туралы хабарламаға фото қосу үшін қажет."
       }
     },
     "android": {
       "package": "kz.saferoute.app",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#0A0E1A",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/image.png",
+        "backgroundColor": "#0A0F1C"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
-        "RECEIVE_SMS",
-        "READ_SMS",
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
         "VIBRATE",
         "POST_NOTIFICATIONS"
       ],
@@ -44,16 +45,28 @@
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/image.png"
     },
     "plugins": [
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "SafeRoute использует фоновую геолокацию для предупреждений о животных на дороге."
+          "locationAlwaysAndWhenInUsePermission": "Sapa Jol жол бойындағы жануарлар туралы ескертулер үшін фондық геолокацияны пайдаланады."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Оқиға туралы хабарламаға фото қосу үшін қажет.",
+          "cameraPermission": "Оқиғаларды хабарлау үшін фото түсіру қажет."
         }
       ],
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
   }
 }

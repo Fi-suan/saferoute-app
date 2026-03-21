@@ -1,5 +1,14 @@
-# Render.com Blueprint — SafeRoute Backend
-# Push to GitHub and connect to Render for auto-deploy
+# Render.com Blueprint — SafeRoute / Sapa Jol
+# Деплой: push в GitHub → Render автоматически подхватит этот файл
+#
+# Сервис: Web Service (Node.js) + PostgreSQL база данных
+
+databases:
+  - name: saferoute-db
+    databaseName: saferoute
+    user: saferoute
+    plan: free
+    region: frankfurt
 
 services:
   - type: web
@@ -9,9 +18,15 @@ services:
     plan: free
     rootDir: backend
     buildCommand: npm install
-    startCommand: npm run seed && npm start
+    startCommand: node migrate.js && npm start
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: saferoute-db
+          property: connectionString
       - key: OPENAI_API_KEY
-        sync: false  # set manually in Render dashboard
+        sync: false   # добавь вручную в Render Dashboard
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 8000
