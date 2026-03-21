@@ -7,6 +7,7 @@
  *
  * Реализован graceful fallback: все функции не кидают исключений.
  */
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import axios from 'axios';
@@ -64,7 +65,11 @@ export async function registerForPushNotifications(): Promise<string | null> {
         }
 
         // Пытаемся получить Expo Push Token (только для dev builds)
-        // В Expo Go — падает с ошибкой, ловим тихо
+        if (Constants.appOwnership === 'expo') {
+            console.log("[Notifications] Expo Go detected: bypassing remote push (SDK 53 limit). Local notifications work.");
+            return null;
+        }
+
         try {
             const token = await Notifications.getExpoPushTokenAsync();
             const deviceId = await getDeviceId();

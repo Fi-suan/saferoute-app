@@ -4,10 +4,10 @@
 export const Colors = {
   // Core palette
   brand: {
-    primary: '#FF5722',     // Switched to radar orange/red for brand to match the image
-    secondary: '#E64A19',
-    glow: '#FF572240',
-    glowStrong: '#FF572280',
+    primary: '#2ECC71',     // Reverted back to neon green
+    secondary: '#27AE60',
+    glow: '#2ECC7140',
+    glowStrong: '#2ECC7180',
   },
 
   // Backgrounds - matching the image's dark slate/carbon
@@ -23,24 +23,24 @@ export const Colors = {
     primary: '#FFFFFF',
     secondary: '#A3A6B4',
     muted: '#6B6E7D',
-    accent: '#FF5722',
+    accent: '#2ECC71',
   },
 
   // Alert levels
   alert: {
-    critical: '#FF3B30',    // bright red for radar
-    high: '#FF9500',        // bright orange
-    medium: '#FFCC00',
-    low: '#34C759',         // iOS green
-    info: '#007AFF',
+    critical: '#E74C3C',    // restored to standard red (less aggressive than radar red)
+    high: '#E67E22',
+    medium: '#F1C40F',
+    low: '#2ECC71',
+    info: '#3498DB',
   },
 
   // Incident types
   incident: {
-    animal: '#FF9500',      // animal -> orange
-    crash: '#FF3B30',       // crash -> red
-    hazard: '#FFCC00',      // hazard -> yellow
-    resolved: '#34C759',    // resolved -> green
+    animal: '#E67E22',
+    crash: '#E74C3C',
+    hazard: '#F1C40F',
+    resolved: '#2ECC71',
   },
 
   // UI

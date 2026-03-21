@@ -20,10 +20,10 @@ export const Config = {
      *
      * Переопределить: app.json extras.BACKEND_URL
      */
-    BACKEND_URL: extra.BACKEND_URL ?? 'https://saferoute-api.onrender.com',
+    BACKEND_URL: extra.BACKEND_URL ?? 'https://saferoute-api-ce7l.onrender.com',
 
     /** WebSocket live feed URL */
-    BACKEND_WS: extra.BACKEND_WS ?? 'wss://saferoute-api.onrender.com/ws/live',
+    BACKEND_WS: extra.BACKEND_WS ?? 'wss://https://saferoute-api-ce7l.onrender.com/ws/live',
 
 
     /** Polling interval for incidents (ms) */

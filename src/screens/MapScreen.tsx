@@ -183,12 +183,14 @@ export default function MapScreen() {
                                 title={meta.label}
                                 description={inc.description ?? `Растаулар: ${inc.confirmations_count}/3`}
                                 onCalloutPress={() => goToDetail(inc)}
-                            >
-                                <View style={[styles.markerWrap, { borderColor: meta.color }]}>
-                                    <Ionicons name={meta.icon as any} size={16} color={meta.color} />
-                                </View>
-                            </Marker>
-                            {/* Glowing Aura Effect matching radar reference */}
+                            />
+
+                            {/* Core radar dot + Glowing Aura Effect */}
+                            <Circle
+                                center={{ latitude: inc.latitude, longitude: inc.longitude }}
+                                radius={50}
+                                fillColor={meta.color}
+                            />
                             <Circle
                                 center={{ latitude: inc.latitude, longitude: inc.longitude }}
                                 radius={150}
@@ -210,9 +212,12 @@ export default function MapScreen() {
                     );
                 })}
 
-                {/* Скот на карте */}
+                {/* Скот на карте (Без иконок, радарный стиль) */}
                 {showLivestock && livestock.map((animal) => {
-                    const meta = LIVESTOCK_META[animal.type];
+                    // Fallback to generic animal if type is not in LIVESTOCK_META
+                    const meta = LIVESTOCK_META[animal.type] || {
+                        label: 'Жануар', labelKk: 'Жануар', color: Colors.brand.primary, emoji: '🐾'
+                    };
                     const isDangerous = animal.isNearRoad && animal.distanceToRoadM < 300;
                     return (
                         <React.Fragment key={`ls-${animal.id}`}>
@@ -223,11 +228,13 @@ export default function MapScreen() {
                                     `${meta.labelKk} · ${animal.count} бас · ${animal.distanceToRoadM}м жолдан` +
                                     (isDangerous ? ' ⚠️ ҚАУІП!' : '')
                                 }
-                            >
-                                <View style={[styles.livestockMarker, { borderColor: isDangerous ? Colors.alert.critical : meta.color }]}>
-                                    <Text style={styles.livestockEmoji}>{meta.emoji}</Text>
-                                </View>
-                            </Marker>
+                            />
+
+                            <Circle
+                                center={{ latitude: animal.latitude, longitude: animal.longitude }}
+                                radius={40}
+                                fillColor={isDangerous ? Colors.alert.critical : meta.color}
+                            />
                             {isDangerous && (
                                 <>
                                     <Circle
