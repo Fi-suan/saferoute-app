@@ -108,16 +108,12 @@ async def create_incident(data: IncidentCreate, db: Session = Depends(get_db)):
     except ValueError:
         inc_type = IncidentType.OTHER
 
-    from geoalchemy2.shape import from_shape
-    from shapely.geometry import Point
-
     incident = IncidentReport(
         incident_type=inc_type,
         description=data.description,
         severity=data.severity,
         latitude=data.latitude,
         longitude=data.longitude,
-        point=from_shape(Point(data.longitude, data.latitude), srid=4326),
         reporter_device_id=data.reporter_device_id,
         ai_verified=ai_result["verified"],
         ai_confidence=ai_result["confidence"],

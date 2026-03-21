@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum
 from sqlalchemy.orm import relationship
-from geoalchemy2 import Geometry
 from datetime import datetime
 from app.database import Base
 import enum
@@ -21,7 +20,7 @@ class AnimalType(str, enum.Enum):
 
 
 class Herd(Base):
-    """Стадо / табун животных с GPS-ошейником на вожаке"""
+    """Стадо / табун животных"""
     __tablename__ = "herds"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -32,7 +31,11 @@ class Herd(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    locations = relationship("HerdLocation", back_populates="herd", order_by="HerdLocation.timestamp.desc()")
+    locations = relationship(
+        "HerdLocation", back_populates="herd",
+        order_by="desc(HerdLocation.timestamp)",
+        lazy="dynamic"
+    )
     alerts = relationship("Alert", back_populates="herd")
 
 
@@ -44,7 +47,6 @@ class HerdLocation(Base):
     herd_id = Column(Integer, ForeignKey("herds.id"), nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-    point = Column(Geometry("POINT", srid=4326))
     speed_kmh = Column(Float, default=0.0)
     heading_degrees = Column(Float, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
@@ -54,15 +56,21 @@ class HerdLocation(Base):
 
 
 class GeoZone(Base):
-    """Буферная зона вдоль дороги"""
+    """Буферная зона вдоль дороги — bounding box"""
     __tablename__ = "geozones"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=False)
     road_type = Column(String(50), default="highway")
     buffer_km = Column(Float, default=5.0)
-    polygon = Column(Geometry("POLYGON", srid=4326))
-    road_line = Column(Geometry("LINESTRING", srid=4326))
+    # Bounding box (replaces PostGIS polygon)
+    lat_min = Column(Float, nullable=False, default=0.0)
+    lat_max = Column(Float, nullable=False, default=0.0)
+    lon_min = Column(Float, nullable=False, default=0.0)
+    lon_max = Column(Float, nullable=False, default=0.0)
+    # Road centerline midpoint (replaces PostGIS linestring)
+    road_lat = Column(Float, nullable=False, default=0.0)
+    road_lon = Column(Float, nullable=False, default=0.0)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -91,7 +99,7 @@ class Alert(Base):
 
 
 class DriverDevice(Base):
-    """Устройства водителей для push-уведомлений"""
+    """Устройства водителей"""
     __tablename__ = "driver_devices"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -112,7 +120,7 @@ class IncidentType(str, enum.Enum):
 
 
 class IncidentReport(Base):
-    """Метка инцидента, созданная пользователем"""
+    """Метка инцидента"""
     __tablename__ = "incident_reports"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -123,11 +131,8 @@ class IncidentReport(Base):
     ai_verified = Column(Boolean, default=False)
     ai_confidence = Column(Float, nullable=True)
     ai_analysis = Column(Text, nullable=True)
-
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-    point = Column(Geometry("POINT", srid=4326))
-
     reporter_device_id = Column(String(200), nullable=True)
     confirmations_count = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)

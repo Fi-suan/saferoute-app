@@ -1,66 +1,79 @@
+"""
+Database seeder — creates initial Kazakhstan road geozones.
+No PostGIS required — uses bounding boxes + centerpoint.
+"""
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 from app.database import engine, Base, SessionLocal
 from app.models import GeoZone
 
 
+# Kazakhstan highways: (name, road_type, buffer_km, lat_min, lat_max, lon_min, lon_max, road_lat, road_lon)
+ROAD_ZONES = [
+    {
+        "name": "Трасса А-17 (Астана—Павлодар) зап. участок",
+        "road_type": "highway",
+        "buffer_km": 5.0,
+        "lat_min": 51.05, "lat_max": 51.35, "lon_min": 71.3, "lon_max": 72.5,
+        "road_lat": 51.18, "road_lon": 71.9,  # centerline midpoint
+    },
+    {
+        "name": "Трасса А-17 (Астана—Павлодар) вост. участок",
+        "road_type": "highway",
+        "buffer_km": 5.0,
+        "lat_min": 51.35, "lat_max": 52.0, "lon_min": 72.5, "lon_max": 75.0,
+        "road_lat": 51.7, "road_lon": 73.75,
+    },
+    {
+        "name": "Трасса А-17 (Павлодар—Семей)",
+        "road_type": "highway",
+        "buffer_km": 5.0,
+        "lat_min": 51.8, "lat_max": 52.5, "lon_min": 76.8, "lon_max": 80.5,
+        "road_lat": 52.1, "road_lon": 78.6,
+    },
+    {
+        "name": "Трасса А-1 (Алматы—Астана) степной участок",
+        "road_type": "highway",
+        "buffer_km": 5.0,
+        "lat_min": 49.5, "lat_max": 51.3, "lon_min": 68.0, "lon_max": 73.0,
+        "road_lat": 50.4, "road_lon": 70.5,
+    },
+    {
+        "name": "Трасса А-21 (Павлодар—Омск)",
+        "road_type": "highway",
+        "buffer_km": 5.0,
+        "lat_min": 51.9, "lat_max": 53.5, "lon_min": 76.5, "lon_max": 81.0,
+        "road_lat": 52.7, "road_lon": 78.75,
+    },
+]
+
+
 def seed_geozones(db: Session):
-    """Create buffer zones along major Kazakhstan highways near saiga migration routes."""
     if db.query(GeoZone).count() > 0:
-        print("Geozones already seeded, skipping.")
+        print("[seed] Geozones already seeded, skipping.")
         return
 
-    roads = [
-        {
-            "name": "Трасса А-17 (Астана-Павлодар) км 245-310",
-            "road_type": "highway",
-            "buffer_km": 5.0,
-            "wkt_line": "LINESTRING(71.3 51.18, 71.5 51.18, 71.7 51.18, 71.9 51.18, 72.1 51.18, 72.3 51.18, 72.5 51.18)",
-        },
-        {
-            "name": "Трасса А-17 (Павлодар-Семей) км 30-80",
-            "road_type": "highway",
-            "buffer_km": 5.0,
-            "wkt_line": "LINESTRING(77.0 52.3, 77.3 52.2, 77.6 52.1, 77.9 52.0, 78.2 51.9)",
-        },
-        {
-            "name": "Трасса А-1 (Алматы-Астана) степной участок",
-            "road_type": "highway",
-            "buffer_km": 5.0,
-            "wkt_line": "LINESTRING(71.4 51.22, 71.6 51.23, 71.8 51.24, 72.0 51.25, 72.2 51.26)",
-        },
-    ]
-
-    for r in roads:
-        result = db.execute(
-            text("""
-                SELECT
-                    ST_Buffer(
-                        ST_GeomFromText(:wkt, 4326)::geography,
-                        :buffer_meters
-                    )::geometry AS polygon,
-                    ST_GeomFromText(:wkt, 4326) AS road_line
-            """),
-            {"wkt": r["wkt_line"], "buffer_meters": r["buffer_km"] * 1000},
-        ).fetchone()
-
+    for r in ROAD_ZONES:
         zone = GeoZone(
             name=r["name"],
             road_type=r["road_type"],
             buffer_km=r["buffer_km"],
-            polygon=result.polygon,
-            road_line=result.road_line,
+            lat_min=r["lat_min"],
+            lat_max=r["lat_max"],
+            lon_min=r["lon_min"],
+            lon_max=r["lon_max"],
+            road_lat=r["road_lat"],
+            road_lon=r["road_lon"],
             is_active=True,
         )
         db.add(zone)
 
     db.commit()
-    print(f"Seeded {len(roads)} geozones.")
+    print(f"[seed] Seeded {len(ROAD_ZONES)} geozones ✅")
 
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    print("DB tables created.")
+    print("[seed] DB tables created.")
     db = SessionLocal()
     try:
         seed_geozones(db)

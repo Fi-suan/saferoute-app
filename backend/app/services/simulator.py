@@ -1,3 +1,7 @@
+"""
+GPS Simulator — generates fake herd movement for demo purposes.
+No PostGIS / geoalchemy2 / shapely — pure Python only.
+"""
 import math
 import random
 import logging
@@ -6,7 +10,6 @@ from typing import List, Dict
 from sqlalchemy.orm import Session
 from app.models import Herd, HerdLocation, AnimalType
 from app.services.geofencing import process_location_update
-from app.services.notifications import notify_nearby_drivers
 
 logger = logging.getLogger(__name__)
 
@@ -30,14 +33,23 @@ def initialize_simulator(db: Session) -> List[Herd]:
             _init_herd_state(existing.id, config)
             continue
 
-        herd = Herd(name=config["name"], animal_type=config["animal_type"], estimated_count=config["estimated_count"], owner_name=config["owner_name"])
+        herd = Herd(
+            name=config["name"],
+            animal_type=config["animal_type"],
+            estimated_count=config["estimated_count"],
+            owner_name=config["owner_name"],
+        )
         db.add(herd)
         db.commit()
         db.refresh(herd)
 
-        from geoalchemy2.shape import from_shape
-        from shapely.geometry import Point
-        initial_loc = HerdLocation(herd_id=herd.id, latitude=config["start_lat"], longitude=config["start_lon"], point=from_shape(Point(config["start_lon"], config["start_lat"]), srid=4326), speed_kmh=0.0, source="simulator")
+        initial_loc = HerdLocation(
+            herd_id=herd.id,
+            latitude=config["start_lat"],
+            longitude=config["start_lon"],
+            speed_kmh=0.0,
+            source="simulator",
+        )
         db.add(initial_loc)
         db.commit()
         _init_herd_state(herd.id, config)
@@ -47,17 +59,25 @@ def initialize_simulator(db: Session) -> List[Herd]:
 
 
 def _init_herd_state(herd_id: int, config: dict):
-    _sim_state[herd_id] = {"current_lat": config["start_lat"], "current_lon": config["start_lon"], "target_lat": config["target_lat"], "target_lon": config["target_lon"], "speed_variation": config["speed_variation"], "arrived": False}
+    _sim_state[herd_id] = {
+        "current_lat": config["start_lat"],
+        "current_lon": config["start_lon"],
+        "target_lat": config["target_lat"],
+        "target_lon": config["target_lon"],
+        "speed_variation": config["speed_variation"],
+        "arrived": False,
+    }
 
 
 def simulator_tick(db: Session) -> Dict:
     global _tick_count
     _tick_count += 1
+
     if not _sim_state:
         initialize_simulator(db)
 
     results = []
-    for herd_id, state in _sim_state.items():
+    for herd_id, state in list(_sim_state.items()):
         if state["arrived"]:
             continue
         herd = db.query(Herd).filter(Herd.id == herd_id).first()
@@ -70,7 +90,8 @@ def simulator_tick(db: Session) -> Dict:
 
         dlat = state["target_lat"] - state["current_lat"]
         dlon = state["target_lon"] - state["current_lon"]
-        dist = math.sqrt(dlat**2 + dlon**2)
+        dist = math.sqrt(dlat ** 2 + dlon ** 2)
+
         if dist < step * 0.5:
             state["arrived"] = True
             continue
@@ -84,16 +105,19 @@ def simulator_tick(db: Session) -> Dict:
         speed = (step * 111.0) / (settings.SIMULATOR_INTERVAL_SECONDS / 3600.0)
 
         try:
-            from geoalchemy2.shape import from_shape
-            from shapely.geometry import Point
-            loc = HerdLocation(herd_id=herd_id, latitude=new_lat, longitude=new_lon, point=from_shape(Point(new_lon, new_lat), srid=4326), speed_kmh=speed, source="simulator")
+            loc = HerdLocation(
+                herd_id=herd_id, latitude=new_lat, longitude=new_lon,
+                speed_kmh=speed, source="simulator",
+            )
             db.add(loc)
             db.commit()
 
             alert = process_location_update(db, herd, new_lat, new_lon, speed)
-            if alert:
-                notify_nearby_drivers(db, alert, new_lat, new_lon)
-            results.append({"herd_id": herd_id, "lat": new_lat, "lon": new_lon, "alert_level": alert.level.value if alert else None})
+            results.append({
+                "herd_id": herd_id,
+                "lat": new_lat, "lon": new_lon,
+                "alert_level": alert.level.value if alert else None,
+            })
         except Exception as e:
             logger.error(f"Simulator tick error for herd {herd_id}: {e}")
             db.rollback()
@@ -102,7 +126,11 @@ def simulator_tick(db: Session) -> Dict:
 
 
 def get_simulator_status() -> Dict:
-    return {"running": bool(_sim_state), "tick_count": _tick_count, "herds": [{"herd_id": hid, "lat": s["current_lat"], "lon": s["current_lon"], "arrived": s["arrived"]} for hid, s in _sim_state.items()]}
+    return {
+        "running": bool(_sim_state),
+        "tick_count": _tick_count,
+        "herds": [{"herd_id": hid, "lat": s["current_lat"], "lon": s["current_lon"], "arrived": s["arrived"]} for hid, s in _sim_state.items()],
+    }
 
 
 def reset_simulator(db: Session):
