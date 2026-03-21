@@ -6,22 +6,22 @@ import React, { useState, useRef } from 'react';
 
 /** Dark map style — Nothing Phone aesthetic */
 const DARK_MAP_STYLE = [
-    { elementType: 'geometry', stylers: [{ color: '#0d1117' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#0d1117' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#5a6275' }] },
-    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#9ca3b4' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1b2340' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1e2a45' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#2ECC7130' }] },
-    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#2ECC7150' }] },
-    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#2ECC71' }] },
-    { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#131a2e' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0a0f1c' }] },
-    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3498db40' }] },
-    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#131a2e' }] },
-    { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#5a6275' }] },
-    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#0f1a12' }] },
-    { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#0d1117' }] },
+    { elementType: 'geometry', stylers: [{ color: '#1E2028' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#1E2028' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#6B6E7D' }] },
+    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#A3A6B4' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#272935' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#272935' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#FF572230' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#FF572240' }] },
+    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#FF5722' }] },
+    { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2A2D35' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#181A22' }] },
+    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#2A2D35' }] },
+    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#272935' }] },
+    { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#6B6E7D' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#181A22' }] },
+    { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#1E2028' }] },
 ];
 import {
     View, Text, StyleSheet, TouchableOpacity,
@@ -183,10 +183,21 @@ export default function MapScreen() {
                                     <Ionicons name={meta.icon as any} size={16} color={meta.color} />
                                 </View>
                             </Marker>
+                            {/* Glowing Aura Effect matching radar reference */}
                             <Circle
                                 center={{ latitude: inc.latitude, longitude: inc.longitude }}
-                                radius={500}
-                                fillColor={meta.color + '15'}
+                                radius={150}
+                                fillColor={meta.color + '60'}
+                            />
+                            <Circle
+                                center={{ latitude: inc.latitude, longitude: inc.longitude }}
+                                radius={400}
+                                fillColor={meta.color + '20'}
+                            />
+                            <Circle
+                                center={{ latitude: inc.latitude, longitude: inc.longitude }}
+                                radius={800}
+                                fillColor={meta.color + '0A'}
                                 strokeColor={meta.color + '40'}
                                 strokeWidth={1}
                             />
@@ -213,13 +224,20 @@ export default function MapScreen() {
                                 </View>
                             </Marker>
                             {isDangerous && (
-                                <Circle
-                                    center={{ latitude: animal.latitude, longitude: animal.longitude }}
-                                    radius={animal.distanceToRoadM}
-                                    fillColor={Colors.alert.critical + '12'}
-                                    strokeColor={Colors.alert.critical + '60'}
-                                    strokeWidth={2}
-                                />
+                                <>
+                                    <Circle
+                                        center={{ latitude: animal.latitude, longitude: animal.longitude }}
+                                        radius={animal.distanceToRoadM}
+                                        fillColor={Colors.alert.critical + '20'}
+                                    />
+                                    <Circle
+                                        center={{ latitude: animal.latitude, longitude: animal.longitude }}
+                                        radius={animal.distanceToRoadM * 1.5}
+                                        fillColor={Colors.alert.critical + '08'}
+                                        strokeColor={Colors.alert.critical + '40'}
+                                        strokeWidth={1}
+                                    />
+                                </>
                             )}
                         </React.Fragment>
                     );
@@ -396,10 +414,10 @@ const styles = StyleSheet.create({
 
     topBar: {
         position: 'absolute', top: 50, left: Spacing.md, right: Spacing.md,
-        backgroundColor: Colors.overlay, borderRadius: Radius.lg,
-        paddingVertical: 10, paddingHorizontal: Spacing.md,
+        backgroundColor: Colors.overlay, borderRadius: Radius.md,
+        paddingVertical: 12, paddingHorizontal: Spacing.md,
         borderWidth: 1, borderColor: Colors.border, ...Shadow.card,
-        gap: 8,
+        gap: 10,
     },
     topBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     topBarText: { fontSize: 17, fontWeight: '700', color: Colors.text.primary },
@@ -440,7 +458,7 @@ const styles = StyleSheet.create({
     filterChip: {
         flexDirection: 'row', alignItems: 'center', gap: 5,
         paddingVertical: 8, paddingHorizontal: 12,
-        borderRadius: Radius.full, backgroundColor: Colors.overlay,
+        borderRadius: Radius.sm, backgroundColor: Colors.overlay,
         borderWidth: 1, borderColor: Colors.border,
     },
     filterChipActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
@@ -460,9 +478,9 @@ const styles = StyleSheet.create({
     },
 
     markerWrap: {
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.full,
-        width: 34, height: 34, alignItems: 'center', justifyContent: 'center',
-        borderWidth: 2, ...Shadow.card,
+        backgroundColor: Colors.bg.secondary, borderRadius: Radius.sm,
+        width: 32, height: 32, alignItems: 'center', justifyContent: 'center',
+        borderWidth: 1.5, ...Shadow.glow,
     },
     ecoMarker: {
         backgroundColor: Colors.bg.secondary, borderRadius: Radius.sm,

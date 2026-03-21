@@ -4,54 +4,54 @@
 export const Colors = {
   // Core palette
   brand: {
-    primary: '#2ECC71',     // main green accent
-    secondary: '#27AE60',   // darker green
-    glow: '#2ECC7140',      // green glow for markers
-    glowStrong: '#2ECC7180',
+    primary: '#FF5722',     // Switched to radar orange/red for brand to match the image
+    secondary: '#E64A19',
+    glow: '#FF572240',
+    glowStrong: '#FF572280',
   },
 
-  // Backgrounds
+  // Backgrounds - matching the image's dark slate/carbon
   bg: {
-    primary: '#0A0F1C',     // deep navy
-    secondary: '#131A2E',   // card background
-    tertiary: '#1B2340',    // elevated surface
-    map: '#0D1117',         // map overlay tint
+    primary: '#1E2028',     // map background / root
+    secondary: '#272935',   // floating panels, darker than before
+    tertiary: '#313442',    // cards inside panels
+    map: '#1E2028',
   },
 
   // Text
   text: {
-    primary: '#F0F2F5',
-    secondary: '#9CA3B4',
-    muted: '#5A6275',
-    accent: '#2ECC71',
+    primary: '#FFFFFF',
+    secondary: '#A3A6B4',
+    muted: '#6B6E7D',
+    accent: '#FF5722',
   },
 
   // Alert levels
   alert: {
-    critical: '#E74C3C',
-    high: '#E67E22',
-    medium: '#F1C40F',
-    low: '#2ECC71',
-    info: '#3498DB',
+    critical: '#FF3B30',    // bright red for radar
+    high: '#FF9500',        // bright orange
+    medium: '#FFCC00',
+    low: '#34C759',         // iOS green
+    info: '#007AFF',
   },
 
   // Incident types
   incident: {
-    animal: '#E67E22',      // animal on road
-    crash: '#E74C3C',       // vehicle crash
-    hazard: '#F1C40F',      // road hazard
-    resolved: '#2ECC71',    // resolved
+    animal: '#FF9500',      // animal -> orange
+    crash: '#FF3B30',       // crash -> red
+    hazard: '#FFCC00',      // hazard -> yellow
+    resolved: '#34C759',    // resolved -> green
   },
 
   // UI
   white: '#FFFFFF',
   black: '#000000',
-  border: '#1E2A45',
-  divider: '#1A2238',
-  overlay: 'rgba(10, 15, 28, 0.85)',
-  success: '#2ECC71',
-  error: '#E74C3C',
-  warning: '#F1C40F',
+  border: '#383B4A',        // Subtle panel borders
+  divider: '#313442',
+  overlay: 'rgba(39, 41, 53, 0.95)', // Solid glassmorphism like the image
+  success: '#34C759',
+  error: '#FF3B30',
+  warning: '#FFCC00',
 };
 
 export const Spacing = {
@@ -81,7 +81,7 @@ export const Shadow = {
     elevation: 6,
   },
   glow: {
-    shadowColor: '#2ECC71',
+    shadowColor: '#FF5722',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 12,

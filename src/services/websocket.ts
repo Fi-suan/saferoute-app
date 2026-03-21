@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { Config } from '../config';
 import { useAlertStore } from '../store/useAlertStore';
 import { Alert as AlertType, Herd } from './api';
@@ -8,6 +9,7 @@ export const useWebSocket = () => {
     const { setHerds, setActiveAlerts, addAlert, setLastUpdated, setLoading } = useAlertStore();
     const retryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const retryCount = useRef(0);
+    const appState = useRef(AppState.currentState);
 
     const connect = () => {
         if (ws.current?.readyState === WebSocket.OPEN) return;
@@ -63,9 +65,24 @@ export const useWebSocket = () => {
 
     useEffect(() => {
         connect();
+
+        const subscription = AppState.addEventListener('change', (nextAppState) => {
+            if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+                console.log('[WS] App has come to the foreground, reconnecting WebSocket...');
+                // Force reconnect
+                if (retryTimeout.current) clearTimeout(retryTimeout.current);
+                if (ws.current) {
+                    ws.current.close();
+                }
+                connect();
+            }
+            appState.current = nextAppState;
+        });
+
         return () => {
             if (retryTimeout.current) clearTimeout(retryTimeout.current);
             ws.current?.close();
+            subscription.remove();
         };
     }, []);
 
