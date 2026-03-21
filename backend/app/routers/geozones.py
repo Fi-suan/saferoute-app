@@ -19,29 +19,31 @@ def list_geozones(db: Session = Depends(get_db)):
 
 @router.get("/geojson")
 def get_geozones_geojson(db: Session = Depends(get_db)):
-    query = text("""
-        SELECT
-            id, name, road_type, buffer_km,
-            ST_AsGeoJSON(polygon)::json AS polygon_geojson,
-            ST_AsGeoJSON(road_line)::json AS road_geojson
-        FROM geozones
-        WHERE is_active = true
-    """)
-    rows = db.execute(query).fetchall()
+    zones = db.query(GeoZone).filter(GeoZone.is_active == True).all()
 
     features = []
-    for row in rows:
-        if row.polygon_geojson:
-            features.append({
-                "type": "Feature",
-                "properties": {
-                    "id": row.id,
-                    "name": row.name,
-                    "road_type": row.road_type,
-                    "buffer_km": row.buffer_km,
-                    "layer": "buffer_zone",
-                },
-                "geometry": row.polygon_geojson,
-            })
+    for zone in zones:
+        polygon_geojson = {
+            "type": "Polygon",
+            "coordinates": [[
+                [zone.lon_min, zone.lat_min],
+                [zone.lon_max, zone.lat_min],
+                [zone.lon_max, zone.lat_max],
+                [zone.lon_min, zone.lat_max],
+                [zone.lon_min, zone.lat_min]
+            ]]
+        }
+        
+        features.append({
+            "type": "Feature",
+            "properties": {
+                "id": zone.id,
+                "name": zone.name,
+                "road_type": zone.road_type,
+                "buffer_km": zone.buffer_km,
+                "layer": "buffer_zone",
+            },
+            "geometry": polygon_geojson,
+        })
 
     return {"type": "FeatureCollection", "features": features}

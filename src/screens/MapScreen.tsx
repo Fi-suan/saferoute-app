@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 import MapView, { Marker, Circle } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
+import LottieView from 'lottie-react-native';
 import { useNavigation, CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -151,8 +152,12 @@ export default function MapScreen() {
     if (loading) {
         return (
             <View style={styles.loadingWrap}>
-                <ActivityIndicator size="large" color={Colors.brand.primary} />
-                {/* 🎨 ANIMATION_SLOT: loading_pulse — Lottie вместо ActivityIndicator */}
+                <LottieView
+                    source={require('../assets/lottie/loading.json')}
+                    autoPlay
+                    loop
+                    style={{ width: 120, height: 120 }}
+                />
                 <Text style={styles.loadingText}>Орналасу анықталуда...</Text>
             </View>
         );
@@ -331,13 +336,19 @@ export default function MapScreen() {
             </TouchableOpacity>
 
             {/* FAB — нажатие: репорт | долгое нажатие 5с: SOS */}
-            {/* 🎨 ANIMATION_SLOT: fab_glow — пульсирующее свечение FAB (Reanimated loop) */}
             <TouchableOpacity
                 style={styles.fab}
                 onPress={() => setShowReport(true)}
                 onLongPress={handleSOSLongPress}
                 delayLongPress={5000}
             >
+                {/* 🎨 Анимация пульса под кнопкой */}
+                <LottieView
+                    source={require('../assets/lottie/alert_pulse.json')}
+                    autoPlay
+                    loop
+                    style={{ position: 'absolute', width: 150, height: 150 }}
+                />
                 <Ionicons name="add" size={30} color={Colors.bg.primary} />
             </TouchableOpacity>
 
@@ -355,8 +366,13 @@ export default function MapScreen() {
             <Modal visible={!!confirmDialog} transparent animationType="fade">
                 <View style={styles.confirmOverlay}>
                     <View style={styles.confirmCard}>
-                        {/* 🎨 ANIMATION_SLOT: confirm_icon — Lottie вопросительный знак */}
-                        <Ionicons name="help-circle" size={44} color={Colors.brand.primary} />
+                        {/* Вопросительный знак (Анимация Lottie) */}
+                        <LottieView
+                            source={require('../assets/lottie/confirm_question.json')}
+                            autoPlay
+                            loop
+                            style={{ width: 90, height: 90 }}
+                        />
                         <Text style={styles.confirmTitle}>Мәселе шешілді ме?</Text>
                         <Text style={styles.confirmDesc}>
                             Сіз белгінің жанынан өттіңіз. Жол тазарды ма?
