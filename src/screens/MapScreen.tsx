@@ -35,12 +35,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { getIncidentMeta, Incident } from '../constants/incidents';
-import { ECO_POINTS } from '../data/mockData';
 import { useIncidents } from '../hooks/useIncidents';
 import { useLocation } from '../hooks/useLocation';
 import { useSettings } from '../hooks/useSettings';
 import { useRoute } from '../hooks/useRoute';
 import { useLivestock } from '../hooks/useLivestock';
+import { useUserProfile } from '../hooks/useUserProfile';
+import { Config } from '../config';
 import ProximityBanner from '../components/ProximityBanner';
 import ReportModal from '../components/ReportModal';
 import RoadStatusBadge from '../components/RoadStatusBadge';
@@ -53,13 +54,9 @@ type NavProp = CompositeNavigationProp<
     NativeStackNavigationProp<RootStackParamList>
 >;
 
-type FilterType = 'all' | 'incidents' | 'eco';
+type FilterType = 'all' | 'incidents';
 
-const ECO_ICON: Record<string, { icon: string; color: string }> = {
-    trash: { icon: 'trash-bin', color: '#2ECC71' },
-    recycle: { icon: 'leaf', color: '#3498DB' },
-    hazardous: { icon: 'nuclear', color: '#E74C3C' },
-};
+
 
 
 
@@ -69,13 +66,15 @@ export default function MapScreen() {
     const mapRef = useRef<MapView>(null);
     const [filter, setFilter] = useState<FilterType>('all');
     const [showReport, setShowReport] = useState(false);
+    const [showOwnerReport, setShowOwnerReport] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState<Incident | null>(null);
+    const { profile } = useUserProfile();
 
     const { settings } = useSettings();
     const { incidents, isOnline, loading, submitReport, confirmIncident, pendingReportsCount } =
         useIncidents('active');
     const { location, nearbyAlert, confirmCandidate, dismissNearbyAlert, dismissConfirmCandidate } =
-        useLocation(incidents, settings.proximityRadiusKm);
+        useLocation(incidents, Config.DEFAULT_PROXIMITY_RADIUS_KM);
 
     // Фича 2+3: Режим маршрута A-17 + статус дороги
     const { isRouteMode, toggleRouteMode, routeIncidents, roadStatus } = useRoute(incidents);
@@ -83,7 +82,6 @@ export default function MapScreen() {
     // Фича livestock: скот вблизи дорог
     const { livestock, dangerousLivestock } = useLivestock(location);
 
-    // Push при proximity
     React.useEffect(() => {
         if (nearbyAlert) {
             const meta = getIncidentMeta(nearbyAlert.incident_type);
@@ -142,7 +140,6 @@ export default function MapScreen() {
 
     const displayedIncidents = isRouteMode ? routeIncidents : incidents.filter(i => i.is_active);
     const showIncidents = filter === 'all' || filter === 'incidents';
-    const showEco = filter === 'all' || filter === 'eco';
     const showLivestock = filter === 'all' || filter === 'incidents';
 
     const initialRegion = location
@@ -255,21 +252,7 @@ export default function MapScreen() {
                     );
                 })}
 
-                {showEco && ECO_POINTS.map((eco) => {
-                    const em = ECO_ICON[eco.type] ?? ECO_ICON.trash;
-                    return (
-                        <Marker
-                            key={`eco-${eco.id}`}
-                            coordinate={{ latitude: eco.latitude, longitude: eco.longitude }}
-                            title={eco.name}
-                            description={eco.description}
-                        >
-                            <View style={[styles.ecoMarker, { borderColor: em.color }]}>
-                                <Ionicons name={em.icon as any} size={14} color={em.color} />
-                            </View>
-                        </Marker>
-                    );
-                })}
+
             </MapView>
 
             {/* Верхний бар */}
@@ -314,7 +297,6 @@ export default function MapScreen() {
                 {([
                     { key: 'all', label: 'Барлығы', icon: 'layers' },
                     { key: 'incidents', label: 'Белгілер', icon: 'warning' },
-                    { key: 'eco', label: 'Эко-нүкте', icon: 'leaf' },
                 ] as const).map((f) => (
                     <TouchableOpacity
                         key={f.key}
@@ -345,7 +327,7 @@ export default function MapScreen() {
             {/* FAB — нажатие: репорт | долгое нажатие 5с: SOS */}
             <TouchableOpacity
                 style={styles.fab}
-                onPress={() => setShowReport(true)}
+                onPress={() => profile.role === 'livestock_owner' ? setShowOwnerReport(true) : setShowReport(true)}
                 onLongPress={handleSOSLongPress}
                 delayLongPress={5000}
             >
@@ -425,6 +407,21 @@ export default function MapScreen() {
                 location={location}
                 onSubmit={submitReport}
             />
+
+            {/* Временный модал для Мал иесі */}
+            <Modal visible={showOwnerReport} transparent animationType="slide">
+                <View style={styles.confirmOverlay}>
+                    <View style={styles.confirmCard}>
+                        <Ionicons name="paw" size={48} color={Colors.brand.primary} />
+                        <Text style={styles.confirmTitle}>Малды тіркеу</Text>
+                        <Text style={styles.confirmDesc}>Бұл бөлім мал иестері үшін жасалуда (Жуықта чипсіз тіркеу іске қосылады).</Text>
+                        
+                        <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: Colors.brand.primary, marginTop: 24 }]} onPress={() => setShowOwnerReport(false)}>
+                            <Text style={styles.confirmBtnText}>Түсіндім</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }

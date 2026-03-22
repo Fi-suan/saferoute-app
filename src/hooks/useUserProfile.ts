@@ -1,14 +1,14 @@
 /**
  * useUserProfile.ts — профиль пользователя SafeRoute
  *
- * Хранит: имя, телефон, роль (водитель/мал иесі/екеуі де)
- * Персистируется через AsyncStorage
+ * Единый источник правды для профиля.
+ * Хранит: имя, телефон, роль ('driver' | 'livestock_owner'), статистика.
+ * Персистируется через AsyncStorage (STORAGE.USER_PROFILE).
  */
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile, UserRole } from '../constants/livestock';
-
-const PROFILE_KEY = 'saferoute:user:profile';
+import { STORAGE } from '../constants/storage';
 
 const DEFAULT_PROFILE: UserProfile = {
     name: 'Пайдаланушы',
@@ -31,7 +31,7 @@ export function useUserProfile(): UseUserProfileReturn {
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        AsyncStorage.getItem(PROFILE_KEY).then(raw => {
+        AsyncStorage.getItem(STORAGE.USER_PROFILE).then(raw => {
             if (raw) {
                 try { setProfile(JSON.parse(raw)); } catch { /* use default */ }
             }
@@ -41,11 +41,11 @@ export function useUserProfile(): UseUserProfileReturn {
 
     const updateProfile = useCallback(async (patch: Partial<UserProfile>) => {
         const initials = patch.name
-            ? patch.name.trim().split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+            ? patch.name.trim().split(' ').map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase()
             : profile.avatarInitials;
         const updated = { ...profile, ...patch, avatarInitials: initials };
         setProfile(updated);
-        await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(updated));
+        await AsyncStorage.setItem(STORAGE.USER_PROFILE, JSON.stringify(updated));
     }, [profile]);
 
     const incrementReports = useCallback(async () => {

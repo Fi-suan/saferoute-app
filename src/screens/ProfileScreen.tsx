@@ -28,7 +28,6 @@ import { getDeviceId } from '../services/deviceId';
 const ROLE_CONFIG: Record<UserRole, { label: string; icon: string; color: string; desc: string }> = {
     driver: { label: 'Жүргізуші', icon: 'car', color: Colors.brand.primary, desc: 'Жол белгілерін алады' },
     livestock_owner: { label: 'Мал иесі', icon: 'paw', color: Colors.alert.high, desc: 'Малды қадағалайды' },
-    both: { label: 'Жүргізуші + Мал иесі', icon: 'people', color: Colors.alert.info, desc: 'Толық мүмкіндіктер' },
 };
 
 const RADIUS_OPTIONS = [0.5, 1, 2, 3, 5];
@@ -95,8 +94,7 @@ export default function ProfileScreen() {
     };
 
     const handleRoleChange = () => {
-        const roles: UserRole[] = ['driver', 'livestock_owner', 'both'];
-        const next = roles[(roles.indexOf(profile.role) + 1) % roles.length];
+        const next: UserRole = profile.role === 'driver' ? 'livestock_owner' : 'driver';
         Alert.alert(
             'Рөлді өзгерту',
             `${ROLE_CONFIG[next].label} ретінде жалғастырасыз ба?`,
@@ -262,7 +260,7 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* ── МАЛ ИЕСІ СЕКЦИЯ ──────────────────────────────── */}
-                {(profile.role === 'livestock_owner' || profile.role === 'both') && (
+                {(profile.role === 'livestock_owner') && (
                     <>
                         <SectionHeader title="МАЛ ИЕЛЕНУ" />
                         <View style={styles.card}>
@@ -324,30 +322,6 @@ export default function ProfileScreen() {
                             trackColor={{ false: Colors.bg.tertiary, true: Colors.brand.primary }}
                             thumbColor={Colors.white}
                         />
-                    </View>
-                    <View style={styles.rowDivider} />
-                    {/* Радиус */}
-                    <View style={styles.radiusSection}>
-                        <View style={[styles.rowIcon, { backgroundColor: Colors.alert.medium + '18' }]}>
-                            <Ionicons name="radio" size={18} color={Colors.alert.medium} />
-                        </View>
-                        <View style={styles.rowBody}>
-                            <Text style={styles.rowLabel}>Ескерту радиусы</Text>
-                            <View style={styles.radiusRow}>
-                                {RADIUS_OPTIONS.map(km => (
-                                    <TouchableOpacity
-                                        key={km}
-                                        style={[styles.radiusBtn, settings.proximityRadiusKm === km && styles.radiusBtnActive]}
-                                        onPress={() => { updateSettings({ proximityRadiusKm: km }); Haptics.selectionAsync(); }}
-                                    >
-                                        <Text style={[styles.radiusBtnText, settings.proximityRadiusKm === km && styles.radiusBtnTextActive]}>
-                                            {km}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                                <Text style={styles.radiusUnit}>км</Text>
-                            </View>
-                        </View>
                     </View>
                 </View>
 

@@ -87,6 +87,7 @@ class AlertOut(BaseModel):
 
 class DeviceRegister(BaseModel):
     device_id: str
+    role: str = "driver"
     fcm_token: Optional[str] = None
     phone_number: Optional[str] = None
     latitude: Optional[float] = None

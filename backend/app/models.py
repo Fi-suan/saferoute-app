@@ -19,6 +19,11 @@ class AnimalType(str, enum.Enum):
     OTHER = "other"
 
 
+class Role(str, enum.Enum):
+    DRIVER = "driver"
+    OWNER = "owner"
+
+
 class Herd(Base):
     """Стадо / табун животных"""
     __tablename__ = "herds"
@@ -98,12 +103,13 @@ class Alert(Base):
     geozone = relationship("GeoZone", back_populates="alerts")
 
 
-class DriverDevice(Base):
-    """Устройства водителей"""
-    __tablename__ = "driver_devices"
+class Device(Base):
+    """Пользовательское устройство (Водитель или Пастух)"""
+    __tablename__ = "devices"
 
     id = Column(Integer, primary_key=True, index=True)
     device_id = Column(String(200), unique=True, nullable=False)
+    role = Column(Enum(Role), default=Role.DRIVER)
     fcm_token = Column(String(500), nullable=True)
     phone_number = Column(String(20), nullable=True)
     latitude = Column(Float, nullable=True)

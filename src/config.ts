@@ -11,19 +11,11 @@ import Constants from 'expo-constants';
 const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
 
 export const Config = {
-    /**
-     * REST API base URL
-     *
-     * Dev:        http://10.0.2.2:8000  (Android эмулятор → localhost)
-     *             http://192.168.x.x:8000  (реальный телефон → IP компа)
-     * Production: https://saferoute-api-ce71onrender.com  ← DEPLOYED ✅
-     *
-     * Переопределить: app.json extras.BACKEND_URL
-     */
+
     BACKEND_URL: extra.BACKEND_URL ?? 'https://saferoute-api-ce7l.onrender.com',
 
     /** WebSocket live feed URL */
-    BACKEND_WS: extra.BACKEND_WS ?? 'wss://https://saferoute-api-ce7l.onrender.com/ws/live',
+    BACKEND_WS: extra.BACKEND_WS ?? 'wss://saferoute-api-ce7l.onrender.com/ws/live',
 
 
     /** Polling interval for incidents (ms) */

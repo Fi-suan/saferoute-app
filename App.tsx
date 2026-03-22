@@ -8,28 +8,33 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 
 import RootNavigator from './src/navigation/RootNavigator';
-import OnboardingScreen from './src/screens/OnboardingScreen';
+import OnboardingScreen, { OnboardingResult } from './src/screens/OnboardingScreen';
 import { Colors } from './src/constants/colors';
 import { STORAGE } from './src/constants/storage';
 import { getDeviceId } from './src/services/deviceId';
 import { registerForPushNotifications } from './src/services/notifications';
+import type { UserProfile } from './src/constants/livestock';
 
 // Держим splash пока читаем AsyncStorage
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null); // null = ещё не загружено
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        // Инициализируем device ID при первом запуске
         await getDeviceId();
-        // Читаем статус онбординга
         const done = await AsyncStorage.getItem(STORAGE.ONBOARDING_DONE);
-        setOnboardingDone(done === 'true');
-        // Запрашиваем push-разрешения в фоне (не блокируем UI)
-        registerForPushNotifications().catch(() => { });
+        const profileRaw = await AsyncStorage.getItem(STORAGE.USER_PROFILE);
+        setOnboardingDone(done === 'true' && !!profileRaw);
+
+        if (profileRaw) {
+          try {
+            const profile: UserProfile = JSON.parse(profileRaw);
+            registerForPushNotifications(profile.role).catch(() => { });
+          } catch { /* ignore parse error */ }
+        }
       } catch {
         setOnboardingDone(false);
       } finally {
@@ -38,12 +43,32 @@ export default function App() {
     })();
   }, []);
 
-  const handleOnboardingFinish = useCallback(async () => {
+  const handleOnboardingFinish = useCallback(async (data: OnboardingResult) => {
+    // Формируем инициалы из имени
+    const initials = data.name
+      .trim()
+      .split(' ')
+      .map(w => w[0])
+      .filter(Boolean)
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || 'АА';
+
+    const profile: UserProfile = {
+      name: data.name || 'Пайдаланушы',
+      phone: data.phone,
+      role: data.role,
+      joinedAt: new Date().toISOString(),
+      totalReports: 0,
+      avatarInitials: initials,
+    };
+
+    await AsyncStorage.setItem(STORAGE.USER_PROFILE, JSON.stringify(profile));
     await AsyncStorage.setItem(STORAGE.ONBOARDING_DONE, 'true');
     setOnboardingDone(true);
+    registerForPushNotifications(data.role).catch(() => { });
   }, []);
 
-  // Пока читаем AsyncStorage — loading state (splash держит экран)
   if (onboardingDone === null) {
     return (
       <View style={styles.loadingWrap}>
@@ -90,4 +115,3 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bg.primary },
   loadingWrap: { flex: 1, backgroundColor: Colors.bg.primary, alignItems: 'center', justifyContent: 'center' },
 });
-

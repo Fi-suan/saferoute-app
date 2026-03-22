@@ -69,7 +69,7 @@ export const LIVESTOCK_DANGER_DISTANCE_M = 300;
 /** Дистанция от дороги для предупреждения водителей */
 export const LIVESTOCK_WARN_DISTANCE_M = 1000;
 
-export type UserRole = 'driver' | 'livestock_owner' | 'both';
+export type UserRole = 'driver' | 'livestock_owner';
 
 export interface UserProfile {
     name: string;

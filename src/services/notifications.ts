@@ -36,7 +36,7 @@ try {
  * Запрашивает разрешение на локальные уведомления.
  * Remote push (FCM) в Expo Go SDK53+ не работают — не пытаемся их запросить.
  */
-export async function registerForPushNotifications(): Promise<string | null> {
+export async function registerForPushNotifications(role: string = 'driver'): Promise<string | null> {
     if (!_notificationsSupported) return null;
 
     try {
@@ -67,6 +67,15 @@ export async function registerForPushNotifications(): Promise<string | null> {
         // Пытаемся получить Expo Push Token (только для dev builds)
         if (Constants.appOwnership === 'expo') {
             console.log("[Notifications] Expo Go detected: bypassing remote push (SDK 53 limit). Local notifications work.");
+            
+            // Still register device to map role locally to remote
+            const deviceId = await getDeviceId();
+            axios.post(`${Config.BACKEND_URL}/api/v1/devices/register`, {
+                device_id: deviceId,
+                role: role,
+                fcm_token: null,
+            }, { timeout: 5000 }).catch(() => { });
+            
             return null;
         }
 
@@ -76,6 +85,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
             // Отправить токен на бэкенд (тихо, не блокирует UI)
             axios.post(`${Config.BACKEND_URL}/api/v1/devices/register`, {
                 device_id: deviceId,
+                role: role,
                 fcm_token: token.data,
             }, { timeout: 5000 }).catch(() => { });
             return token.data;
