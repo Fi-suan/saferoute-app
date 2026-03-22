@@ -51,25 +51,25 @@ import { useAppDialog } from '../components/AppDialog';
 
 /** Точки трассы A-17 Астана — Павлодар (упрощённые веховые пункты) */
 const A17_WAYPOINTS = [
-    { latitude: 51.18,  longitude: 71.45 },
-    { latitude: 51.28,  longitude: 71.72 },
-    { latitude: 51.32,  longitude: 71.95 },
-    { latitude: 51.39,  longitude: 72.48 },
-    { latitude: 51.45,  longitude: 72.82 },
-    { latitude: 51.58,  longitude: 73.45 },
-    { latitude: 51.64,  longitude: 73.92 },
-    { latitude: 51.72,  longitude: 74.55 },
-    { latitude: 51.78,  longitude: 75.40 },
-    { latitude: 51.85,  longitude: 75.90 },
-    { latitude: 52.05,  longitude: 76.35 },
-    { latitude: 52.18,  longitude: 76.68 },
-    { latitude: 52.29,  longitude: 76.97 },
+    { latitude: 51.18, longitude: 71.45 },
+    { latitude: 51.28, longitude: 71.72 },
+    { latitude: 51.32, longitude: 71.95 },
+    { latitude: 51.39, longitude: 72.48 },
+    { latitude: 51.45, longitude: 72.82 },
+    { latitude: 51.58, longitude: 73.45 },
+    { latitude: 51.64, longitude: 73.92 },
+    { latitude: 51.72, longitude: 74.55 },
+    { latitude: 51.78, longitude: 75.40 },
+    { latitude: 51.85, longitude: 75.90 },
+    { latitude: 52.05, longitude: 76.35 },
+    { latitude: 52.18, longitude: 76.68 },
+    { latitude: 52.29, longitude: 76.97 },
 ];
 
 const ROAD_STATUS_COLOR = {
-    open:    '#2ECC71',
+    open: '#2ECC71',
     caution: '#E67E22',
-    closed:  '#E74C3C',
+    closed: '#E74C3C',
 } as const;
 
 type NavProp = CompositeNavigationProp<
@@ -477,7 +477,7 @@ export default function MapScreen() {
                         <Ionicons name="paw" size={48} color={Colors.brand.primary} />
                         <Text style={styles.confirmTitle}>Малды тіркеу</Text>
                         <Text style={styles.confirmDesc}>Бұл бөлім мал иестері үшін жасалуда (Жуықта чипсіз тіркеу іске қосылады).</Text>
-                        
+
                         <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: Colors.brand.primary, marginTop: 24 }]} onPress={() => setShowOwnerReport(false)}>
                             <Text style={styles.confirmBtnText}>Түсіндім</Text>
                         </TouchableOpacity>

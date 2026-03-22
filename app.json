@@ -42,7 +42,8 @@
         "googleMaps": {
           "apiKey": "AIzaSyC9i_naMZTp0Th9S0Rc-uMeGzG0jKsUYF0"
         }
-      }
+      },
+      "privacyPolicyUrl": "https://saferoute.kz/privacy"
     },
     "web": {
       "favicon": "./assets/image.png"

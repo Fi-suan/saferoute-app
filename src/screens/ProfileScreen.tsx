@@ -12,11 +12,12 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Alert, TextInput, Modal, Switch,
+    TextInput, Modal, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useAppDialog } from '../components/AppDialog';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useSettings } from '../hooks/useSettings';
@@ -67,6 +68,7 @@ function SectionHeader({ title }: { title: string }) {
 }
 
 export default function ProfileScreen() {
+    const { showDialog, DialogComponent } = useAppDialog();
     const { profile, loaded, updateProfile } = useUserProfile();
     const { settings, update: updateSettings } = useSettings();
     const { incidents, isOnline } = useIncidents('active');
@@ -95,14 +97,20 @@ export default function ProfileScreen() {
 
     const handleRoleChange = () => {
         const next: UserRole = profile.role === 'driver' ? 'livestock_owner' : 'driver';
-        Alert.alert(
-            'Рөлді өзгерту',
-            `${ROLE_CONFIG[next].label} ретінде жалғастырасыз ба?`,
-            [
-                { text: 'Болдырмау', style: 'cancel' },
-                { text: 'Иә', onPress: () => { updateProfile({ role: next }); Haptics.selectionAsync(); } },
-            ],
-        );
+        showDialog({
+            title: 'Рөлді өзгерту',
+            message: `${ROLE_CONFIG[next].label} ретінде жалғастырасыз ба?`,
+            icon: 'swap-horizontal',
+            iconColor: Colors.brand.primary,
+            buttons: [
+                {
+                    text: 'Иә',
+                    style: 'default',
+                    onPress: () => { updateProfile({ role: next }); Haptics.selectionAsync(); }
+                },
+                { text: 'Болдырмау', style: 'cancel' }
+            ]
+        });
     };
 
     const handleShowDeviceId = async () => {
@@ -266,10 +274,13 @@ export default function ProfileScreen() {
                         <View style={styles.card}>
                             <TouchableOpacity
                                 style={styles.settingsRow}
-                                onPress={() => Alert.alert(
-                                    'Мал тіркеу',
-                                    'Малды тіркеу функционалы дамытылуда. Картадан "Мен с табуном" режимін пайдаланыңыз.',
-                                )}
+                                onPress={() => showDialog({
+                                    title: 'Мал тіркеу',
+                                    message: 'Малды тіркеу функционалы дамытылуда. Картадан "Мен с табуном" режимін пайдаланыңыз.',
+                                    icon: 'paw',
+                                    iconColor: Colors.alert.high,
+                                    buttons: [{ text: 'Түсіндім', style: 'default' }]
+                                })}
                             >
                                 <View style={[styles.rowIcon, { backgroundColor: Colors.alert.high + '18' }]}>
                                     <Ionicons name="paw" size={18} color={Colors.alert.high} />
@@ -429,6 +440,7 @@ export default function ProfileScreen() {
                     </View>
                 </View>
             </Modal>
+            {DialogComponent}
         </SafeAreaView>
     );
 }

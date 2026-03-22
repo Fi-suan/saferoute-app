@@ -5,7 +5,7 @@ Falls back silently if Firebase not configured.
 import logging
 from typing import List
 from sqlalchemy.orm import Session
-from app.models import DriverDevice, Alert
+from app.models import Device, Role, Alert
 from app.config import settings
 from app.services.geofencing import haversine_km
 
@@ -50,9 +50,13 @@ def send_push_notification(fcm_token: str, alert: Alert) -> bool:
 def notify_nearby_drivers(db: Session, alert: Alert, herd_lat: float, herd_lon: float) -> int:
     from datetime import datetime, timedelta
     cutoff = datetime.utcnow() - timedelta(minutes=30)
-    devices: List[DriverDevice] = (
-        db.query(DriverDevice)
-        .filter(DriverDevice.is_active == True, DriverDevice.last_seen >= cutoff)
+    devices: List[Device] = (
+        db.query(Device)
+        .filter(
+            Device.role == Role.DRIVER,
+            Device.is_active == True,
+            Device.last_seen >= cutoff,
+        )
         .all()
     )
 
