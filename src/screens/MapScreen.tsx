@@ -12,9 +12,9 @@ const DARK_MAP_STYLE = [
     { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#A3A6B4' }] },
     { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#272935' }] },
     { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#272935' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#FF572230' }] },
-    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#FF572240' }] },
-    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#FF5722' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#2ECC7130' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#2ECC7150' }] },
+    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#2ECC71' }] },
     { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2A2D35' }] },
     { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#181A22' }] },
     { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#2A2D35' }] },
@@ -27,7 +27,7 @@ import {
     View, Text, StyleSheet, TouchableOpacity,
     Modal, ActivityIndicator, Alert, Linking, Vibration,
 } from 'react-native';
-import MapView, { Marker, Circle } from 'react-native-maps';
+import MapView, { Marker, Circle, Polyline } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
 import { useNavigation, CompositeNavigationProp } from '@react-navigation/native';
@@ -37,7 +37,6 @@ import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { getIncidentMeta, Incident } from '../constants/incidents';
 import { useIncidents } from '../hooks/useIncidents';
 import { useLocation } from '../hooks/useLocation';
-import { useSettings } from '../hooks/useSettings';
 import { useRoute } from '../hooks/useRoute';
 import { useLivestock } from '../hooks/useLivestock';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -48,6 +47,30 @@ import RoadStatusBadge from '../components/RoadStatusBadge';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { scheduleProximityNotification } from '../services/notifications';
 import { LIVESTOCK_META } from '../constants/livestock';
+import { useAppDialog } from '../components/AppDialog';
+
+/** Точки трассы A-17 Астана — Павлодар (упрощённые веховые пункты) */
+const A17_WAYPOINTS = [
+    { latitude: 51.18,  longitude: 71.45 },
+    { latitude: 51.28,  longitude: 71.72 },
+    { latitude: 51.32,  longitude: 71.95 },
+    { latitude: 51.39,  longitude: 72.48 },
+    { latitude: 51.45,  longitude: 72.82 },
+    { latitude: 51.58,  longitude: 73.45 },
+    { latitude: 51.64,  longitude: 73.92 },
+    { latitude: 51.72,  longitude: 74.55 },
+    { latitude: 51.78,  longitude: 75.40 },
+    { latitude: 51.85,  longitude: 75.90 },
+    { latitude: 52.05,  longitude: 76.35 },
+    { latitude: 52.18,  longitude: 76.68 },
+    { latitude: 52.29,  longitude: 76.97 },
+];
+
+const ROAD_STATUS_COLOR = {
+    open:    '#2ECC71',
+    caution: '#E67E22',
+    closed:  '#E74C3C',
+} as const;
 
 type NavProp = CompositeNavigationProp<
     BottomTabNavigationProp<Record<string, undefined>>,
@@ -69,8 +92,8 @@ export default function MapScreen() {
     const [showOwnerReport, setShowOwnerReport] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState<Incident | null>(null);
     const { profile } = useUserProfile();
+    const { showDialog, DialogComponent } = useAppDialog();
 
-    const { settings } = useSettings();
     const { incidents, isOnline, loading, submitReport, confirmIncident, pendingReportsCount } =
         useIncidents('active');
     const { location, nearbyAlert, confirmCandidate, dismissNearbyAlert, dismissConfirmCandidate } =
@@ -80,7 +103,7 @@ export default function MapScreen() {
     const { isRouteMode, toggleRouteMode, routeIncidents, roadStatus } = useRoute(incidents);
 
     // Фича livestock: скот вблизи дорог
-    const { livestock, dangerousLivestock } = useLivestock(location);
+    const { livestock } = useLivestock(location);
 
     React.useEffect(() => {
         if (nearbyAlert) {
@@ -102,7 +125,13 @@ export default function MapScreen() {
         setConfirmDialog(null);
         dismissConfirmCandidate();
         await confirmIncident(confirmDialog.id, isResolved);
-        if (isResolved) Alert.alert('Рахмет!', '3 растаудан кейін белгі жойылады.');
+        if (isResolved) showDialog({
+            title: 'Рахмет!',
+            message: '3 растаудан кейін белгі жойылады.',
+            icon: 'checkmark-circle',
+            iconColor: Colors.brand.primary,
+            buttons: [{ text: 'Түсіндім', style: 'default' }],
+        });
     };
 
     const goToDetail = (incident: Incident) => {
@@ -113,12 +142,16 @@ export default function MapScreen() {
     const handleSOSLongPress = () => {
         // Эскалирующая: тихо → сильнее → очень сильно
         Vibration.vibrate([0, 100, 80, 200, 80, 400, 80, 600]);
-        Alert.alert(
-            '🆘 SOS — Жедел жәрдем',
-            'Орналасуыңыз жазылып, белгі автоматты түрде жасалды.\n\n⚠️ Тест режимі: 112 шақыру өшірілген.',
-            [
+        showDialog({
+            title: 'SOS — Жедел жәрдем',
+            message: 'Орналасуыңыз жазылып, белгі автоматты түрде жасалды.\n\n⚠️ Тест режимі: 112 шақыру өшірілген.',
+            icon: 'alert-circle',
+            iconColor: Colors.alert.critical,
+            buttons: [
                 {
-                    text: '📍 Белгі ғана қою',
+                    text: 'Белгі ғана қою',
+                    icon: 'location',
+                    style: 'default',
                     onPress: async () => {
                         if (location) {
                             await submitReport({
@@ -129,12 +162,18 @@ export default function MapScreen() {
                                 longitude: location.lon,
                             });
                         }
-                        Alert.alert('✅ Белгі жасалды', 'Жақын жүргізушілер ескертілді.');
+                        showDialog({
+                            title: 'Белгі жасалды',
+                            message: 'Жақын жүргізушілер ескертілді.',
+                            icon: 'checkmark-circle',
+                            iconColor: Colors.brand.primary,
+                            buttons: [{ text: 'Түсіндім', style: 'default' }],
+                        });
                     },
                 },
                 { text: 'Бас тарту', style: 'cancel' },
             ],
-        );
+        });
     };
 
 
@@ -175,12 +214,19 @@ export default function MapScreen() {
                     const meta = getIncidentMeta(inc.incident_type);
                     return (
                         <React.Fragment key={`inc-${inc.id}`}>
+                            {/* Кастомный маркер Nothing-стиль: тёмный квадрат + иконка + цветная рамка */}
                             <Marker
                                 coordinate={{ latitude: inc.latitude, longitude: inc.longitude }}
-                                title={meta.label}
-                                description={inc.description ?? `Растаулар: ${inc.confirmations_count}/3`}
                                 onCalloutPress={() => goToDetail(inc)}
-                            />
+                                tracksViewChanges={false}
+                            >
+                                <View style={styles.markerContainer}>
+                                    <View style={[styles.markerCard, { borderColor: meta.color }]}>
+                                        <Ionicons name={meta.icon as any} size={16} color={meta.color} />
+                                    </View>
+                                    <View style={[styles.markerPointer, { borderTopColor: meta.color }]} />
+                                </View>
+                            </Marker>
 
                             {/* Core radar dot + Glowing Aura Effect */}
                             <Circle
@@ -211,21 +257,30 @@ export default function MapScreen() {
 
                 {/* Скот на карте (Без иконок, радарный стиль) */}
                 {showLivestock && livestock.map((animal) => {
-                    // Fallback to generic animal if type is not in LIVESTOCK_META
                     const meta = LIVESTOCK_META[animal.type] || {
                         label: 'Жануар', labelKk: 'Жануар', color: Colors.brand.primary, emoji: '🐾'
                     };
                     const isDangerous = animal.isNearRoad && animal.distanceToRoadM < 300;
+                    const markerColor = isDangerous ? Colors.alert.critical : meta.color;
                     return (
                         <React.Fragment key={`ls-${animal.id}`}>
+                            {/* Кастомный маркер скота: эмоджи + счётчик голов */}
                             <Marker
                                 coordinate={{ latitude: animal.latitude, longitude: animal.longitude }}
-                                title={`${meta.emoji} ${animal.name}`}
-                                description={
-                                    `${meta.labelKk} · ${animal.count} бас · ${animal.distanceToRoadM}м жолдан` +
-                                    (isDangerous ? ' ⚠️ ҚАУІП!' : '')
-                                }
-                            />
+                                tracksViewChanges={false}
+                            >
+                                <View style={styles.markerContainer}>
+                                    <View style={[styles.markerCard, styles.markerCardLivestock, { borderColor: markerColor }]}>
+                                        <Text style={styles.livestockEmoji}>{meta.emoji}</Text>
+                                        {isDangerous && (
+                                            <View style={styles.dangerBadge}>
+                                                <Text style={styles.dangerBadgeText}>!</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                    <View style={[styles.markerPointer, { borderTopColor: markerColor }]} />
+                                </View>
+                            </Marker>
 
                             <Circle
                                 center={{ latitude: animal.latitude, longitude: animal.longitude }}
@@ -252,6 +307,13 @@ export default function MapScreen() {
                     );
                 })}
 
+                {/* Polyline трассы A-17 — цвет по статусу дороги */}
+                <Polyline
+                    coordinates={A17_WAYPOINTS}
+                    strokeColor={ROAD_STATUS_COLOR[roadStatus]}
+                    strokeWidth={3}
+                    lineDashPattern={roadStatus === 'closed' ? [8, 6] : undefined}
+                />
 
             </MapView>
 
@@ -422,6 +484,7 @@ export default function MapScreen() {
                     </View>
                 </View>
             </Modal>
+            {DialogComponent}
         </View>
     );
 }
@@ -497,22 +560,36 @@ const styles = StyleSheet.create({
         width: 64, height: 64, alignItems: 'center', justifyContent: 'center', ...Shadow.glow,
     },
 
-    markerWrap: {
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.sm,
-        width: 32, height: 32, alignItems: 'center', justifyContent: 'center',
-        borderWidth: 1.5, ...Shadow.glow,
+    // Кастомные маркеры — Nothing Phone стиль
+    markerContainer: { alignItems: 'center' },
+    markerCard: {
+        width: 36, height: 36,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.sm,
+        borderWidth: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.35,
+        shadowRadius: 4,
+        elevation: 5,
     },
-    ecoMarker: {
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.sm,
-        width: 28, height: 28, alignItems: 'center', justifyContent: 'center',
-        borderWidth: 2, ...Shadow.card,
+    markerCardLivestock: { width: 40, height: 40, borderRadius: Radius.md, position: 'relative' },
+    markerPointer: {
+        width: 0, height: 0,
+        borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 7,
+        borderLeftColor: 'transparent', borderRightColor: 'transparent',
     },
-    livestockMarker: {
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.sm,
-        width: 34, height: 34, alignItems: 'center', justifyContent: 'center',
-        borderWidth: 2.5, ...Shadow.card,
+    livestockEmoji: { fontSize: 20 },
+    dangerBadge: {
+        position: 'absolute', top: -4, right: -4,
+        width: 16, height: 16, borderRadius: 8,
+        backgroundColor: Colors.alert.critical,
+        alignItems: 'center', justifyContent: 'center',
+        borderWidth: 1.5, borderColor: Colors.bg.secondary,
     },
-    livestockEmoji: { fontSize: 18 },
+    dangerBadgeText: { fontSize: 9, fontWeight: '900', color: Colors.white },
 
 
     confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center' },

@@ -30,7 +30,7 @@ const ROLE_CONFIG: Record<UserRole, { label: string; icon: string; color: string
     livestock_owner: { label: 'Мал иесі', icon: 'paw', color: Colors.alert.high, desc: 'Малды қадағалайды' },
 };
 
-const RADIUS_OPTIONS = [0.5, 1, 2, 3, 5];
+
 
 /** Nothing Phone стиль: числа в monospace, геометрические карточки */
 function StatCard({

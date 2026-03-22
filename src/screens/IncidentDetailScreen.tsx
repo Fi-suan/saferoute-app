@@ -16,7 +16,7 @@
 import React from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Linking, Image, Share, Alert,
+    Linking, Image, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { getIncidentMeta } from '../constants/incidents';
 import { RootStackParamList } from '../navigation/RootNavigator';
+import { useAppDialog } from '../components/AppDialog';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -46,6 +47,7 @@ export default function IncidentDetailScreen() {
     const navigation = useNavigation<NavProp>();
     const route = useNavRoute();
     const { incident } = (route.params as { incident: RootStackParamList['IncidentDetail']['incident'] });
+    const { showDialog, DialogComponent } = useAppDialog();
 
     const meta = getIncidentMeta(incident.incident_type);
     const sevCfg = SEVERITY_LABELS[incident.severity] ?? SEVERITY_LABELS[3];
@@ -65,7 +67,13 @@ export default function IncidentDetailScreen() {
         try {
             await Share.share({ message: shareText, title: 'SafeRoute инцидент' });
         } catch (e) {
-            Alert.alert('Қате', 'Бөлісу мүмкін болмады');
+            showDialog({
+                title: 'Қате',
+                message: 'Бөлісу мүмкін болмады',
+                icon: 'warning',
+                iconColor: Colors.alert.critical,
+                buttons: [{ text: 'Жабу', style: 'cancel' }],
+            });
         }
     };
 
@@ -244,6 +252,7 @@ export default function IncidentDetailScreen() {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+            {DialogComponent}
         </SafeAreaView>
     );
 }

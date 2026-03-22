@@ -18,6 +18,7 @@ import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { INCIDENT_TYPES_LIST } from '../constants/incidents';
 import { GeoPoint } from '../hooks/useLocation';
 import * as FileSystem from 'expo-file-system';
+import { useAppDialog } from './AppDialog';
 
 interface Props {
     visible: boolean;
@@ -40,6 +41,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
     const [severity, setSeverity] = useState(3);
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const { showDialog, DialogComponent } = useAppDialog();
 
     const pickPhoto = async () => {
         // Сначала пробуем камеру
@@ -72,7 +74,13 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
 
     const handleSubmit = async () => {
         if (!location) {
-            Alert.alert('Қате', 'Геолокация жоқ. Рұқсат беріңіз.');
+            showDialog({
+                title: 'Қате',
+                message: 'Геолокация жоқ. Рұқсат беріңіз.',
+                icon: 'warning',
+                iconColor: Colors.alert.critical,
+                buttons: [{ text: 'Жабу', style: 'default' }],
+            });
             return;
         }
         setSubmitting(true);
@@ -106,9 +114,21 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
             setSeverity(3);
             setReportType('crash');
             onClose();
-            Alert.alert('Дайын!', 'Белгі қойылды. AI тексеруі жүргізілуде.');
+            showDialog({
+                title: 'Дайын!',
+                message: 'Белгі қойылды. AI тексеруі жүргізілуде.',
+                icon: 'checkmark-circle',
+                iconColor: Colors.brand.primary,
+                buttons: [{ text: 'Түсіндім', style: 'default' }],
+            });
         } else {
-            Alert.alert('Қате', result.error ?? 'Белгісіз қате');
+            showDialog({
+                title: 'Қате',
+                message: result.error ?? 'Белгісіз қате',
+                icon: 'close-circle',
+                iconColor: Colors.alert.critical,
+                buttons: [{ text: 'Жабу', style: 'cancel' }],
+            });
         }
     };
 
@@ -240,6 +260,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
                     </ScrollView>
                 </View>
             </View>
+            {DialogComponent}
         </Modal>
     );
 }
