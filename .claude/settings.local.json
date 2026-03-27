@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(grep -r import.*MOCK_ /c/Users/zhant/.gemini/antigravity/scratch/saferoute-app/src/)",
+      "Bash(find C:/Users/zhant/.gemini/antigravity/scratch/saferoute-app/src -type f -name *.ts -o -type f -name *.tsx)",
+      "Bash(grep -r MOCK C:/Users/zhant/.gemini/antigravity/scratch/saferoute-app/src --include=*.ts --include=*.tsx)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

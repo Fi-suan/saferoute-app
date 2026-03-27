@@ -1,11 +1,9 @@
 /**
- * useIncidents Hook — SafeRoute / Sapa Jol (FIXED)
+ * useIncidents Hook — SafeRoute / Sapa Jol
  *
- * Исправления:
- * 1. Shared state через incidentStore — MapScreen и AlertsScreen видят одни данные
- * 2. Optimistic incidents появляются сразу в AlertsScreen
- * 3. photo_url передаётся в Incident интерфейсе (опционально)
- * 4. Правильный маппинг MockIncident → Incident
+ * Shared state через incidentStore — MapScreen и AlertsScreen видят одни данные.
+ * Optimistic incidents появляются сразу, заменяются реальными от сервера.
+ * При офлайне — пустой список + очередь репортов (отправятся при reconnect).
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
@@ -13,7 +11,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Config } from '../config';
 import { STORAGE } from '../constants/storage';
 import { Incident } from '../constants/incidents';
-import { MOCK_INCIDENTS } from '../data/mockData';
 import { getDeviceId } from '../services/deviceId';
 import { incidentStore } from '../store/incidentStore';
 
@@ -23,8 +20,8 @@ export interface SubmitReportParams {
     severity: number;
     latitude: number;
     longitude: number;
-    photo_base64?: string;  // base64 фото для AI валидации на бэкенде
-    photo_uri?: string;     // локальный uri для отображения в UI
+    photo_base64?: string;
+    photo_uri?: string;
 }
 
 interface QueuedReport extends SubmitReportParams {
@@ -42,45 +39,19 @@ interface UseIncidentsReturn {
     pendingReportsCount: number;
 }
 
-/** Конвертирует MockIncident в Incident */
-function normalizeMockData(data: typeof MOCK_INCIDENTS): Incident[] {
-    return data.map(m => ({
-        id: m.id,
-        incident_type: m.incident_type as Incident['incident_type'],
-        description: m.description,
-        severity: m.severity,
-        latitude: m.latitude,
-        longitude: m.longitude,
-        is_active: m.is_active,
-        ai_verified: m.ai_verified,
-        ai_analysis: m.ai_analysis || null,
-        ai_confidence: m.ai_confidence > 0 ? m.ai_confidence : undefined,
-        confirmations_count: m.confirmations_count,
-        created_at: m.created_at,
-        resolved_at: m.resolved_at,
-    }));
-}
-
-/** Загружает инциденты с сервера или возвращает mock */
 async function fetchFromServer(tab: 'active' | 'all'): Promise<{ data: Incident[]; online: boolean }> {
     const endpoint = tab === 'active' ? '/api/v1/incidents/active' : '/api/v1/incidents/feed';
     try {
         const res = await axios.get<Incident[]>(`${Config.BACKEND_URL}${endpoint}`, {
-            timeout: 8000, // Render free tier может спать — даём 8 сек
+            timeout: 8000,
         });
-        if (Array.isArray(res.data) && res.data.length > 0) {
+        if (Array.isArray(res.data)) {
             return { data: res.data, online: true };
         }
-    } catch { /* offline */ }
-
-    const all = normalizeMockData(MOCK_INCIDENTS);
-    return {
-        data: tab === 'active' ? all.filter(i => i.is_active) : all,
-        online: false,
-    };
+    } catch { /* offline — вернём пустой список */ }
+    return { data: [], online: false };
 }
 
-/** Читает очередь оффлайн-репортов */
 async function loadQueue(): Promise<QueuedReport[]> {
     try {
         const raw = await AsyncStorage.getItem(STORAGE.REPORT_QUEUE);
@@ -110,10 +81,8 @@ async function flushQueue(deviceId: string): Promise<void> {
 }
 
 export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsReturn {
-    // Читаем из shared store вместо локального useState
     const [incidents, setIncidents] = useState<Incident[]>(() => {
         const stored = incidentStore.get();
-        // Если store пустой — нет смысла фильтровать, ждём загрузки
         if (stored.length === 0) return [];
         return tab === 'active' ? stored.filter(i => i.is_active) : stored;
     });
@@ -125,7 +94,6 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
     const tabRef = useRef(tab);
     tabRef.current = tab;
 
-    // Подписываемся на изменения store — работает между экземплярами хука
     useEffect(() => {
         const unsubscribe = incidentStore.subscribe((all) => {
             setIncidents(tabRef.current === 'active' ? all.filter(i => i.is_active) : all);
@@ -135,12 +103,9 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
 
     const refresh = useCallback(async () => {
         const { data, online } = await fetchFromServer(tab);
-        // Обновляем глобальный store — оба экземпляра получат обновление
-        // НО: сохраняем оптимистичные инциденты поверх (id < 0 или Date.now())
         const currentOptimistic = incidentStore.get().filter(
             i => !data.find(d => d.id === i.id)
         );
-        // Склеиваем: optimistic + real data
         incidentStore.set([...currentOptimistic, ...data]);
         setIsOnline(online);
 
@@ -168,9 +133,8 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
     ): Promise<{ ok: boolean; error?: string }> => {
         const deviceId = await getDeviceId();
 
-        // Создаём оптимистичный инцидент — добавляем в store НЕМЕДЛЕННО
         const optimistic: Incident & { photo_uri?: string } = {
-            id: -(Date.now()),  // отрицательный id = временный
+            id: -(Date.now()),
             incident_type: params.incident_type as Incident['incident_type'],
             description: params.description || null,
             severity: params.severity,
@@ -204,24 +168,20 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
                 payload,
                 { timeout: 5000 },
             );
-            // Заменяем оптимистичный инцидент на реальный от сервера
-            const real = res.data;
-            incidentStore.update(optimistic.id, { ...real });
+            incidentStore.update(optimistic.id, { ...res.data });
             await refresh();
             return { ok: true };
         } catch {
-            // Offline — кладём в очередь, оптимистичный остаётся в UI
             const queue = await loadQueue();
             queue.push({ ...params, queuedAt: new Date().toISOString() });
             await saveQueue(queue);
             setPendingReportsCount(queue.length);
-            return { ok: true }; // пользователь видит запись, она отправится позже
+            return { ok: true };
         }
     }, [refresh]);
 
     const confirmIncident = useCallback(async (id: number, isResolved: boolean) => {
         const deviceId = await getDeviceId();
-        // Оптимистично обновляем счётчик
         const current = incidentStore.get().find(i => i.id === id);
         if (current) {
             incidentStore.update(id, {

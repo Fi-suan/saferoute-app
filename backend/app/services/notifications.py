@@ -27,7 +27,7 @@ def send_push_notification(fcm_token: str, alert: Alert) -> bool:
         msg = messaging.Message(
             token=fcm_token,
             notification=messaging.Notification(
-                title="⚠️ Sapa Jol: Жол қауіпі",
+                title="Sapa Jol: Жол қауіпі",
                 body=alert.message_kk,
             ),
             data={

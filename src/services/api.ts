@@ -75,6 +75,7 @@ export const getGeozonesGeoJSON = () => api.get('/geozones/geojson').then(r => r
 // ── Devices ────────────────────────────────────────────────────────────────────
 export const registerDevice = (data: {
     device_id: string;
+    role?: string;
     fcm_token?: string;
     phone_number?: string;
     latitude?: number;
