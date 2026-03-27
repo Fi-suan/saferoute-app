@@ -4,23 +4,24 @@
  */
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
+// Nothing Phone pure-black map style
 const DARK_MAP_STYLE = [
-    { elementType: 'geometry', stylers: [{ color: '#1E2028' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#1E2028' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#6B6E7D' }] },
-    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#A3A6B4' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#272935' }] },
-    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#272935' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#2ECC7130' }] },
-    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#2ECC7150' }] },
-    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#2ECC71' }] },
-    { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2A2D35' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#181A22' }] },
-    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#2A2D35' }] },
-    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#272935' }] },
-    { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#6B6E7D' }] },
-    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#181A22' }] },
-    { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#1E2028' }] },
+    { elementType: 'geometry',                                   stylers: [{ color: '#0A0A0A' }] },
+    { elementType: 'labels.text.stroke',                         stylers: [{ color: '#000000' }] },
+    { elementType: 'labels.text.fill',                           stylers: [{ color: '#444444' }] },
+    { featureType: 'administrative.locality',  elementType: 'labels.text.fill',  stylers: [{ color: '#888888' }] },
+    { featureType: 'road',                     elementType: 'geometry',          stylers: [{ color: '#1A1A1A' }] },
+    { featureType: 'road',                     elementType: 'geometry.stroke',   stylers: [{ color: '#111111' }] },
+    { featureType: 'road.highway',             elementType: 'geometry',          stylers: [{ color: '#2ECC7120' }] },
+    { featureType: 'road.highway',             elementType: 'geometry.stroke',   stylers: [{ color: '#2ECC7140' }] },
+    { featureType: 'road.highway',             elementType: 'labels.text.fill',  stylers: [{ color: '#2ECC71' }] },
+    { featureType: 'transit',                  elementType: 'geometry',          stylers: [{ color: '#111111' }] },
+    { featureType: 'water',                    elementType: 'geometry',          stylers: [{ color: '#050505' }] },
+    { featureType: 'water',                    elementType: 'labels.text.fill',  stylers: [{ color: '#1A1A1A' }] },
+    { featureType: 'poi',                      elementType: 'geometry',          stylers: [{ color: '#111111' }] },
+    { featureType: 'poi',                      elementType: 'labels.text.fill',  stylers: [{ color: '#333333' }] },
+    { featureType: 'poi.park',                 elementType: 'geometry',          stylers: [{ color: '#0A0A0A' }] },
+    { featureType: 'landscape',                elementType: 'geometry',          stylers: [{ color: '#0A0A0A' }] },
 ];
 
 import {
@@ -53,6 +54,9 @@ import { scheduleProximityNotification } from '../services/notifications';
 import { useAppDialog } from '../components/AppDialog';
 import { useT } from '../i18n';
 import { fetchDirections, DirectionsResult } from '../services/directions';
+import { useRoutePolyline } from '../hooks/useRoutePolyline';
+import { useNotificationLog } from '../hooks/useNotificationLog';
+import { useSettings } from '../hooks/useSettings';
 
 /** Отображаемые названия маршрутов */
 const ROUTE_NAMES: Record<string, string> = {
@@ -166,13 +170,18 @@ export default function MapScreen() {
     const t = useT();
     const { profile } = useUserProfile();
     const { showDialog, DialogComponent } = useAppDialog();
+    const { settings } = useSettings();
+    const { addEntry: addNotifEntry } = useNotificationLog();
 
     const { incidents, isOnline, loading, submitReport, confirmIncident, pendingReportsCount } =
         useIncidents('active');
     const { location, nearbyAlert, confirmCandidate, dismissNearbyAlert, dismissConfirmCandidate } =
-        useLocation(incidents, Config.DEFAULT_PROXIMITY_RADIUS_KM);
+        useLocation(incidents, Config.DEFAULT_PROXIMITY_RADIUS_KM, (incidentId, title, body) => {
+            addNotifEntry({ title, body, incidentId });
+        });
 
     const { isRouteMode, toggleRouteMode, routeIncidents, roadStatus } = useRoute(incidents, activeRouteId);
+    const cachedPolyline = useRoutePolyline(activeRouteId);
 
     const {
         livestock,
@@ -189,14 +198,18 @@ export default function MapScreen() {
         });
     }, []));
 
-    // Push уведомление при приближении
+    // Push уведомление при приближении (уважает soundEnabled)
     useEffect(() => {
         if (nearbyAlert) {
             const meta = getIncidentMeta(nearbyAlert.incident_type);
+            if (settings.vibrationEnabled) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            }
             scheduleProximityNotification({
                 title: '⚠️ Абай болыңыз!',
                 body: `${meta.label}${nearbyAlert.description ? ` — ${nearbyAlert.description}` : ''}`,
                 incidentId: nearbyAlert.id,
+                soundEnabled: settings.soundEnabled,
             });
         }
     }, [nearbyAlert?.id]);
@@ -319,7 +332,7 @@ export default function MapScreen() {
         }
     };
 
-    // Advance navigation step when within 50m of current step endpoint
+    // Advance navigation step when within 80m of current step endpoint
     useEffect(() => {
         if (!navResult || !location) return;
         const step = navResult.steps[navStepIdx];
@@ -327,17 +340,28 @@ export default function MapScreen() {
         const dlat = location.lat - step.end.latitude;
         const dlon = location.lon - step.end.longitude;
         const distM = Math.sqrt(dlat * dlat + dlon * dlon) * 111_000;
-        if (distM < 50 && navStepIdx < navResult.steps.length - 1) {
+        if (distM < 80 && navStepIdx < navResult.steps.length - 1) {
             setNavStepIdx(i => i + 1);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
     }, [location?.lat, location?.lon]);
 
+    // When navigating, camera follows location with 15° tilt for driving perspective
+    useEffect(() => {
+        if (!navResult || !location) return;
+        mapRef.current?.animateCamera({
+            center: { latitude: location.lat, longitude: location.lon },
+            zoom: 15,
+            pitch: 30,
+            heading: 0,
+        } as Camera, { duration: 800 });
+    }, [location?.lat, location?.lon, !!navResult]);
+
     const displayedIncidents = isRouteMode ? routeIncidents : incidents.filter(i => i.is_active);
     const showIncidents = filter === 'all' || filter === 'incidents';
     const showLivestock = filter === 'all' || filter === 'livestock';
-    // Use directions polyline when navigation is active, otherwise static waypoints
-    const routeCoords = navResult ? navResult.polyline : (ROUTE_WAYPOINTS[activeRouteId] ?? ROUTE_WAYPOINTS.a17);
+    // Navigation polyline > cached Directions polyline > static waypoints
+    const routeCoords = navResult ? navResult.polyline : cachedPolyline;
 
     const initialRegion = location
         ? { latitude: location.lat, longitude: location.lon, latitudeDelta: 0.05, longitudeDelta: 0.05 }
@@ -519,21 +543,43 @@ export default function MapScreen() {
                 ))}
             </View>
 
-            {/* ── Навигационная подсказка ── */}
-            {navResult && navResult.steps[navStepIdx] && (
-                <View style={styles.navBanner}>
-                    <Ionicons name="navigate" size={16} color={Colors.brand.primary} />
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.navStepText} numberOfLines={2}>
-                            {navResult.steps[navStepIdx].instruction}
-                        </Text>
-                        <Text style={styles.navMetaText}>
-                            {navResult.steps[navStepIdx].distance} · {navResult.steps[navStepIdx].duration}
-                        </Text>
+            {/* ── Полноэкранный навигатор (нижняя карточка) ── */}
+            {navResult && (
+                <View style={styles.navCard}>
+                    {/* Step progress bar */}
+                    <View style={styles.navProgress}>
+                        <View style={[styles.navProgressFill, { width: `${((navStepIdx + 1) / navResult.steps.length) * 100}%` as any }]} />
                     </View>
-                    <TouchableOpacity onPress={() => { setNavResult(null); setNavStepIdx(0); }}>
-                        <Ionicons name="close-circle" size={20} color={Colors.text.muted} />
-                    </TouchableOpacity>
+                    {/* Step header */}
+                    <View style={styles.navCardHeader}>
+                        <View style={styles.navIconBox}>
+                            <Ionicons name="navigate" size={24} color={Colors.brand.primary} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            {navResult.steps[navStepIdx] && (
+                                <Text style={styles.navInstructionText} numberOfLines={2}>
+                                    {navResult.steps[navStepIdx].instruction}
+                                </Text>
+                            )}
+                            <Text style={styles.navDistText}>
+                                {navResult.steps[navStepIdx]?.distance}
+                                {' · '}
+                                <Text style={styles.navTotalText}>{t('route_mode_label')} {navResult.totalDistance}</Text>
+                            </Text>
+                        </View>
+                        <TouchableOpacity style={styles.navStopBtn} onPress={() => { setNavResult(null); setNavStepIdx(0); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}>
+                            <Ionicons name="stop" size={16} color={Colors.alert.critical} />
+                        </TouchableOpacity>
+                    </View>
+                    {/* Next step preview */}
+                    {navResult.steps[navStepIdx + 1] && (
+                        <View style={styles.navNextStep}>
+                            <Text style={styles.navNextLabel}>Затем: </Text>
+                            <Text style={styles.navNextText} numberOfLines={1}>
+                                {navResult.steps[navStepIdx + 1].instruction}
+                            </Text>
+                        </View>
+                    )}
                 </View>
             )}
 
@@ -717,7 +763,7 @@ const styles = StyleSheet.create({
 
     topBar: {
         position: 'absolute', top: 50, left: Spacing.md, right: Spacing.md,
-        backgroundColor: Colors.overlay, borderRadius: Radius.md,
+        backgroundColor: 'rgba(0,0,0,0.85)', borderRadius: Radius.md,
         paddingVertical: 12, paddingHorizontal: Spacing.md,
         borderWidth: 1, borderColor: Colors.border, ...Shadow.card, gap: 10,
     },
@@ -759,16 +805,48 @@ const styles = StyleSheet.create({
     navBtnText: { fontSize: 11, fontWeight: '700', color: Colors.brand.primary },
     navBtnTextActive: { color: Colors.bg.primary },
 
-    navBanner: {
-        position: 'absolute', top: 196, left: Spacing.md, right: Spacing.md,
-        flexDirection: 'row', alignItems: 'center', gap: 10,
-        backgroundColor: Colors.overlay, borderRadius: Radius.md,
-        paddingVertical: 10, paddingHorizontal: Spacing.md,
-        borderWidth: 1, borderColor: Colors.brand.primary + '40',
+    // Full-screen navigator card
+    navCard: {
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        backgroundColor: Colors.bg.secondary,
+        borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
+        borderTopWidth: 1, borderColor: Colors.brand.primary + '30',
+        paddingBottom: 32, paddingTop: 0,
         ...Shadow.card,
     },
-    navStepText: { fontSize: 13, fontWeight: '600', color: Colors.text.primary, lineHeight: 18 },
-    navMetaText: { fontSize: 11, color: Colors.text.muted, marginTop: 2 },
+    navProgress: {
+        height: 2, backgroundColor: Colors.bg.tertiary,
+        borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, overflow: 'hidden',
+    },
+    navProgressFill: { height: '100%', backgroundColor: Colors.brand.primary },
+    navCardHeader: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg,
+        gap: Spacing.md,
+    },
+    navIconBox: {
+        width: 48, height: 48, borderRadius: Radius.md,
+        backgroundColor: Colors.brand.primary + '15',
+        borderWidth: 1, borderColor: Colors.brand.primary + '30',
+        alignItems: 'center', justifyContent: 'center',
+    },
+    navInstructionText: { fontSize: 17, fontWeight: '700', color: Colors.text.primary, lineHeight: 22 },
+    navDistText: { fontSize: 13, color: Colors.text.secondary, marginTop: 3 },
+    navTotalText: { color: Colors.text.muted },
+    navStopBtn: {
+        width: 36, height: 36, borderRadius: Radius.full,
+        borderWidth: 1, borderColor: Colors.alert.critical + '40',
+        alignItems: 'center', justifyContent: 'center',
+        backgroundColor: Colors.alert.critical + '10',
+    },
+    navNextStep: {
+        flexDirection: 'row', alignItems: 'center',
+        marginHorizontal: Spacing.lg, marginTop: Spacing.sm,
+        paddingTop: Spacing.sm,
+        borderTopWidth: 1, borderColor: Colors.divider,
+    },
+    navNextLabel: { fontSize: 12, color: Colors.text.muted, marginRight: 4 },
+    navNextText: { fontSize: 12, color: Colors.text.secondary, flex: 1 },
 
     filterRow: {
         position: 'absolute', top: 142, left: Spacing.md, right: Spacing.md,
@@ -777,7 +855,7 @@ const styles = StyleSheet.create({
     filterChip: {
         flexDirection: 'row', alignItems: 'center', gap: 5,
         paddingVertical: 8, paddingHorizontal: 12,
-        borderRadius: Radius.sm, backgroundColor: Colors.overlay,
+        borderRadius: Radius.sm, backgroundColor: 'rgba(0,0,0,0.85)',
         borderWidth: 1, borderColor: Colors.border,
     },
     filterChipActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },

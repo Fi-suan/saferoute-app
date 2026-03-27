@@ -17,7 +17,13 @@ export const AppResetEvent = {
         _listener = fn;
     },
     trigger: async () => {
-        // Очищаем все ключи профиля и онбординга
+        // Firebase sign-out (lazy import to avoid circular dep at startup)
+        try {
+            const { firebaseLogout, isFirebaseConfigured } = await import('./firebase');
+            if (isFirebaseConfigured()) await firebaseLogout();
+        } catch { /* ignore if Firebase not configured */ }
+
+        // Clear local storage
         await AsyncStorage.multiRemove([
             STORAGE.ONBOARDING_DONE,
             STORAGE.USER_PROFILE,

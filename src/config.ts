@@ -36,6 +36,16 @@ export const Config = {
     /** Google Maps / Directions API key (set in .env) */
     GOOGLE_MAPS_API_KEY: extra.googleMapsApiKey ?? '',
 
+    /** Firebase config (set in .env) */
+    FIREBASE: {
+        apiKey:            extra.firebaseApiKey            ?? '',
+        authDomain:        extra.firebaseAuthDomain        ?? '',
+        projectId:         extra.firebaseProjectId         ?? '',
+        storageBucket:     extra.firebaseStorageBucket     ?? '',
+        messagingSenderId: extra.firebaseMessagingSenderId ?? '',
+        appId:             extra.firebaseAppId             ?? '',
+    },
+
     /** App version (for display) */
     VERSION: Constants.expoConfig?.version ?? '1.0.0',
 } as const;

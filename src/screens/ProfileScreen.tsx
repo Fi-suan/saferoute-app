@@ -29,6 +29,7 @@ import { AppResetEvent } from '../services/appReset';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE } from '../constants/storage';
 import { useT } from '../i18n';
+import { useNotificationLog } from '../hooks/useNotificationLog';
 
 const ROLE_CONFIG: Record<UserRole, { label: string; icon: string; color: string; desc: string }> = {
     driver: { label: 'Жүргізуші', icon: 'car', color: Colors.brand.primary, desc: 'Жол белгілерін алады' },
@@ -77,6 +78,7 @@ export default function ProfileScreen() {
     const { profile, loaded, updateProfile } = useUserProfile();
     const { settings, update: updateSettings } = useSettings();
     const { incidents, isOnline } = useIncidents('active');
+    const { log: notifLog, markAllRead, clearLog: clearNotifLog, unreadCount } = useNotificationLog();
     const [editModal, setEditModal] = useState(false);
     const [editName, setEditName] = useState('');
     const [editPhone, setEditPhone] = useState('');
@@ -380,6 +382,39 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
+                {/* ── NOTIFICATION LOG ─────────────────────────────── */}
+                {notifLog.length > 0 && (
+                    <>
+                        <View style={styles.logHeader}>
+                            <View style={styles.sectionHeaderWrap}>
+                                <View style={styles.sectionDot} />
+                                <Text style={styles.sectionHeader}>{t('profile_notifications_section')} {unreadCount > 0 ? `(${unreadCount})` : ''}</Text>
+                                <View style={styles.sectionLine} />
+                            </View>
+                            <TouchableOpacity onPress={() => { markAllRead(); Haptics.selectionAsync(); }} style={styles.logAction}>
+                                <Text style={styles.logActionText}>{t('notif_mark_read')}</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.card}>
+                            {notifLog.slice(0, 10).map((entry, idx) => (
+                                <View key={entry.id}>
+                                    {idx > 0 && <View style={styles.rowDivider} />}
+                                    <View style={[styles.notifRow, !entry.read && styles.notifRowUnread]}>
+                                        <View style={[styles.notifDot, !entry.read && styles.notifDotActive]} />
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.notifTitle}>{entry.title}</Text>
+                                            <Text style={styles.notifBody} numberOfLines={1}>{entry.body}</Text>
+                                        </View>
+                                        <Text style={styles.notifTime}>
+                                            {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </Text>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+                    </>
+                )}
+
                 {/* ── ҚОСЫМША ТУРАЛЫ ───────────────────────────────── */}
                 <SectionHeader title={t('profile_about_section')} />
                 <View style={styles.card}>
@@ -543,6 +578,18 @@ const styles = StyleSheet.create({
         borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border,
     },
     langToggleText: { fontSize: 11, fontWeight: '800', color: Colors.text.secondary },
+
+    // Notification log
+    logHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+    logAction: { paddingHorizontal: Spacing.sm, paddingVertical: 4 },
+    logActionText: { fontSize: 11, color: Colors.brand.primary, fontWeight: '600' },
+    notifRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: Spacing.sm, gap: 10 },
+    notifRowUnread: { backgroundColor: Colors.brand.primary + '06' },
+    notifDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.bg.tertiary },
+    notifDotActive: { backgroundColor: Colors.brand.primary },
+    notifTitle: { fontSize: 13, fontWeight: '600', color: Colors.text.primary },
+    notifBody: { fontSize: 12, color: Colors.text.secondary, marginTop: 1 },
+    notifTime: { fontSize: 11, color: Colors.text.muted },
 
     // Route card (референс: "Current Order")
     routeCard: {

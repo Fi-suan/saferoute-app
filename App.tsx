@@ -14,6 +14,9 @@ import { STORAGE } from './src/constants/storage';
 import { getDeviceId } from './src/services/deviceId';
 import { registerForPushNotifications } from './src/services/notifications';
 import { AppResetEvent } from './src/services/appReset';
+import { auth, isFirebaseConfigured } from './src/services/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import type { UserProfile } from './src/constants/livestock';
 
 // Держим splash пока читаем AsyncStorage
@@ -28,25 +31,67 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      try {
-        await getDeviceId();
-        const done = await AsyncStorage.getItem(STORAGE.ONBOARDING_DONE);
-        const profileRaw = await AsyncStorage.getItem(STORAGE.USER_PROFILE);
-        setOnboardingDone(done === 'true' && !!profileRaw);
+    let splashHidden = false;
+    const hideSplash = async () => {
+      if (!splashHidden) { splashHidden = true; await SplashScreen.hideAsync(); }
+    };
 
-        if (profileRaw) {
-          try {
-            const profile: UserProfile = JSON.parse(profileRaw);
-            registerForPushNotifications(profile.role).catch(() => { });
-          } catch { /* ignore parse error */ }
+    if (isFirebaseConfigured()) {
+      // Firebase auth state listener — source of truth when Firebase is configured
+      const unsub = onAuthStateChanged(auth, async (user) => {
+        try {
+          if (user) {
+            const db = getFirestore();
+            const snap = await getDoc(doc(db, 'users', user.uid));
+            if (snap.exists()) {
+              const profile = snap.data() as UserProfile;
+              await AsyncStorage.setItem(STORAGE.USER_PROFILE, JSON.stringify(profile));
+              await AsyncStorage.setItem(STORAGE.ONBOARDING_DONE, 'true');
+              setOnboardingDone(true);
+              registerForPushNotifications(profile.role).catch(() => { });
+            } else {
+              setOnboardingDone(false);
+            }
+          } else {
+            // No Firebase user — fall back to local AsyncStorage
+            const done = await AsyncStorage.getItem(STORAGE.ONBOARDING_DONE);
+            const profileRaw = await AsyncStorage.getItem(STORAGE.USER_PROFILE);
+            setOnboardingDone(done === 'true' && !!profileRaw);
+            if (profileRaw) {
+              try {
+                const profile: UserProfile = JSON.parse(profileRaw);
+                registerForPushNotifications(profile.role).catch(() => { });
+              } catch { /* ignore */ }
+            }
+          }
+        } catch {
+          setOnboardingDone(false);
+        } finally {
+          await hideSplash();
         }
-      } catch {
-        setOnboardingDone(false);
-      } finally {
-        await SplashScreen.hideAsync();
-      }
-    })();
+      });
+      return () => unsub();
+    } else {
+      // Firebase not configured — use local AsyncStorage only
+      (async () => {
+        try {
+          await getDeviceId();
+          const done = await AsyncStorage.getItem(STORAGE.ONBOARDING_DONE);
+          const profileRaw = await AsyncStorage.getItem(STORAGE.USER_PROFILE);
+          setOnboardingDone(done === 'true' && !!profileRaw);
+          if (profileRaw) {
+            try {
+              const profile: UserProfile = JSON.parse(profileRaw);
+              registerForPushNotifications(profile.role).catch(() => { });
+            } catch { /* ignore */ }
+          }
+        } catch {
+          setOnboardingDone(false);
+        } finally {
+          await hideSplash();
+        }
+      })();
+    }
   }, []);
 
   const handleOnboardingFinish = useCallback(async (data: OnboardingResult) => {

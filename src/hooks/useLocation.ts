@@ -45,6 +45,7 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 export function useLocation(
     incidents: Incident[],
     proximityRadiusKm: number = Config.DEFAULT_PROXIMITY_RADIUS_KM,
+    onNearbyAlert?: (incidentId: number, title: string, body: string) => void,
 ): UseLocationReturn {
     const [location, setLocation] = useState<GeoPoint | null>(null);
     const [hasPermission, setHasPermission] = useState(false);
@@ -112,6 +113,10 @@ export function useLocation(
             if (dist <= proximityRadiusKm && !alertedIds.current.has(inc.id)) {
                 alertedIds.current.add(inc.id);
                 setNearbyAlert(inc);
+                // Notify log callback
+                const title = '⚠️ Абай болыңыз!';
+                const body = inc.description || inc.incident_type;
+                onNearbyAlert?.(inc.id, title, body);
                 // Автоматически скрыть через 8 сек
                 setTimeout(() => setNearbyAlert(null), 8000);
             }

@@ -153,6 +153,8 @@ const translations = {
         stat_main_road: 'Негізгі жол',
         route_start: 'Бастапқы',
         route_end: 'Соңғы',
+        notif_mark_read: 'Барлығын оқылды',
+        notif_clear: 'Тазалау',
     },
 
     ru: {
@@ -292,6 +294,8 @@ const translations = {
         stat_main_road: 'Главная дорога',
         route_start: 'Начало',
         route_end: 'Конец',
+        notif_mark_read: 'Отметить прочитанными',
+        notif_clear: 'Очистить',
     },
 } as const;
 

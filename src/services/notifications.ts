@@ -102,20 +102,23 @@ export async function registerForPushNotifications(role: string = 'driver'): Pro
 /**
  * Локальное уведомление о proximity-инциденте.
  * Работает В EXPO GO. Показывается немедленно.
+ * Уважает настройки sound/vibration из AsyncStorage.
  */
 export async function scheduleProximityNotification(params: {
     title: string;
     body: string;
     incidentId: number;
+    soundEnabled?: boolean;
 }): Promise<void> {
     if (!_notificationsSupported) return;
+    const sound = params.soundEnabled !== false;
     try {
         await Notifications.scheduleNotificationAsync({
             content: {
                 title: params.title,
                 body: params.body,
                 data: { incidentId: params.incidentId },
-                sound: 'default',
+                sound: sound ? 'default' : undefined,
             },
             trigger: null, // Немедленно
         });
