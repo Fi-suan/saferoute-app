@@ -390,7 +390,7 @@ function RegForm({ ui, name, setName, phone, setPhone, email, setEmail, password
             <Text style={[styles.slideTitle, { color: accent }]}>{ui.register}</Text>
 
             <Field label={ui.nameLabel} value={name} onChange={v => { setName(v); clear('name'); }}
-                placeholder={ui.namePh} error={errors.name} autoCapitalize="words" />
+                error={errors.name} autoCapitalize="words" />
             <Field label={ui.phoneLabel} value={phone} onChange={v => { setPhone(v); clear('phone'); }}
                 placeholder={ui.phonePh} keyboardType="phone-pad" error={errors.phone} />
 

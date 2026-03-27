@@ -31,9 +31,9 @@ import { STORAGE } from '../constants/storage';
 import { useT } from '../i18n';
 import { useNotificationLog } from '../hooks/useNotificationLog';
 
-const ROLE_CONFIG: Record<UserRole, { label: string; icon: string; color: string; desc: string }> = {
-    driver: { label: 'Жүргізуші', icon: 'car', color: Colors.brand.primary, desc: 'Жол белгілерін алады' },
-    livestock_owner: { label: 'Мал иесі', icon: 'paw', color: Colors.alert.high, desc: 'Малды қадағалайды' },
+const ROLE_ICON: Record<UserRole, { icon: string; color: string }> = {
+    driver: { icon: 'car', color: Colors.brand.primary },
+    livestock_owner: { icon: 'paw', color: Colors.alert.high },
 };
 
 
@@ -80,6 +80,7 @@ export default function ProfileScreen() {
     const { incidents, isOnline } = useIncidents('active');
     const { log: notifLog, markAllRead, clearLog: clearNotifLog, unreadCount } = useNotificationLog();
     const [editModal, setEditModal] = useState(false);
+    const [notifModal, setNotifModal] = useState(false);
     const [editName, setEditName] = useState('');
     const [editPhone, setEditPhone] = useState('');
     const [activeRouteId, setActiveRouteId] = useState<string>('a17');
@@ -137,7 +138,9 @@ export default function ProfileScreen() {
 
     if (!loaded) return null;
 
-    const roleCfg = ROLE_CONFIG[profile.role];
+    const roleIcon = ROLE_ICON[profile.role];
+    const roleLabel = profile.role === 'driver' ? t('role_driver') : t('role_owner');
+    const roleDesc = profile.role === 'driver' ? t('role_driver_desc') : t('role_owner_desc');
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -169,30 +172,25 @@ export default function ProfileScreen() {
 
                     <View style={styles.headerRight}>
                         <View style={[styles.onlineDot, { backgroundColor: isOnline ? Colors.brand.primary : Colors.alert.medium }]} />
-                        <TouchableOpacity
-                            onPress={() => showDialog({
-                                title: t('profile_notifications_section'),
-                                message: t('profile_notif_status')
-                                    .replace('%sound%', settings.soundEnabled ? t('notif_on') : t('notif_off'))
-                                    .replace('%vibration%', settings.vibrationEnabled ? t('notif_on') : t('notif_off')),
-                                icon: 'notifications',
-                                iconColor: Colors.brand.primary,
-                                buttons: [{ text: t('cancel'), style: 'cancel' }],
-                            })}
-                        >
+                        <TouchableOpacity onPress={() => setNotifModal(true)}>
                             <Ionicons name="notifications-outline" size={22} color={Colors.text.secondary} />
+                            {unreadCount > 0 && (
+                                <View style={styles.bellBadge}>
+                                    <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                                </View>
+                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 {/* ── ROLE BADGE (Nothing-style pill) — только отображение ── */}
-                <View style={[styles.roleBadge, { borderColor: roleCfg.color + '40' }]}>
-                    <View style={[styles.roleIcon, { backgroundColor: roleCfg.color + '18' }]}>
-                        <Ionicons name={roleCfg.icon as any} size={14} color={roleCfg.color} />
+                <View style={[styles.roleBadge, { borderColor: roleIcon.color + '40' }]}>
+                    <View style={[styles.roleIconBox, { backgroundColor: roleIcon.color + '18' }]}>
+                        <Ionicons name={roleIcon.icon as any} size={14} color={roleIcon.color} />
                     </View>
                     <View>
-                        <Text style={[styles.roleLabel, { color: roleCfg.color }]}>{roleCfg.label}</Text>
-                        <Text style={styles.roleDesc}>{roleCfg.desc}</Text>
+                        <Text style={[styles.roleLabel, { color: roleIcon.color }]}>{roleLabel}</Text>
+                        <Text style={styles.roleDesc}>{roleDesc}</Text>
                     </View>
                     <View style={[styles.roleLockIcon, { marginLeft: 'auto' }]}>
                         <Ionicons name="lock-closed" size={12} color={Colors.text.muted} />
@@ -382,39 +380,6 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* ── NOTIFICATION LOG ─────────────────────────────── */}
-                {notifLog.length > 0 && (
-                    <>
-                        <View style={styles.logHeader}>
-                            <View style={styles.sectionHeaderWrap}>
-                                <View style={styles.sectionDot} />
-                                <Text style={styles.sectionHeader}>{t('profile_notifications_section')} {unreadCount > 0 ? `(${unreadCount})` : ''}</Text>
-                                <View style={styles.sectionLine} />
-                            </View>
-                            <TouchableOpacity onPress={() => { markAllRead(); Haptics.selectionAsync(); }} style={styles.logAction}>
-                                <Text style={styles.logActionText}>{t('notif_mark_read')}</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.card}>
-                            {notifLog.slice(0, 10).map((entry, idx) => (
-                                <View key={entry.id}>
-                                    {idx > 0 && <View style={styles.rowDivider} />}
-                                    <View style={[styles.notifRow, !entry.read && styles.notifRowUnread]}>
-                                        <View style={[styles.notifDot, !entry.read && styles.notifDotActive]} />
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={styles.notifTitle}>{entry.title}</Text>
-                                            <Text style={styles.notifBody} numberOfLines={1}>{entry.body}</Text>
-                                        </View>
-                                        <Text style={styles.notifTime}>
-                                            {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </Text>
-                                    </View>
-                                </View>
-                            ))}
-                        </View>
-                    </>
-                )}
-
                 {/* ── ҚОСЫМША ТУРАЛЫ ───────────────────────────────── */}
                 <SectionHeader title={t('profile_about_section')} />
                 <View style={styles.card}>
@@ -482,6 +447,54 @@ export default function ProfileScreen() {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* ── NOTIFICATION HISTORY MODAL ────────────────────── */}
+            <Modal visible={notifModal} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.notifModalCard}>
+                        <View style={styles.notifModalHeader}>
+                            <Text style={styles.notifModalTitle}>{t('notif_history')}</Text>
+                            {notifLog.length > 0 && (
+                                <TouchableOpacity onPress={() => { markAllRead(); Haptics.selectionAsync(); }}>
+                                    <Text style={styles.logActionText}>{t('notif_mark_read')}</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        {notifLog.length === 0 ? (
+                            <View style={styles.notifEmpty}>
+                                <Ionicons name="notifications-off-outline" size={40} color={Colors.text.muted} />
+                                <Text style={styles.notifEmptyText}>{t('notif_empty')}</Text>
+                            </View>
+                        ) : (
+                            <ScrollView style={styles.notifModalScroll} showsVerticalScrollIndicator={false}>
+                                {notifLog.slice(0, 30).map((entry, idx) => (
+                                    <View key={entry.id}>
+                                        {idx > 0 && <View style={styles.rowDivider} />}
+                                        <View style={[styles.notifRow, !entry.read && styles.notifRowUnread]}>
+                                            <View style={[styles.notifDot, !entry.read && styles.notifDotActive]} />
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={styles.notifTitle}>{entry.title}</Text>
+                                                <Text style={styles.notifBody} numberOfLines={2}>{entry.body}</Text>
+                                            </View>
+                                            <Text style={styles.notifTime}>
+                                                {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                ))}
+                            </ScrollView>
+                        )}
+
+                        <TouchableOpacity
+                            style={styles.notifCloseBtn}
+                            onPress={() => setNotifModal(false)}
+                        >
+                            <Text style={styles.notifCloseBtnText}>{t('notif_close')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
 
             {/* ── EDIT PROFILE MODAL ────────────────────────────── */}
             <Modal visible={editModal} transparent animationType="slide">
@@ -568,7 +581,7 @@ const styles = StyleSheet.create({
         padding: Spacing.sm, marginBottom: Spacing.md,
         borderWidth: 1,
     },
-    roleIcon: { width: 32, height: 32, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
+    roleIconBox: { width: 32, height: 32, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
     roleLabel: { fontSize: 14, fontWeight: '700' },
     roleDesc: { fontSize: 11, color: Colors.text.muted, marginTop: 1 },
     roleLockIcon: { width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
@@ -579,9 +592,38 @@ const styles = StyleSheet.create({
     },
     langToggleText: { fontSize: 11, fontWeight: '800', color: Colors.text.secondary },
 
-    // Notification log
-    logHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-    logAction: { paddingHorizontal: Spacing.sm, paddingVertical: 4 },
+    // Bell badge
+    bellBadge: {
+        position: 'absolute', top: -4, right: -6,
+        minWidth: 16, height: 16, borderRadius: 8,
+        backgroundColor: Colors.alert.critical,
+        alignItems: 'center', justifyContent: 'center',
+        paddingHorizontal: 3, borderWidth: 1.5, borderColor: Colors.bg.primary,
+    },
+    bellBadgeText: { fontSize: 9, fontWeight: '800', color: Colors.white },
+
+    // Notification modal
+    notifModalCard: {
+        backgroundColor: Colors.bg.secondary, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
+        paddingTop: Spacing.lg, paddingBottom: 40, borderTopWidth: 1, borderTopColor: Colors.border,
+        maxHeight: '80%',
+    },
+    notifModalHeader: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: Spacing.lg, marginBottom: Spacing.md,
+    },
+    notifModalTitle: { fontSize: 14, fontWeight: '800', color: Colors.text.muted, letterSpacing: 1.2 },
+    notifModalScroll: { paddingHorizontal: Spacing.sm },
+    notifEmpty: { alignItems: 'center', paddingVertical: 40, gap: 10 },
+    notifEmptyText: { fontSize: 14, color: Colors.text.muted },
+    notifCloseBtn: {
+        marginHorizontal: Spacing.lg, marginTop: Spacing.lg,
+        backgroundColor: Colors.brand.primary, borderRadius: Radius.lg,
+        paddingVertical: 14, alignItems: 'center',
+    },
+    notifCloseBtnText: { fontSize: 15, fontWeight: '700', color: Colors.bg.primary },
+
+    // Notification log rows
     logActionText: { fontSize: 11, color: Colors.brand.primary, fontWeight: '600' },
     notifRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: Spacing.sm, gap: 10 },
     notifRowUnread: { backgroundColor: Colors.brand.primary + '06' },

@@ -97,22 +97,20 @@ const ROUTE_WAYPOINTS: Record<string, { latitude: number; longitude: number }[]>
         { latitude: 52.287, longitude: 76.967 },
     ],
     a1: [
-        // Астана → Алматы (A-1, ~1256 км)
+        // Астана → Караганда → Балхаш → Алматы (A-1, ~1256 км)
         { latitude: 51.165, longitude: 71.427 },
-        { latitude: 50.950, longitude: 71.620 },
-        { latitude: 50.620, longitude: 71.980 },
-        { latitude: 49.980, longitude: 72.870 },
-        { latitude: 49.380, longitude: 73.310 },
-        { latitude: 48.600, longitude: 73.880 },
-        { latitude: 47.400, longitude: 74.150 },
-        { latitude: 46.850, longitude: 74.990 },
-        { latitude: 45.800, longitude: 74.650 },
-        { latitude: 44.700, longitude: 74.100 },
-        { latitude: 43.900, longitude: 73.870 },
-        { latitude: 43.590, longitude: 73.770 },
-        { latitude: 43.420, longitude: 74.180 },
-        { latitude: 43.350, longitude: 75.100 },
-        { latitude: 43.240, longitude: 76.910 },
+        { latitude: 50.950, longitude: 71.700 },
+        { latitude: 50.630, longitude: 72.960 },  // Теміртау
+        { latitude: 49.800, longitude: 73.100 },  // Қарағанды
+        { latitude: 49.100, longitude: 73.200 },
+        { latitude: 48.300, longitude: 73.500 },
+        { latitude: 47.600, longitude: 74.000 },
+        { latitude: 46.850, longitude: 75.000 },  // Балхаш
+        { latitude: 45.700, longitude: 75.300 },
+        { latitude: 44.850, longitude: 76.000 },
+        { latitude: 44.200, longitude: 76.500 },
+        { latitude: 43.600, longitude: 76.800 },
+        { latitude: 43.240, longitude: 76.910 },  // Алматы
     ],
     a21: [
         // Екібастұз → Семей (A-21, ~330 км)
@@ -291,9 +289,15 @@ export default function MapScreen() {
         });
     };
 
+    /** i18n-aware livestock label */
+    const livestockLabel = (type: LivestockType) => {
+        const key = `livestock_${type}` as any;
+        return t(key) || LIVESTOCK_META[type].label;
+    };
+
     const handleActivateManualMode = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        activateManualMode(selectedType, livestockCount, `${LIVESTOCK_META[selectedType].label} табуны`);
+        activateManualMode(selectedType, livestockCount, `${livestockLabel(selectedType)} табуны`);
         setShowOwnerPanel(false);
     };
 
@@ -694,7 +698,7 @@ export default function MapScreen() {
                                 <View style={styles.ownerActiveCard}>
                                     <Text style={styles.ownerActiveEmoji}>{LIVESTOCK_META[selectedType].emoji}</Text>
                                     <View>
-                                        <Text style={styles.ownerActiveType}>{LIVESTOCK_META[selectedType].label}</Text>
+                                        <Text style={styles.ownerActiveType}>{livestockLabel(selectedType)}</Text>
                                         <Text style={styles.ownerActiveCount}>{livestockCount} {t('heads_unit')}</Text>
                                     </View>
                                 </View>
@@ -718,7 +722,7 @@ export default function MapScreen() {
                                         >
                                             <Text style={styles.typeChipEmoji}>{LIVESTOCK_META[type].emoji}</Text>
                                             <Text style={[styles.typeChipLabel, selectedType === type && styles.typeChipLabelActive]}>
-                                                {LIVESTOCK_META[type].label}
+                                                {livestockLabel(type)}
                                             </Text>
                                         </TouchableOpacity>
                                     ))}

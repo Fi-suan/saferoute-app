@@ -207,9 +207,9 @@ const styles = StyleSheet.create({
         borderRadius: Radius.lg,
     },
     btnDefault: { backgroundColor: Colors.brand.primary },
-    btnCancel: { backgroundColor: Colors.bg.tertiary, borderWidth: 1, borderColor: Colors.border },
+    btnCancel: { backgroundColor: Colors.bg.tertiary, borderWidth: 1, borderColor: Colors.borderStrong },
     btnDestructive: { backgroundColor: Colors.alert.critical },
     btnTextDefault: { fontSize: 14, fontWeight: '700', color: Colors.bg.primary },
-    btnTextCancel: { fontSize: 14, fontWeight: '600', color: Colors.text.secondary },
+    btnTextCancel: { fontSize: 14, fontWeight: '600', color: Colors.text.primary },
     btnTextDestructive: { fontSize: 14, fontWeight: '700', color: Colors.white },
 });

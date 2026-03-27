@@ -56,14 +56,20 @@ export const STATIC_WAYPOINTS: Record<string, LatLng[]> = {
         { latitude: 52.287, longitude: 76.967 },
     ],
     a1: [
+        // Астана → Караганда → Балхаш → Алматы (A-1, ~1256 км)
         { latitude: 51.180, longitude: 71.446 },
-        { latitude: 50.400, longitude: 72.200 },
-        { latitude: 49.000, longitude: 73.100 },
-        { latitude: 47.500, longitude: 74.000 },
-        { latitude: 46.000, longitude: 74.500 },
-        { latitude: 44.800, longitude: 75.600 },
-        { latitude: 43.650, longitude: 76.300 },
-        { latitude: 43.240, longitude: 76.910 },
+        { latitude: 50.950, longitude: 71.700 },
+        { latitude: 50.630, longitude: 72.960 },  // Теміртау
+        { latitude: 49.800, longitude: 73.100 },  // Қарағанды
+        { latitude: 49.100, longitude: 73.200 },
+        { latitude: 48.300, longitude: 73.500 },
+        { latitude: 47.600, longitude: 74.000 },
+        { latitude: 46.850, longitude: 75.000 },  // Балхаш
+        { latitude: 45.700, longitude: 75.300 },
+        { latitude: 44.850, longitude: 76.000 },
+        { latitude: 44.200, longitude: 76.500 },
+        { latitude: 43.600, longitude: 76.800 },
+        { latitude: 43.240, longitude: 76.910 },  // Алматы
     ],
     a21: [
         { latitude: 51.180, longitude: 71.446 },

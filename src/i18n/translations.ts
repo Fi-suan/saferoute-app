@@ -155,6 +155,16 @@ const translations = {
         route_end: 'Соңғы',
         notif_mark_read: 'Барлығын оқылды',
         notif_clear: 'Тазалау',
+        notif_history: 'ХАБАРЛАНДЫРУ ТАРИХЫ',
+        notif_empty: 'Хабарландырулар жоқ',
+        notif_close: 'Жабу',
+
+        // ─── Мал түрлері ──────────────────────────────────────
+        livestock_horse: 'Жылқы',
+        livestock_cow: 'Сиыр',
+        livestock_camel: 'Түйе',
+        livestock_sheep: 'Қой',
+        livestock_goat: 'Ешкі',
     },
 
     ru: {
@@ -296,6 +306,16 @@ const translations = {
         route_end: 'Конец',
         notif_mark_read: 'Отметить прочитанными',
         notif_clear: 'Очистить',
+        notif_history: 'ИСТОРИЯ УВЕДОМЛЕНИЙ',
+        notif_empty: 'Нет уведомлений',
+        notif_close: 'Закрыть',
+
+        // ─── Типы скота ───────────────────────────────────────
+        livestock_horse: 'Лошадь',
+        livestock_cow: 'Корова',
+        livestock_camel: 'Верблюд',
+        livestock_sheep: 'Овца',
+        livestock_goat: 'Коза',
     },
 } as const;
 
