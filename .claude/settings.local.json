@@ -9,7 +9,8 @@
       "Bash(npx tsc:*)",
       "Bash(npx expo:*)",
       "Bash(node -e \"const a = require\\(''''/c/Users/zhant/.gemini/antigravity/scratch/saferoute-app/node_modules/firebase/auth/dist/index.cjs.js''''\\); const keys = Object.keys\\(a\\).filter\\(k => k.toLowerCase\\(\\).includes\\(''''native''''\\) || k.toLowerCase\\(\\).includes\\(''''persist''''\\)\\); console.log\\(keys\\);\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(find /c/Users/zhant/.gemini/antigravity/scratch/saferoute-app/src -type f -name *.ts -o -name *.js)"
     ]
   }
 }

@@ -17,11 +17,11 @@ export const AppResetEvent = {
         _listener = fn;
     },
     trigger: async () => {
-        // Firebase sign-out (lazy import to avoid circular dep at startup)
+        // Clear auth token
         try {
-            const { firebaseLogout, isFirebaseConfigured } = await import('./firebase');
-            if (isFirebaseConfigured()) await firebaseLogout();
-        } catch { /* ignore if Firebase not configured */ }
+            const { backendLogout } = await import('./auth');
+            await backendLogout();
+        } catch { /* ignore */ }
 
         // Clear local storage
         await AsyncStorage.multiRemove([

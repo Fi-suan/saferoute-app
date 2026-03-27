@@ -1,14 +1,3 @@
-/**
- * OnboardingScreen — SafeRoute / Sapa Jol
- *
- * Modes:
- *  'choice'   — Welcome screen: "Войти" / "Зарегистрироваться"
- *  'login'    — Firebase email + password sign-in
- *  'slides'   — Feature walkthrough (4 info slides + registration form)
- *
- * Design: Nothing Phone dark frosted glass aesthetic
- * Icons: custom SVG via OnboardingIllustration
- */
 import React, { useRef, useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, Dimensions, TouchableOpacity,
@@ -20,7 +9,7 @@ import { BlurView } from 'expo-blur';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import type { UserRole } from '../constants/livestock';
 import OnboardingIllustration from '../components/OnboardingIllustration';
-import { firebaseLogin, firebaseRegister, isFirebaseConfigured } from '../services/firebase';
+import { backendLogin, backendRegister } from '../services/auth';
 
 const { width, height } = Dimensions.get('window');
 
@@ -50,53 +39,51 @@ interface Slide {
 }
 
 const SLIDES_KK: Slide[] = [
-    { illust: 'shield',    title: 'Sapa Jol',             subtitle: 'Жол қауіпсіздігі жүйесі',       desc: 'Қазақстан жолдарындағы жануарлар мен жүргізушілерді қорғайды.', accent: Colors.brand.primary },
-    { illust: 'marker',    title: 'Белгі қою',             subtitle: 'нақты уақыттағы карта',          desc: 'Жүргізушілер жолдағы киіктерді, малдарды, шұңқырларды белгілейді. AI фотоны тексереді.', accent: Colors.alert.medium },
-    { illust: 'bell',      title: 'Ақылды ескерту',        subtitle: '2 км радиуста',                  desc: 'Қауіпті аймаққа жақындасаңыз — қосымша алдын ала ескертеді.', accent: Colors.alert.high },
-    { illust: 'community', title: 'Ұжымдық мониторинг',   subtitle: 'бірге қауіпсіз',                 desc: 'Белгіні растаңыз. 3 растаудан кейін белгі автоматты жойылады.', accent: Colors.alert.info },
-    { illust: 'profile',   title: 'Тіркелу',               subtitle: 'Деректеріңізді енгізіңіз',       desc: '', accent: Colors.brand.primary, isReg: true },
+    { illust: 'shield', title: 'Sapa Jol', subtitle: 'Жол қауіпсіздігі жүйесі', desc: 'Қазақстан жолдарындағы жануарлар мен жүргізушілерді қорғайды.', accent: Colors.brand.primary },
+    { illust: 'marker', title: 'Белгі қою', subtitle: 'нақты уақыттағы карта', desc: 'Жүргізушілер жолдағы киіктерді, малдарды, шұңқырларды белгілейді. AI фотоны тексереді.', accent: Colors.alert.medium },
+    { illust: 'bell', title: 'Ақылды ескерту', subtitle: '2 км радиуста', desc: 'Қауіпті аймаққа жақындасаңыз — қосымша алдын ала ескертеді.', accent: Colors.alert.high },
+    { illust: 'community', title: 'Ұжымдық мониторинг', subtitle: 'бірге қауіпсіз', desc: 'Белгіні растаңыз. 3 растаудан кейін белгі автоматты жойылады.', accent: Colors.alert.info },
+    { illust: 'profile', title: 'Тіркелу', subtitle: 'Деректеріңізді енгізіңіз', desc: '', accent: Colors.brand.primary, isReg: true },
 ];
 const SLIDES_RU: Slide[] = [
-    { illust: 'shield',    title: 'Sapa Jol',             subtitle: 'Система безопасности дорог',     desc: 'Защищает животных и водителей на дорогах Казахстана.', accent: Colors.brand.primary },
-    { illust: 'marker',    title: 'Метки',                 subtitle: 'карта в реальном времени',       desc: 'Водители отмечают животных, скот, ямы. AI проверяет каждое фото.', accent: Colors.alert.medium },
-    { illust: 'bell',      title: 'Умные оповещения',      subtitle: 'в радиусе 2 км',                 desc: 'При приближении к опасной зоне — приложение предупредит заранее.', accent: Colors.alert.high },
-    { illust: 'community', title: 'Коллективный мониторинг', subtitle: 'вместе безопаснее',           desc: 'Подтвердите метку. После 3 подтверждений метка автоматически удаляется.', accent: Colors.alert.info },
-    { illust: 'profile',   title: 'Регистрация',           subtitle: 'Введите ваши данные',            desc: '', accent: Colors.brand.primary, isReg: true },
+    { illust: 'shield', title: 'Sapa Jol', subtitle: 'Система безопасности дорог', desc: 'Защищает животных и водителей на дорогах Казахстана.', accent: Colors.brand.primary },
+    { illust: 'marker', title: 'Метки', subtitle: 'карта в реальном времени', desc: 'Водители отмечают животных, скот, ямы. AI проверяет каждое фото.', accent: Colors.alert.medium },
+    { illust: 'bell', title: 'Умные оповещения', subtitle: 'в радиусе 2 км', desc: 'При приближении к опасной зоне — приложение предупредит заранее.', accent: Colors.alert.high },
+    { illust: 'community', title: 'Коллективный мониторинг', subtitle: 'вместе безопаснее', desc: 'Подтвердите метку. После 3 подтверждений метка автоматически удаляется.', accent: Colors.alert.info },
+    { illust: 'profile', title: 'Регистрация', subtitle: 'Введите ваши данные', desc: '', accent: Colors.brand.primary, isReg: true },
 ];
 
 type Lang = 'kk' | 'ru';
 const L = {
     kk: {
         welcome: 'Sapa Jol', tagline: 'Жол қауіпсіздігі', login: 'Кіру', register: 'Тіркелу',
-        nameLabel: 'АТЫ-ЖӨНІ', namePh: 'Асқар Жанасов', nameErr: 'Мин. 2 таңба',
+        nameLabel: 'АТЫ-ЖӨНІ', nameErr: 'Мин. 2 таңба',
         phoneLabel: 'ТЕЛЕФОН', phonePh: '+7 700 000 0000', phoneErr: 'Дұрыс формат: +7XXXXXXXXXX',
-        emailLabel: 'EMAIL', emailPh: 'example@email.com', emailErr: 'Жарамды email енгізіңіз',
-        passLabel: 'ҚҰПИЯ СӨЗ', passPh: '••••••••', passErr: 'Мин. 6 таңба',
+        emailLabel: 'EMAIL (МІНДЕТТІ ЕМЕС)', emailPh: 'example@email.com', emailErr: 'Жарамды email енгізіңіз',
+        passLabel: 'ҚҰПИЯ СӨЗ', passPh: '••••••••', passErr: 'Мін. 6 таңба',
         roleLabel: 'РӨЛІҢІЗДІ ТАҢДАҢЫЗ', roleErr: 'Рөл таңдаңыз',
         driver: 'Жүргізуші', driverDesc: 'Жол ескертулерін алады',
         owner: 'Мал иесі', ownerDesc: 'Малды тіркеу және қорғау',
         next: 'Келесі', back: 'Артқа', start: 'Бастау', skip: 'Өткізу',
         loginBtn: 'Кіру', loginEmail: 'EMAIL', loginPass: 'ҚҰПИЯ СӨЗ',
-        loginErr: 'Email немесе пароль қате', loginNotConfig: 'Firebase баптанбаған',
+        loginErr: 'Email немесе пароль қате', loginNotReady: 'Авторизация серверде әзірленуде',
         toRegister: 'Аккаунт жоқ па? → Тіркелу',
         langToggle: 'RU',
-        emailRequired: isFirebaseConfigured() ? '' : '(Firebase баптанбаған — міндетті емес)',
     },
     ru: {
         welcome: 'Sapa Jol', tagline: 'Безопасность на дороге', login: 'Войти', register: 'Регистрация',
-        nameLabel: 'ИМЯ', namePh: 'Алексей Иванов', nameErr: 'Мин. 2 символа',
+        nameLabel: 'ИМЯ', nameErr: 'Мин. 2 символа',
         phoneLabel: 'ТЕЛЕФОН', phonePh: '+7 700 000 0000', phoneErr: 'Формат: +7XXXXXXXXXX',
-        emailLabel: 'EMAIL', emailPh: 'example@email.com', emailErr: 'Введите корректный email',
+        emailLabel: 'EMAIL (НЕОБЯЗАТЕЛЬНО)', emailPh: 'example@email.com', emailErr: 'Введите корректный email',
         passLabel: 'ПАРОЛЬ', passPh: '••••••••', passErr: 'Мин. 6 символов',
         roleLabel: 'ВЫБЕРИТЕ РОЛЬ', roleErr: 'Выберите роль',
         driver: 'Водитель', driverDesc: 'Получает дорожные предупреждения',
         owner: 'Владелец скота', ownerDesc: 'Регистрация и защита скота',
         next: 'Далее', back: 'Назад', start: 'Начать', skip: 'Пропустить',
         loginBtn: 'Войти', loginEmail: 'EMAIL', loginPass: 'ПАРОЛЬ',
-        loginErr: 'Неверный email или пароль', loginNotConfig: 'Firebase не настроен',
+        loginErr: 'Неверный email или пароль', loginNotReady: 'Авторизация на сервере в разработке',
         toRegister: 'Нет аккаунта? → Регистрация',
         langToggle: 'ҚАЗ',
-        emailRequired: isFirebaseConfigured() ? '' : '(Firebase не настроен — необязательно)',
     },
 };
 
@@ -124,7 +111,6 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
 
     const slides = lang === 'kk' ? SLIDES_KK : SLIDES_RU;
     const ui = L[lang];
-    const fbEnabled = isFirebaseConfigured();
 
     const goToSlide = (idx: number) => {
         scrollRef.current?.scrollTo({ x: idx * width, animated: true });
@@ -140,8 +126,8 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
         const e: Record<string, string> = {};
         if (name.trim().length < 2) e.name = ui.nameErr;
         if (!isValidPhone(phone)) e.phone = ui.phoneErr;
-        if (fbEnabled && !isValidEmail(email)) e.email = ui.emailErr;
-        if (fbEnabled && password.length < 6) e.pass = ui.passErr;
+        if (email.trim() && !isValidEmail(email)) e.email = ui.emailErr;
+        if (email.trim() && password.length < 6) e.pass = ui.passErr;
         if (!role) e.role = ui.roleErr;
         setErrors(e);
         return Object.keys(e).length === 0;
@@ -160,8 +146,15 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
                 totalReports: 0,
                 avatarInitials: name.trim().split(' ').map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || 'АА',
             };
-            if (fbEnabled && email && password) {
-                await firebaseRegister(email.trim().toLowerCase(), password, profile);
+            // Try to register on backend (fire-and-forget)
+            if (email.trim() && password) {
+                backendRegister({
+                    name: profile.name,
+                    phone: profile.phone,
+                    email: email.trim().toLowerCase(),
+                    password,
+                    role: role!,
+                }).catch(() => { });
             }
             onFinish({ name: profile.name, phone: profile.phone, role: role!, email: email || undefined });
         } catch (err: any) {
@@ -169,11 +162,10 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
         } finally {
             setLoading(false);
         }
-    }, [name, phone, email, password, role, fbEnabled, onFinish]);
+    }, [name, phone, email, password, role, onFinish]);
 
     // ── Handle login ─────────────────────────────────────────────────
     const handleLogin = useCallback(async () => {
-        if (!fbEnabled) { setErrors({ login: ui.loginNotConfig }); return; }
         const e: Record<string, string> = {};
         if (!isValidEmail(lEmail)) e.lemail = ui.emailErr;
         if (lPass.length < 6) e.lpass = ui.passErr;
@@ -181,14 +173,16 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
         if (Object.keys(e).length) return;
         setLoading(true);
         try {
-            const profile = await firebaseLogin(lEmail.trim().toLowerCase(), lPass);
+            const profile = await backendLogin(lEmail.trim().toLowerCase(), lPass);
             onFinish({ name: profile.name, phone: profile.phone, role: profile.role });
-        } catch {
-            setErrors({ login: ui.loginErr });
+        } catch (err: any) {
+            // 404 = endpoint not found, backend auth not ready yet
+            const is404 = err?.response?.status === 404 || err?.message === 'no_profile';
+            setErrors({ login: is404 ? ui.loginNotReady : ui.loginErr });
         } finally {
             setLoading(false);
         }
-    }, [lEmail, lPass, fbEnabled, onFinish, ui]);
+    }, [lEmail, lPass, onFinish, ui]);
 
     const handleNext = () => {
         if (slideIdx < slides.length - 1) goToSlide(slideIdx + 1);
@@ -242,7 +236,7 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
                         <Text style={styles.loginTitle}>{ui.loginBtn}</Text>
 
                         <Field
-                            label={ui.loginEmail} value={lEmail} onChange={v => { setLEmail(v); setErrors({} ); }}
+                            label={ui.loginEmail} value={lEmail} onChange={v => { setLEmail(v); setErrors({}); }}
                             placeholder={ui.emailPh} keyboardType="email-address" error={errors.lemail}
                             autoCapitalize="none"
                         />
@@ -288,7 +282,7 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
                         <View key={i} style={[styles.slide, { width }]}>
                             {s.isReg ? (
                                 <RegForm
-                                    ui={ui} fbEnabled={fbEnabled}
+                                    ui={ui}
                                     name={name} setName={setName}
                                     phone={phone} setPhone={setPhone}
                                     email={email} setEmail={setEmail}
@@ -379,7 +373,7 @@ function InfoSlide({ slide }: { slide: Slide }) {
 }
 
 interface RegFormProps {
-    ui: typeof L['kk']; fbEnabled: boolean;
+    ui: typeof L['kk'];
     name: string; setName: (v: string) => void;
     phone: string; setPhone: (v: string) => void;
     email: string; setEmail: (v: string) => void;
@@ -389,7 +383,7 @@ interface RegFormProps {
     accent: string; loading: boolean;
 }
 
-function RegForm({ ui, fbEnabled, name, setName, phone, setPhone, email, setEmail, password, setPassword, role, setRole, errors, setErrors, accent, loading }: RegFormProps) {
+function RegForm({ ui, name, setName, phone, setPhone, email, setEmail, password, setPassword, role, setRole, errors, setErrors, accent, loading }: RegFormProps) {
     const clear = (k: string) => setErrors({ ...errors, [k]: '' });
     return (
         <ScrollView contentContainerStyle={styles.regContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -400,25 +394,23 @@ function RegForm({ ui, fbEnabled, name, setName, phone, setPhone, email, setEmai
             <Field label={ui.phoneLabel} value={phone} onChange={v => { setPhone(v); clear('phone'); }}
                 placeholder={ui.phonePh} keyboardType="phone-pad" error={errors.phone} />
 
-            {/* Email + password — only shown when Firebase is configured */}
-            {fbEnabled && (
-                <>
-                    <Field label={ui.emailLabel} value={email} onChange={v => { setEmail(v); clear('email'); }}
-                        placeholder={ui.emailPh} keyboardType="email-address" error={errors.email} autoCapitalize="none" />
-                    <Field label={ui.passLabel} value={password} onChange={v => { setPassword(v); clear('pass'); }}
-                        placeholder={ui.passPh} secureTextEntry error={errors.pass} />
-                </>
+            {/* Email + password — optional, for future backend auth */}
+            <Field label={ui.emailLabel} value={email} onChange={v => { setEmail(v); clear('email'); }}
+                placeholder={ui.emailPh} keyboardType="email-address" error={errors.email} autoCapitalize="none" />
+            {email.trim().length > 0 && (
+                <Field label={ui.passLabel} value={password} onChange={v => { setPassword(v); clear('pass'); }}
+                    placeholder={ui.passPh} secureTextEntry error={errors.pass} />
             )}
 
             {/* Role */}
             <Text style={[styles.fieldLabel, errors.role ? { color: Colors.alert.critical } : null]}>{ui.roleLabel}</Text>
             {errors.role && <Text style={styles.fieldError}>{errors.role}</Text>}
             <RoleCard
-                icon="🚗" title={ui.driver} desc={ui.driverDesc}
+                title={ui.driver} desc={ui.driverDesc}
                 selected={role === 'driver'} onPress={() => setRole('driver')}
             />
             <RoleCard
-                icon="🐄" title={ui.owner} desc={ui.ownerDesc}
+                title={ui.owner} desc={ui.ownerDesc}
                 selected={role === 'livestock_owner'} onPress={() => setRole('livestock_owner')}
             />
             {errors.submit && <Text style={styles.formError}>{errors.submit}</Text>}
@@ -426,7 +418,7 @@ function RegForm({ ui, fbEnabled, name, setName, phone, setPhone, email, setEmai
     );
 }
 
-function RoleCard({ icon, title, desc, selected, onPress }: { icon: string; title: string; desc: string; selected: boolean; onPress: () => void }) {
+function RoleCard({ icon, title, desc, selected, onPress }: { icon?: string; title: string; desc: string; selected: boolean; onPress: () => void }) {
     return (
         <TouchableOpacity
             style={[styles.roleCard, selected && styles.roleCardActive]}
