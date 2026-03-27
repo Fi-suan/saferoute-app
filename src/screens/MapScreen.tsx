@@ -2,9 +2,8 @@
  * MapScreen — SafeRoute / Sapa Jol
  * Nothing Phone стиль: тёмная карта, геометрические маркеры.
  */
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
-/** Dark map style — Nothing Phone aesthetic */
 const DARK_MAP_STYLE = [
     { elementType: 'geometry', stylers: [{ color: '#1E2028' }] },
     { elementType: 'labels.text.stroke', stylers: [{ color: '#1E2028' }] },
@@ -23,48 +22,115 @@ const DARK_MAP_STYLE = [
     { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#181A22' }] },
     { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#1E2028' }] },
 ];
+
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Modal, ActivityIndicator, Alert, Linking, Vibration,
+    Modal, Vibration, ActivityIndicator,
 } from 'react-native';
-import MapView, { Marker, Circle, Polyline } from 'react-native-maps';
+import MapView, { Marker, Circle, Polyline, Camera } from 'react-native-maps';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import LottieView from 'lottie-react-native';
-import { useNavigation, CompositeNavigationProp } from '@react-navigation/native';
+import { useNavigation, CompositeNavigationProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { getIncidentMeta, Incident } from '../constants/incidents';
+import { LIVESTOCK_META, LivestockType } from '../constants/livestock';
 import { useIncidents } from '../hooks/useIncidents';
 import { useLocation } from '../hooks/useLocation';
 import { useRoute } from '../hooks/useRoute';
 import { useLivestock } from '../hooks/useLivestock';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { Config } from '../config';
+import { STORAGE } from '../constants/storage';
 import ProximityBanner from '../components/ProximityBanner';
 import ReportModal from '../components/ReportModal';
 import RoadStatusBadge from '../components/RoadStatusBadge';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { scheduleProximityNotification } from '../services/notifications';
-import { LIVESTOCK_META } from '../constants/livestock';
 import { useAppDialog } from '../components/AppDialog';
+import { useT } from '../i18n';
+import { fetchDirections, DirectionsResult } from '../services/directions';
 
-/** Точки трассы A-17 Астана — Павлодар (упрощённые веховые пункты) */
-const A17_WAYPOINTS = [
-    { latitude: 51.18, longitude: 71.45 },
-    { latitude: 51.28, longitude: 71.72 },
-    { latitude: 51.32, longitude: 71.95 },
-    { latitude: 51.39, longitude: 72.48 },
-    { latitude: 51.45, longitude: 72.82 },
-    { latitude: 51.58, longitude: 73.45 },
-    { latitude: 51.64, longitude: 73.92 },
-    { latitude: 51.72, longitude: 74.55 },
-    { latitude: 51.78, longitude: 75.40 },
-    { latitude: 51.85, longitude: 75.90 },
-    { latitude: 52.05, longitude: 76.35 },
-    { latitude: 52.18, longitude: 76.68 },
-    { latitude: 52.29, longitude: 76.97 },
-];
+/** Отображаемые названия маршрутов */
+const ROUTE_NAMES: Record<string, string> = {
+    a17: 'A-17', a1: 'A-1', a21: 'A-21', e40: 'E-40',
+};
+
+/** Конечные точки маршрутов (для навигации) */
+const ROUTE_ENDPOINTS: Record<string, { latitude: number; longitude: number }> = {
+    a17: { latitude: 52.287, longitude: 76.967 }, // Павлодар
+    a1:  { latitude: 43.240, longitude: 76.910 }, // Алматы
+    a21: { latitude: 50.420, longitude: 80.250 }, // Семей
+    e40: { latitude: 42.900, longitude: 71.350 }, // Тараз
+};
+
+/** Маршруты с более точными промежуточными точками */
+const ROUTE_WAYPOINTS: Record<string, { latitude: number; longitude: number }[]> = {
+    a17: [
+        // Астана → Павлодар (A-17, ~494 км)
+        { latitude: 51.165, longitude: 71.427 },
+        { latitude: 51.195, longitude: 71.540 },
+        { latitude: 51.225, longitude: 71.680 },
+        { latitude: 51.268, longitude: 71.880 },
+        { latitude: 51.310, longitude: 72.080 },
+        { latitude: 51.355, longitude: 72.320 },
+        { latitude: 51.400, longitude: 72.560 },
+        { latitude: 51.448, longitude: 72.820 },
+        { latitude: 51.505, longitude: 73.100 },
+        { latitude: 51.565, longitude: 73.420 },
+        { latitude: 51.625, longitude: 73.760 },
+        { latitude: 51.685, longitude: 74.100 },
+        { latitude: 51.740, longitude: 74.440 },
+        { latitude: 51.790, longitude: 74.790 },
+        { latitude: 51.850, longitude: 75.180 },
+        { latitude: 51.920, longitude: 75.580 },
+        { latitude: 52.000, longitude: 75.930 },
+        { latitude: 52.080, longitude: 76.230 },
+        { latitude: 52.170, longitude: 76.560 },
+        { latitude: 52.287, longitude: 76.967 },
+    ],
+    a1: [
+        // Астана → Алматы (A-1, ~1256 км)
+        { latitude: 51.165, longitude: 71.427 },
+        { latitude: 50.950, longitude: 71.620 },
+        { latitude: 50.620, longitude: 71.980 },
+        { latitude: 49.980, longitude: 72.870 },
+        { latitude: 49.380, longitude: 73.310 },
+        { latitude: 48.600, longitude: 73.880 },
+        { latitude: 47.400, longitude: 74.150 },
+        { latitude: 46.850, longitude: 74.990 },
+        { latitude: 45.800, longitude: 74.650 },
+        { latitude: 44.700, longitude: 74.100 },
+        { latitude: 43.900, longitude: 73.870 },
+        { latitude: 43.590, longitude: 73.770 },
+        { latitude: 43.420, longitude: 74.180 },
+        { latitude: 43.350, longitude: 75.100 },
+        { latitude: 43.240, longitude: 76.910 },
+    ],
+    a21: [
+        // Екібастұз → Семей (A-21, ~330 км)
+        { latitude: 51.720, longitude: 75.320 },
+        { latitude: 51.600, longitude: 75.980 },
+        { latitude: 51.450, longitude: 76.720 },
+        { latitude: 51.250, longitude: 77.450 },
+        { latitude: 51.000, longitude: 78.200 },
+        { latitude: 50.780, longitude: 79.000 },
+        { latitude: 50.580, longitude: 79.700 },
+        { latitude: 50.420, longitude: 80.250 },
+    ],
+    e40: [
+        // Шымкент → Тараз (E-40, ~185 км)
+        { latitude: 42.320, longitude: 69.600 },
+        { latitude: 42.400, longitude: 69.980 },
+        { latitude: 42.520, longitude: 70.420 },
+        { latitude: 42.650, longitude: 70.820 },
+        { latitude: 42.760, longitude: 71.100 },
+        { latitude: 42.900, longitude: 71.350 },
+    ],
+};
 
 const ROAD_STATUS_COLOR = {
     open: '#2ECC71',
@@ -72,25 +138,32 @@ const ROAD_STATUS_COLOR = {
     closed: '#E74C3C',
 } as const;
 
+const LIVESTOCK_TYPES: LivestockType[] = ['horse', 'cow', 'camel', 'sheep', 'goat'];
+
 type NavProp = CompositeNavigationProp<
     BottomTabNavigationProp<Record<string, undefined>>,
     NativeStackNavigationProp<RootStackParamList>
 >;
 
-type FilterType = 'all' | 'incidents';
-
-
-
-
-
+/** Фильтр карты: все / только инциденты / только скот */
+type FilterType = 'all' | 'incidents' | 'livestock';
 
 export default function MapScreen() {
     const navigation = useNavigation<NavProp>();
     const mapRef = useRef<MapView>(null);
     const [filter, setFilter] = useState<FilterType>('all');
     const [showReport, setShowReport] = useState(false);
-    const [showOwnerReport, setShowOwnerReport] = useState(false);
+    const [showOwnerPanel, setShowOwnerPanel] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState<Incident | null>(null);
+    const [selectedType, setSelectedType] = useState<LivestockType>('horse');
+    const [livestockCount, setLivestockCount] = useState(10);
+    const [activeRouteId, setActiveRouteId] = useState<string>('a17');
+    const [navResult, setNavResult] = useState<DirectionsResult | null>(null);
+    const [navStepIdx, setNavStepIdx] = useState(0);
+    const [navLoading, setNavLoading] = useState(false);
+    const dangerZoneAlertedRef = useRef(false);
+
+    const t = useT();
     const { profile } = useUserProfile();
     const { showDialog, DialogComponent } = useAppDialog();
 
@@ -99,13 +172,25 @@ export default function MapScreen() {
     const { location, nearbyAlert, confirmCandidate, dismissNearbyAlert, dismissConfirmCandidate } =
         useLocation(incidents, Config.DEFAULT_PROXIMITY_RADIUS_KM);
 
-    // Фича 2+3: Режим маршрута A-17 + статус дороги
-    const { isRouteMode, toggleRouteMode, routeIncidents, roadStatus } = useRoute(incidents);
+    const { isRouteMode, toggleRouteMode, routeIncidents, roadStatus } = useRoute(incidents, activeRouteId);
 
-    // Фича livestock: скот вблизи дорог
-    const { livestock } = useLivestock(location);
+    const {
+        livestock,
+        activateManualMode,
+        deactivateManualMode,
+        isManualMode,
+        dangerZoneAlert,
+    } = useLivestock(location);
 
-    React.useEffect(() => {
+    // Читаем выбранный маршрут при фокусировке вкладки
+    useFocusEffect(useCallback(() => {
+        AsyncStorage.getItem(STORAGE.ACTIVE_ROUTE).then(id => {
+            if (id && ROUTE_WAYPOINTS[id]) setActiveRouteId(id);
+        });
+    }, []));
+
+    // Push уведомление при приближении
+    useEffect(() => {
         if (nearbyAlert) {
             const meta = getIncidentMeta(nearbyAlert.incident_type);
             scheduleProximityNotification({
@@ -116,85 +201,157 @@ export default function MapScreen() {
         }
     }, [nearbyAlert?.id]);
 
-    React.useEffect(() => {
+    // Диалог подтверждения
+    useEffect(() => {
         if (confirmCandidate) setConfirmDialog(confirmCandidate);
     }, [confirmCandidate?.id]);
 
+    // Danger Zone — 3+ стада в 500м (только для водителей)
+    useEffect(() => {
+        if (dangerZoneAlert && !dangerZoneAlertedRef.current && profile.role === 'driver') {
+            dangerZoneAlertedRef.current = true;
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            showDialog({
+                title: t('danger_zone_title'),
+                message: t('danger_zone_msg'),
+                icon: 'warning',
+                iconColor: Colors.alert.high,
+                buttons: [{ text: t('understand'), style: 'default' }],
+            });
+        }
+        if (!dangerZoneAlert) dangerZoneAlertedRef.current = false;
+    }, [dangerZoneAlert, profile.role]);
+
     const handleConfirm = async (isResolved: boolean) => {
         if (!confirmDialog) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setConfirmDialog(null);
         dismissConfirmCandidate();
         await confirmIncident(confirmDialog.id, isResolved);
         if (isResolved) showDialog({
-            title: 'Рахмет!',
-            message: '3 растаудан кейін белгі жойылады.',
+            title: t('confirm_thanks'),
+            message: t('confirm_thanks_msg'),
             icon: 'checkmark-circle',
             iconColor: Colors.brand.primary,
-            buttons: [{ text: 'Түсіндім', style: 'default' }],
+            buttons: [{ text: t('understand'), style: 'default' }],
         });
     };
 
     const goToDetail = (incident: Incident) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         navigation.navigate('IncidentDetail', { incident });
     };
 
-    // Фича 6: SOS — 5 сек удержание + эскалирующая вибрация + только метка (тест режим)
     const handleSOSLongPress = () => {
-        // Эскалирующая: тихо → сильнее → очень сильно
         Vibration.vibrate([0, 100, 80, 200, 80, 400, 80, 600]);
         showDialog({
-            title: 'SOS — Жедел жәрдем',
-            message: 'Орналасуыңыз жазылып, белгі автоматты түрде жасалды.\n\n⚠️ Тест режимі: 112 шақыру өшірілген.',
+            title: t('sos_title'),
+            message: t('sos_msg'),
             icon: 'alert-circle',
             iconColor: Colors.alert.critical,
             buttons: [
                 {
-                    text: 'Белгі ғана қою',
+                    text: t('sos_place_marker'),
                     icon: 'location',
                     style: 'default',
                     onPress: async () => {
                         if (location) {
                             await submitReport({
                                 incident_type: 'crash',
-                                description: '🆘 SOS! Жедел жәрдем қажет. Жүргізуші хабарлады.',
+                                description: '🆘 SOS! Жедел жәрдем қажет.',
                                 severity: 5,
                                 latitude: location.lat,
                                 longitude: location.lon,
                             });
                         }
                         showDialog({
-                            title: 'Белгі жасалды',
-                            message: 'Жақын жүргізушілер ескертілді.',
+                            title: t('sos_placed'),
+                            message: t('sos_placed_msg'),
                             icon: 'checkmark-circle',
                             iconColor: Colors.brand.primary,
-                            buttons: [{ text: 'Түсіндім', style: 'default' }],
+                            buttons: [{ text: t('understand'), style: 'default' }],
                         });
                     },
                 },
-                { text: 'Бас тарту', style: 'cancel' },
+                { text: t('sos_cancel'), style: 'cancel' },
             ],
         });
     };
 
+    const handleActivateManualMode = () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        activateManualMode(selectedType, livestockCount, `${LIVESTOCK_META[selectedType].label} табуны`);
+        setShowOwnerPanel(false);
+    };
+
+    const handleDeactivateManualMode = () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        deactivateManualMode();
+        setShowOwnerPanel(false);
+    };
+
+    const handleNorthReset = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        mapRef.current?.animateCamera({ heading: 0, pitch: 0 } as Camera, { duration: 300 });
+    };
+
+    const handleToggleNavigation = async () => {
+        if (navResult) {
+            setNavResult(null);
+            setNavStepIdx(0);
+            return;
+        }
+        if (!location) {
+            showDialog({ title: t('report_error_no_location'), message: '', icon: 'warning', iconColor: Colors.alert.high, buttons: [{ text: t('understand'), style: 'default' }] });
+            return;
+        }
+        setNavLoading(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        const dest = ROUTE_ENDPOINTS[activeRouteId] ?? ROUTE_ENDPOINTS.a17;
+        const result = await fetchDirections({ lat: location.lat, lon: location.lon }, dest, Config.GOOGLE_MAPS_API_KEY);
+        setNavLoading(false);
+        if (result) {
+            setNavResult(result);
+            setNavStepIdx(0);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+            showDialog({ title: t('route_mode_label'), message: 'Бағытты жүктеу сәтсіз болды. Интернетті тексеріңіз.', icon: 'warning', iconColor: Colors.alert.high, buttons: [{ text: t('understand'), style: 'default' }] });
+        }
+    };
+
+    // Advance navigation step when within 50m of current step endpoint
+    useEffect(() => {
+        if (!navResult || !location) return;
+        const step = navResult.steps[navStepIdx];
+        if (!step) return;
+        const dlat = location.lat - step.end.latitude;
+        const dlon = location.lon - step.end.longitude;
+        const distM = Math.sqrt(dlat * dlat + dlon * dlon) * 111_000;
+        if (distM < 50 && navStepIdx < navResult.steps.length - 1) {
+            setNavStepIdx(i => i + 1);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+    }, [location?.lat, location?.lon]);
 
     const displayedIncidents = isRouteMode ? routeIncidents : incidents.filter(i => i.is_active);
     const showIncidents = filter === 'all' || filter === 'incidents';
-    const showLivestock = filter === 'all' || filter === 'incidents';
+    const showLivestock = filter === 'all' || filter === 'livestock';
+    // Use directions polyline when navigation is active, otherwise static waypoints
+    const routeCoords = navResult ? navResult.polyline : (ROUTE_WAYPOINTS[activeRouteId] ?? ROUTE_WAYPOINTS.a17);
 
     const initialRegion = location
         ? { latitude: location.lat, longitude: location.lon, latitudeDelta: 0.05, longitudeDelta: 0.05 }
-        : { latitude: 51.96, longitude: 74.2, latitudeDelta: 2.5, longitudeDelta: 4 };  // Центр трассы A-17
+        : { latitude: 51.96, longitude: 74.2, latitudeDelta: 2.5, longitudeDelta: 4 };
 
     if (loading) {
         return (
             <View style={styles.loadingWrap}>
                 <LottieView
                     source={require('../assets/lottie/loading.json')}
-                    autoPlay
-                    loop
+                    autoPlay loop
                     style={{ width: 120, height: 120 }}
                 />
-                <Text style={styles.loadingText}>Орналасу анықталуда...</Text>
+                <Text style={styles.loadingText}>{t('loading_location')}</Text>
             </View>
         );
     }
@@ -207,70 +364,51 @@ export default function MapScreen() {
                 initialRegion={initialRegion}
                 showsUserLocation
                 showsMyLocationButton={false}
+                showsCompass={false}
                 userInterfaceStyle="dark"
                 customMapStyle={DARK_MAP_STYLE}
             >
+                {/* ── Инциденты ── */}
                 {showIncidents && displayedIncidents.map((inc) => {
                     const meta = getIncidentMeta(inc.incident_type);
                     return (
                         <React.Fragment key={`inc-${inc.id}`}>
-                            {/* Кастомный маркер Nothing-стиль: тёмный квадрат + иконка + цветная рамка */}
                             <Marker
                                 coordinate={{ latitude: inc.latitude, longitude: inc.longitude }}
                                 onCalloutPress={() => goToDetail(inc)}
                                 tracksViewChanges={false}
+                                anchor={{ x: 0.5, y: 1 }}
                             >
-                                <View style={styles.markerContainer}>
-                                    <View style={[styles.markerCard, { borderColor: meta.color }]}>
+                                <View style={styles.pinContainer}>
+                                    <View style={[styles.pinCard, { borderColor: meta.color }]}>
                                         <Ionicons name={meta.icon as any} size={16} color={meta.color} />
                                     </View>
-                                    <View style={[styles.markerPointer, { borderTopColor: meta.color }]} />
+                                    <View style={[styles.pinStem, { backgroundColor: meta.color }]} />
+                                    <View style={[styles.pinDot, { backgroundColor: meta.color }]} />
                                 </View>
                             </Marker>
-
-                            {/* Core radar dot + Glowing Aura Effect */}
-                            <Circle
-                                center={{ latitude: inc.latitude, longitude: inc.longitude }}
-                                radius={50}
-                                fillColor={meta.color}
-                            />
-                            <Circle
-                                center={{ latitude: inc.latitude, longitude: inc.longitude }}
-                                radius={150}
-                                fillColor={meta.color + '60'}
-                            />
-                            <Circle
-                                center={{ latitude: inc.latitude, longitude: inc.longitude }}
-                                radius={400}
-                                fillColor={meta.color + '20'}
-                            />
-                            <Circle
-                                center={{ latitude: inc.latitude, longitude: inc.longitude }}
-                                radius={800}
-                                fillColor={meta.color + '0A'}
-                                strokeColor={meta.color + '40'}
-                                strokeWidth={1}
-                            />
+                            <Circle center={{ latitude: inc.latitude, longitude: inc.longitude }} radius={50} fillColor={meta.color + 'AA'} strokeWidth={0} />
+                            <Circle center={{ latitude: inc.latitude, longitude: inc.longitude }} radius={200} fillColor={meta.color + '40'} strokeWidth={0} />
+                            <Circle center={{ latitude: inc.latitude, longitude: inc.longitude }} radius={600} fillColor={meta.color + '18'} strokeWidth={0} />
+                            <Circle center={{ latitude: inc.latitude, longitude: inc.longitude }} radius={1200} fillColor={meta.color + '08'} strokeColor={meta.color + '30'} strokeWidth={1} />
                         </React.Fragment>
                     );
                 })}
 
-                {/* Скот на карте (Без иконок, радарный стиль) */}
+                {/* ── Скот ── */}
                 {showLivestock && livestock.map((animal) => {
-                    const meta = LIVESTOCK_META[animal.type] || {
-                        label: 'Жануар', labelKk: 'Жануар', color: Colors.brand.primary, emoji: '🐾'
-                    };
+                    const meta = LIVESTOCK_META[animal.type] ?? { label: 'Жануар', color: Colors.brand.primary, emoji: '🐾' };
                     const isDangerous = animal.isNearRoad && animal.distanceToRoadM < 300;
                     const markerColor = isDangerous ? Colors.alert.critical : meta.color;
                     return (
                         <React.Fragment key={`ls-${animal.id}`}>
-                            {/* Кастомный маркер скота: эмоджи + счётчик голов */}
                             <Marker
                                 coordinate={{ latitude: animal.latitude, longitude: animal.longitude }}
                                 tracksViewChanges={false}
+                                anchor={{ x: 0.5, y: 1 }}
                             >
-                                <View style={styles.markerContainer}>
-                                    <View style={[styles.markerCard, styles.markerCardLivestock, { borderColor: markerColor }]}>
+                                <View style={styles.pinContainer}>
+                                    <View style={[styles.pinCard, styles.pinCardLivestock, { borderColor: markerColor }]}>
                                         <Text style={styles.livestockEmoji}>{meta.emoji}</Text>
                                         {isDangerous && (
                                             <View style={styles.dangerBadge}>
@@ -278,46 +416,36 @@ export default function MapScreen() {
                                             </View>
                                         )}
                                     </View>
-                                    <View style={[styles.markerPointer, { borderTopColor: markerColor }]} />
+                                    <View style={[styles.pinStem, { backgroundColor: markerColor }]} />
+                                    <View style={[styles.pinDot, { backgroundColor: markerColor }]} />
                                 </View>
                             </Marker>
-
-                            <Circle
-                                center={{ latitude: animal.latitude, longitude: animal.longitude }}
-                                radius={40}
-                                fillColor={isDangerous ? Colors.alert.critical : meta.color}
-                            />
+                            <Circle center={{ latitude: animal.latitude, longitude: animal.longitude }} radius={40} fillColor={markerColor + 'BB'} strokeWidth={0} />
                             {isDangerous && (
-                                <>
-                                    <Circle
-                                        center={{ latitude: animal.latitude, longitude: animal.longitude }}
-                                        radius={animal.distanceToRoadM}
-                                        fillColor={Colors.alert.critical + '20'}
-                                    />
-                                    <Circle
-                                        center={{ latitude: animal.latitude, longitude: animal.longitude }}
-                                        radius={animal.distanceToRoadM * 1.5}
-                                        fillColor={Colors.alert.critical + '08'}
-                                        strokeColor={Colors.alert.critical + '40'}
-                                        strokeWidth={1}
-                                    />
-                                </>
+                                <Circle center={{ latitude: animal.latitude, longitude: animal.longitude }} radius={animal.distanceToRoadM} fillColor={Colors.alert.critical + '20'} strokeColor={Colors.alert.critical + '50'} strokeWidth={1} />
                             )}
                         </React.Fragment>
                     );
                 })}
 
-                {/* Polyline трассы A-17 — цвет по статусу дороги */}
+                {/* ── Маршрут (активный из Profile) ── */}
                 <Polyline
-                    coordinates={A17_WAYPOINTS}
+                    coordinates={routeCoords}
                     strokeColor={ROAD_STATUS_COLOR[roadStatus]}
-                    strokeWidth={3}
-                    lineDashPattern={roadStatus === 'closed' ? [8, 6] : undefined}
+                    strokeWidth={4}
+                    lineDashPattern={roadStatus === 'closed' ? [10, 6] : undefined}
+                    geodesic
                 />
-
+                {/* Белая подложка под линией маршрута для чёткости */}
+                <Polyline
+                    coordinates={routeCoords}
+                    strokeColor="rgba(255,255,255,0.12)"
+                    strokeWidth={8}
+                    geodesic
+                />
             </MapView>
 
-            {/* Верхний бар */}
+            {/* ── Верхний бар ── */}
             <View style={styles.topBar}>
                 <View style={styles.topBarRow}>
                     <Ionicons name="shield-checkmark" size={20} color={Colors.brand.primary} />
@@ -331,42 +459,57 @@ export default function MapScreen() {
                             <Text style={styles.offlineQueueText}>{pendingReportsCount}</Text>
                         </View>
                     )}
+                    {isManualMode && (
+                        <View style={styles.manualModeBadge}>
+                            <View style={styles.manualModeDot} />
+                            <Text style={styles.manualModeBadgeText}>{t('herd_mode_badge')}</Text>
+                        </View>
+                    )}
                     <View style={[styles.liteTag, isOnline ? styles.liteTagOnline : styles.liteTagOffline]}>
-                        <Ionicons
-                            name={isOnline ? 'wifi' : 'cloud-offline'}
-                            size={12}
-                            color={isOnline ? Colors.brand.primary : Colors.alert.medium}
-                        />
+                        <Ionicons name={isOnline ? 'wifi' : 'cloud-offline'} size={12} color={isOnline ? Colors.brand.primary : Colors.alert.medium} />
                         <Text style={[styles.liteTagText, { color: isOnline ? Colors.brand.primary : Colors.alert.medium }]}>
-                            {isOnline ? 'Online' : 'Lite'}
+                            {isOnline ? t('online') : t('offline')}
                         </Text>
                     </View>
                 </View>
-
-                {/* Фича 2+3: Road status + Route mode (строка 2) */}
                 <View style={styles.statusRow}>
                     <RoadStatusBadge
                         status={roadStatus}
+                        routeName={ROUTE_NAMES[activeRouteId] ?? 'A-17'}
                         isRouteMode={isRouteMode}
                         onToggleRoute={toggleRouteMode}
                     />
-
+                    {/* Navigation button */}
+                    <TouchableOpacity
+                        style={[styles.navBtn, navResult && styles.navBtnActive]}
+                        onPress={handleToggleNavigation}
+                        disabled={navLoading}
+                    >
+                        {navLoading
+                            ? <ActivityIndicator size="small" color={navResult ? Colors.bg.primary : Colors.brand.primary} />
+                            : <Ionicons name={navResult ? 'stop-circle' : 'arrow-redo'} size={14} color={navResult ? Colors.bg.primary : Colors.brand.primary} />
+                        }
+                        <Text style={[styles.navBtnText, navResult && styles.navBtnTextActive]}>
+                            {navResult ? (navResult.totalDistance + ' · ' + navResult.totalDuration) : t('route_mode_label')}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
             </View>
 
-            {/* Фильтры */}
+            {/* ── Фильтры: Барлығы / Белгілер / Мал ── */}
             <View style={styles.filterRow}>
                 {([
-                    { key: 'all', label: 'Барлығы', icon: 'layers' },
-                    { key: 'incidents', label: 'Белгілер', icon: 'warning' },
-                ] as const).map((f) => (
+                    { key: 'all',       label: t('filter_all'),       icon: 'layers'   },
+                    { key: 'incidents', label: t('filter_incidents'), icon: 'warning'  },
+                    { key: 'livestock', label: t('filter_livestock'), icon: 'paw'      },
+                ] as { key: FilterType; label: string; icon: string }[]).map((f) => (
                     <TouchableOpacity
                         key={f.key}
                         style={[styles.filterChip, filter === f.key && styles.filterChipActive]}
-                        onPress={() => setFilter(f.key)}
+                        onPress={() => { Haptics.selectionAsync(); setFilter(f.key); }}
                     >
                         <Ionicons
-                            name={f.icon as any} size={14}
+                            name={f.icon as any} size={13}
                             color={filter === f.key ? Colors.bg.primary : Colors.text.secondary}
                         />
                         <Text style={[styles.filterChipText, filter === f.key && styles.filterChipTextActive]}>
@@ -376,77 +519,95 @@ export default function MapScreen() {
                 ))}
             </View>
 
-            {/* Locate button */}
-            <TouchableOpacity
-                style={styles.myLocBtn}
-                onPress={() => location && mapRef.current?.animateToRegion(
-                    { latitude: location.lat, longitude: location.lon, latitudeDelta: 0.05, longitudeDelta: 0.05 }, 500,
-                )}
-            >
-                <Ionicons name="locate" size={22} color={Colors.brand.primary} />
-            </TouchableOpacity>
+            {/* ── Навигационная подсказка ── */}
+            {navResult && navResult.steps[navStepIdx] && (
+                <View style={styles.navBanner}>
+                    <Ionicons name="navigate" size={16} color={Colors.brand.primary} />
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.navStepText} numberOfLines={2}>
+                            {navResult.steps[navStepIdx].instruction}
+                        </Text>
+                        <Text style={styles.navMetaText}>
+                            {navResult.steps[navStepIdx].distance} · {navResult.steps[navStepIdx].duration}
+                        </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => { setNavResult(null); setNavStepIdx(0); }}>
+                        <Ionicons name="close-circle" size={20} color={Colors.text.muted} />
+                    </TouchableOpacity>
+                </View>
+            )}
 
-            {/* FAB — нажатие: репорт | долгое нажатие 5с: SOS */}
+            {/* ── Кнопки справа: Компас + Локация ── */}
+            <View style={styles.rightBtns}>
+                {/* Компас — сброс ориентации на север */}
+                <TouchableOpacity style={styles.mapBtn} onPress={handleNorthReset}>
+                    <Ionicons name="compass-outline" size={20} color={Colors.text.secondary} />
+                </TouchableOpacity>
+                {/* Моё местоположение */}
+                <TouchableOpacity
+                    style={[styles.mapBtn, styles.mapBtnPrimary]}
+                    onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        location && mapRef.current?.animateToRegion(
+                            { latitude: location.lat, longitude: location.lon, latitudeDelta: 0.05, longitudeDelta: 0.05 }, 500,
+                        );
+                    }}
+                >
+                    <Ionicons name="locate" size={20} color={Colors.brand.primary} />
+                </TouchableOpacity>
+            </View>
+
+            {/* ── FAB ── */}
             <TouchableOpacity
-                style={styles.fab}
-                onPress={() => profile.role === 'livestock_owner' ? setShowOwnerReport(true) : setShowReport(true)}
+                style={[styles.fab, isManualMode && styles.fabManual]}
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    profile.role === 'livestock_owner' ? setShowOwnerPanel(true) : setShowReport(true);
+                }}
                 onLongPress={handleSOSLongPress}
                 delayLongPress={5000}
             >
-                {/* 🎨 Анимация пульса под кнопкой */}
                 <LottieView
                     source={require('../assets/lottie/alert_pulse.json')}
-                    autoPlay
-                    loop
+                    autoPlay loop
                     style={{ position: 'absolute', width: 150, height: 150 }}
                 />
-                <Ionicons name="add" size={30} color={Colors.bg.primary} />
+                <Ionicons
+                    name={profile.role === 'livestock_owner' ? 'paw' : 'add'}
+                    size={28}
+                    color={Colors.bg.primary}
+                />
             </TouchableOpacity>
 
-            {/* Proximity Alert */}
+            {/* ── Proximity Banner ── */}
             {nearbyAlert && (
-                // 🎨 ANIMATION_SLOT: banner_slide — Reanimated слайд вместо Animated
-                <ProximityBanner
-                    incident={nearbyAlert}
-                    onDismiss={dismissNearbyAlert}
-                    onViewDetail={goToDetail}
-                />
+                <ProximityBanner incident={nearbyAlert} onDismiss={dismissNearbyAlert} onViewDetail={goToDetail} />
             )}
 
-            {/* Confirm Dialog (только при физическом приближении) */}
+            {/* ── Confirm Dialog ── */}
             <Modal visible={!!confirmDialog} transparent animationType="fade">
                 <View style={styles.confirmOverlay}>
                     <View style={styles.confirmCard}>
-                        {/* Вопросительный знак (Анимация Lottie) */}
                         <LottieView
                             source={require('../assets/lottie/confirm_question.json')}
-                            autoPlay
-                            loop
+                            autoPlay loop
                             style={{ width: 90, height: 90 }}
                         />
-                        <Text style={styles.confirmTitle}>Мәселе шешілді ме?</Text>
-                        <Text style={styles.confirmDesc}>
-                            Сіз белгінің жанынан өттіңіз. Жол тазарды ма?
-                        </Text>
+                        <Text style={styles.confirmTitle}>{t('confirm_title')}</Text>
+                        <Text style={styles.confirmDesc}>{t('confirm_desc')}</Text>
                         {confirmDialog && (
                             <Text style={styles.confirmIncidentType}>
                                 {getIncidentMeta(confirmDialog.incident_type).label}
                             </Text>
                         )}
                         <View style={styles.confirmButtons}>
-                            <TouchableOpacity
-                                style={[styles.confirmBtn, { backgroundColor: Colors.brand.primary }]}
-                                onPress={() => handleConfirm(true)}
-                            >
+                            <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: Colors.brand.primary }]} onPress={() => handleConfirm(true)}>
                                 <Ionicons name="checkmark" size={18} color={Colors.bg.primary} />
-                                <Text style={styles.confirmBtnText}>Иә</Text>
+                                <Text style={styles.confirmBtnText}>{t('confirm_yes')}</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.confirmBtn, { backgroundColor: Colors.alert.critical }]}
-                                onPress={() => handleConfirm(false)}
-                            >
+                            <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: Colors.alert.critical }]} onPress={() => handleConfirm(false)}>
                                 <Ionicons name="close" size={18} color={Colors.white} />
-                                <Text style={[styles.confirmBtnText, { color: Colors.white }]}>Жоқ</Text>
+                                <Text style={[styles.confirmBtnText, { color: Colors.white }]}>{t('confirm_no')}</Text>
                             </TouchableOpacity>
                         </View>
                         <TouchableOpacity
@@ -457,7 +618,7 @@ export default function MapScreen() {
                                 if (confirmDialog) goToDetail(confirmDialog);
                             }}
                         >
-                            <Text style={styles.confirmDetailText}>Белгіні қарау →</Text>
+                            <Text style={styles.confirmDetailText}>{t('confirm_view')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -470,20 +631,79 @@ export default function MapScreen() {
                 onSubmit={submitReport}
             />
 
-            {/* Временный модал для Мал иесі */}
-            <Modal visible={showOwnerReport} transparent animationType="slide">
-                <View style={styles.confirmOverlay}>
-                    <View style={styles.confirmCard}>
-                        <Ionicons name="paw" size={48} color={Colors.brand.primary} />
-                        <Text style={styles.confirmTitle}>Малды тіркеу</Text>
-                        <Text style={styles.confirmDesc}>Бұл бөлім мал иестері үшін жасалуда (Жуықта чипсіз тіркеу іске қосылады).</Text>
+            {/* ── Панель "Мен табунмен" ── */}
+            <Modal visible={showOwnerPanel} transparent animationType="slide">
+                <View style={styles.ownerOverlay}>
+                    <TouchableOpacity style={styles.ownerBackdrop} onPress={() => setShowOwnerPanel(false)} activeOpacity={1} />
+                    <View style={styles.ownerPanel}>
+                        <View style={styles.ownerHandle} />
 
-                        <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: Colors.brand.primary, marginTop: 24 }]} onPress={() => setShowOwnerReport(false)}>
-                            <Text style={styles.confirmBtnText}>Түсіндім</Text>
-                        </TouchableOpacity>
+                        {isManualMode ? (
+                            <>
+                                <View style={styles.ownerActiveHeader}>
+                                    <View style={styles.ownerActiveDot} />
+                                    <Text style={styles.ownerTitle}>{t('owner_active_title')}</Text>
+                                </View>
+                                <Text style={styles.ownerSubtitle}>{t('owner_active_subtitle')}</Text>
+                                <View style={styles.ownerActiveCard}>
+                                    <Text style={styles.ownerActiveEmoji}>{LIVESTOCK_META[selectedType].emoji}</Text>
+                                    <View>
+                                        <Text style={styles.ownerActiveType}>{LIVESTOCK_META[selectedType].label}</Text>
+                                        <Text style={styles.ownerActiveCount}>{livestockCount} {t('heads_unit')}</Text>
+                                    </View>
+                                </View>
+                                <TouchableOpacity style={styles.deactivateBtn} onPress={handleDeactivateManualMode}>
+                                    <Ionicons name="stop-circle" size={20} color={Colors.white} />
+                                    <Text style={styles.deactivateBtnText}>{t('owner_deactivate')}</Text>
+                                </TouchableOpacity>
+                            </>
+                        ) : (
+                            <>
+                                <Text style={styles.ownerTitle}>{t('owner_panel_title')}</Text>
+                                <Text style={styles.ownerSubtitle}>{t('owner_panel_subtitle')}</Text>
+
+                                <Text style={styles.ownerSectionLabel}>{t('owner_type_label')}</Text>
+                                <View style={styles.typeGrid}>
+                                    {LIVESTOCK_TYPES.map(type => (
+                                        <TouchableOpacity
+                                            key={type}
+                                            style={[styles.typeChip, selectedType === type && styles.typeChipActive]}
+                                            onPress={() => { Haptics.selectionAsync(); setSelectedType(type); }}
+                                        >
+                                            <Text style={styles.typeChipEmoji}>{LIVESTOCK_META[type].emoji}</Text>
+                                            <Text style={[styles.typeChipLabel, selectedType === type && styles.typeChipLabelActive]}>
+                                                {LIVESTOCK_META[type].label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
+                                <Text style={styles.ownerSectionLabel}>{t('owner_count_label')}</Text>
+                                <View style={styles.stepper}>
+                                    <TouchableOpacity style={styles.stepperBtn} onPress={() => { Haptics.selectionAsync(); setLivestockCount(c => Math.max(1, c - 5)); }}>
+                                        <Ionicons name="remove" size={20} color={Colors.text.primary} />
+                                    </TouchableOpacity>
+                                    <Text style={styles.stepperValue}>{livestockCount}</Text>
+                                    <TouchableOpacity style={styles.stepperBtn} onPress={() => { Haptics.selectionAsync(); setLivestockCount(c => c + 5); }}>
+                                        <Ionicons name="add" size={20} color={Colors.text.primary} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <TouchableOpacity
+                                    style={[styles.activateBtn, !location && styles.activateBtnDisabled]}
+                                    onPress={handleActivateManualMode}
+                                    disabled={!location}
+                                >
+                                    <Ionicons name="radio" size={20} color={Colors.bg.primary} />
+                                    <Text style={styles.activateBtnText}>{t('owner_activate')}</Text>
+                                </TouchableOpacity>
+                                {!location && <Text style={styles.ownerNoLocation}>{t('owner_no_gps')}</Text>}
+                            </>
+                        )}
                     </View>
                 </View>
             </Modal>
+
             {DialogComponent}
         </View>
     );
@@ -499,8 +719,7 @@ const styles = StyleSheet.create({
         position: 'absolute', top: 50, left: Spacing.md, right: Spacing.md,
         backgroundColor: Colors.overlay, borderRadius: Radius.md,
         paddingVertical: 12, paddingHorizontal: Spacing.md,
-        borderWidth: 1, borderColor: Colors.border, ...Shadow.card,
-        gap: 10,
+        borderWidth: 1, borderColor: Colors.border, ...Shadow.card, gap: 10,
     },
     topBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     topBarText: { fontSize: 17, fontWeight: '700', color: Colors.text.primary },
@@ -511,10 +730,15 @@ const styles = StyleSheet.create({
     topBarBadgeText: { fontSize: 12, fontWeight: '800', color: Colors.bg.primary },
     offlineQueue: {
         flexDirection: 'row', alignItems: 'center', gap: 3,
-        backgroundColor: Colors.alert.medium + '20', paddingHorizontal: 6,
-        paddingVertical: 3, borderRadius: Radius.full,
+        backgroundColor: Colors.alert.medium + '20', paddingHorizontal: 6, paddingVertical: 3, borderRadius: Radius.full,
     },
     offlineQueueText: { fontSize: 10, fontWeight: '700', color: Colors.alert.medium },
+    manualModeBadge: {
+        flexDirection: 'row', alignItems: 'center', gap: 4,
+        backgroundColor: Colors.brand.primary + '20', paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full,
+    },
+    manualModeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.brand.primary },
+    manualModeBadgeText: { fontSize: 10, fontWeight: '700', color: Colors.brand.primary },
     liteTag: {
         flexDirection: 'row', alignItems: 'center', gap: 4,
         paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full, marginLeft: 'auto',
@@ -522,17 +746,29 @@ const styles = StyleSheet.create({
     liteTagOnline: { backgroundColor: Colors.brand.primary + '20' },
     liteTagOffline: { backgroundColor: Colors.alert.medium + '20' },
     liteTagText: { fontSize: 11, fontWeight: '700' },
+    statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 },
 
-    statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    tripBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
+    navBtn: {
+        flexDirection: 'row', alignItems: 'center', gap: 5,
         paddingHorizontal: 10, paddingVertical: 5,
         borderRadius: Radius.full,
-        backgroundColor: Colors.bg.tertiary,
-        borderWidth: 1, borderColor: Colors.border,
+        backgroundColor: Colors.brand.primary + '15',
+        borderWidth: 1, borderColor: Colors.brand.primary + '40',
     },
-    tripBtnActive: { borderColor: Colors.alert.critical + '60' },
-    tripBtnText: { fontSize: 11, fontWeight: '600', color: Colors.text.muted },
+    navBtnActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
+    navBtnText: { fontSize: 11, fontWeight: '700', color: Colors.brand.primary },
+    navBtnTextActive: { color: Colors.bg.primary },
+
+    navBanner: {
+        position: 'absolute', top: 196, left: Spacing.md, right: Spacing.md,
+        flexDirection: 'row', alignItems: 'center', gap: 10,
+        backgroundColor: Colors.overlay, borderRadius: Radius.md,
+        paddingVertical: 10, paddingHorizontal: Spacing.md,
+        borderWidth: 1, borderColor: Colors.brand.primary + '40',
+        ...Shadow.card,
+    },
+    navStepText: { fontSize: 13, fontWeight: '600', color: Colors.text.primary, lineHeight: 18 },
+    navMetaText: { fontSize: 11, color: Colors.text.muted, marginTop: 2 },
 
     filterRow: {
         position: 'absolute', top: 142, left: Spacing.md, right: Spacing.md,
@@ -548,39 +784,40 @@ const styles = StyleSheet.create({
     filterChipText: { fontSize: 12, fontWeight: '600', color: Colors.text.secondary },
     filterChipTextActive: { color: Colors.bg.primary },
 
-    myLocBtn: {
+    // Кнопки справа: компас + локация — сгруппированы вертикально
+    rightBtns: {
         position: 'absolute', bottom: 180, right: Spacing.md,
+        gap: 8,
+    },
+    mapBtn: {
         backgroundColor: Colors.bg.secondary, borderRadius: Radius.full,
         width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
         borderWidth: 1, borderColor: Colors.border, ...Shadow.card,
     },
+    mapBtnPrimary: { borderColor: Colors.brand.primary + '60' },
+
     fab: {
         position: 'absolute', bottom: 100, right: Spacing.md,
         backgroundColor: Colors.brand.primary, borderRadius: Radius.full,
         width: 64, height: 64, alignItems: 'center', justifyContent: 'center', ...Shadow.glow,
     },
+    fabManual: { borderWidth: 2, borderColor: Colors.brand.glowStrong },
 
-    // Кастомные маркеры — Nothing Phone стиль
-    markerContainer: { alignItems: 'center' },
-    markerCard: {
-        width: 36, height: 36,
+    // ── Маркеры Nothing Phone: карточка + тонкий стебель + точка ──
+    pinContainer: { alignItems: 'center' },
+    pinCard: {
+        width: 38, height: 38,
         backgroundColor: Colors.bg.secondary,
         borderRadius: Radius.sm,
         borderWidth: 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.35,
-        shadowRadius: 4,
-        elevation: 5,
+        alignItems: 'center', justifyContent: 'center',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.4, shadowRadius: 5, elevation: 6,
     },
-    markerCardLivestock: { width: 40, height: 40, borderRadius: Radius.md, position: 'relative' },
-    markerPointer: {
-        width: 0, height: 0,
-        borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 7,
-        borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    },
+    pinCardLivestock: { width: 42, height: 42, borderRadius: Radius.md, position: 'relative' },
+    pinStem: { width: 2, height: 7 },
+    pinDot: { width: 6, height: 6, borderRadius: 3 },
+
     livestockEmoji: { fontSize: 20 },
     dangerBadge: {
         position: 'absolute', top: -4, right: -4,
@@ -590,7 +827,6 @@ const styles = StyleSheet.create({
         borderWidth: 1.5, borderColor: Colors.bg.secondary,
     },
     dangerBadgeText: { fontSize: 9, fontWeight: '900', color: Colors.white },
-
 
     confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center' },
     confirmCard: {
@@ -609,4 +845,62 @@ const styles = StyleSheet.create({
     confirmBtnText: { fontSize: 15, fontWeight: '700', color: Colors.bg.primary },
     confirmDetail: { marginTop: Spacing.sm },
     confirmDetailText: { fontSize: 13, color: Colors.brand.primary, fontWeight: '600' },
+
+    // Owner Panel
+    ownerOverlay: { flex: 1, justifyContent: 'flex-end' },
+    ownerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+    ownerPanel: {
+        backgroundColor: Colors.bg.secondary,
+        borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
+        paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: 40,
+        borderWidth: 1, borderColor: Colors.border,
+    },
+    ownerHandle: {
+        width: 36, height: 4, borderRadius: 2,
+        backgroundColor: Colors.border, alignSelf: 'center', marginBottom: Spacing.lg,
+    },
+    ownerTitle: { fontSize: 20, fontWeight: '800', color: Colors.text.primary, marginBottom: 6 },
+    ownerSubtitle: { fontSize: 13, color: Colors.text.secondary, lineHeight: 18, marginBottom: Spacing.lg },
+    ownerSectionLabel: { fontSize: 12, fontWeight: '700', color: Colors.text.muted, letterSpacing: 0.8, marginBottom: 10, textTransform: 'uppercase' },
+    typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Spacing.lg },
+    typeChip: {
+        alignItems: 'center', paddingVertical: 10, paddingHorizontal: 14,
+        borderRadius: Radius.md, backgroundColor: Colors.bg.tertiary,
+        borderWidth: 1.5, borderColor: Colors.border, minWidth: 70,
+    },
+    typeChipActive: { borderColor: Colors.brand.primary, backgroundColor: Colors.brand.primary + '18' },
+    typeChipEmoji: { fontSize: 22, marginBottom: 3 },
+    typeChipLabel: { fontSize: 11, fontWeight: '600', color: Colors.text.secondary },
+    typeChipLabelActive: { color: Colors.brand.primary },
+    stepper: {
+        flexDirection: 'row', alignItems: 'center',
+        backgroundColor: Colors.bg.tertiary, borderRadius: Radius.md,
+        borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.lg,
+        alignSelf: 'flex-start',
+    },
+    stepperBtn: { paddingHorizontal: 20, paddingVertical: 12 },
+    stepperValue: { fontSize: 22, fontWeight: '800', color: Colors.text.primary, minWidth: 60, textAlign: 'center' },
+    activateBtn: {
+        backgroundColor: Colors.brand.primary, borderRadius: Radius.lg,
+        paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    },
+    activateBtnDisabled: { opacity: 0.4 },
+    activateBtnText: { fontSize: 16, fontWeight: '700', color: Colors.bg.primary },
+    ownerNoLocation: { fontSize: 12, color: Colors.alert.medium, textAlign: 'center', marginTop: 8 },
+    ownerActiveHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+    ownerActiveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.brand.primary },
+    ownerActiveCard: {
+        flexDirection: 'row', alignItems: 'center', gap: 16,
+        backgroundColor: Colors.bg.tertiary, borderRadius: Radius.lg,
+        padding: Spacing.md, marginVertical: Spacing.lg,
+        borderWidth: 1, borderColor: Colors.brand.primary + '40',
+    },
+    ownerActiveEmoji: { fontSize: 40 },
+    ownerActiveType: { fontSize: 16, fontWeight: '700', color: Colors.text.primary },
+    ownerActiveCount: { fontSize: 13, color: Colors.text.secondary, marginTop: 2 },
+    deactivateBtn: {
+        backgroundColor: Colors.alert.critical, borderRadius: Radius.lg,
+        paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    },
+    deactivateBtnText: { fontSize: 16, fontWeight: '700', color: Colors.white },
 });

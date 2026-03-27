@@ -25,6 +25,10 @@ import { ROUTES, LIVESTOCK_META, UserRole } from '../constants/livestock';
 import { useIncidents } from '../hooks/useIncidents';
 import { Config } from '../config';
 import { getDeviceId } from '../services/deviceId';
+import { AppResetEvent } from '../services/appReset';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE } from '../constants/storage';
+import { useT } from '../i18n';
 
 const ROLE_CONFIG: Record<UserRole, { label: string; icon: string; color: string; desc: string }> = {
     driver: { label: 'Жүргізуші', icon: 'car', color: Colors.brand.primary, desc: 'Жол белгілерін алады' },
@@ -68,6 +72,7 @@ function SectionHeader({ title }: { title: string }) {
 }
 
 export default function ProfileScreen() {
+    const t = useT();
     const { showDialog, DialogComponent } = useAppDialog();
     const { profile, loaded, updateProfile } = useUserProfile();
     const { settings, update: updateSettings } = useSettings();
@@ -78,6 +83,13 @@ export default function ProfileScreen() {
     const [activeRouteId, setActiveRouteId] = useState<string>('a17');
     const [deviceId, setDeviceId] = useState('...');
     const [showDeviceId, setShowDeviceId] = useState(false);
+
+    // Загружаем сохранённый маршрут
+    React.useEffect(() => {
+        AsyncStorage.getItem(STORAGE.ACTIVE_ROUTE).then(id => {
+            if (id) setActiveRouteId(id);
+        });
+    }, []);
 
     const activeRoute = ROUTES.find(r => r.id === activeRouteId) ?? ROUTES[0];
     const activeIncidents = incidents.filter(i => i.is_active).length;
@@ -95,21 +107,23 @@ export default function ProfileScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
 
-    const handleRoleChange = () => {
-        const next: UserRole = profile.role === 'driver' ? 'livestock_owner' : 'driver';
+    const handleLogout = () => {
         showDialog({
-            title: 'Рөлді өзгерту',
-            message: `${ROLE_CONFIG[next].label} ретінде жалғастырасыз ба?`,
-            icon: 'swap-horizontal',
-            iconColor: Colors.brand.primary,
+            title: t('profile_logout_title'),
+            message: t('profile_logout_confirm'),
+            icon: 'log-out',
+            iconColor: Colors.alert.critical,
             buttons: [
                 {
-                    text: 'Иә',
-                    style: 'default',
-                    onPress: () => { updateProfile({ role: next }); Haptics.selectionAsync(); }
+                    text: t('yes'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                        await AppResetEvent.trigger();
+                    },
                 },
-                { text: 'Болдырмау', style: 'cancel' }
-            ]
+                { text: t('no_exit'), style: 'cancel' },
+            ],
         });
     };
 
@@ -140,26 +154,37 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
 
                     <View style={styles.headerMid}>
-                        <Text style={styles.greeting}>Сәлем,</Text>
+                        <Text style={styles.greeting}>{t('profile_greeting')}</Text>
                         <Text style={styles.userName} numberOfLines={1}>{profile.name}</Text>
                         {profile.phone ? (
                             <Text style={styles.userPhone}>{profile.phone}</Text>
                         ) : (
                             <TouchableOpacity onPress={openEdit}>
-                                <Text style={styles.addPhone}>+ телефон қосу</Text>
+                                <Text style={styles.addPhone}>{t('profile_add_phone')}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
 
                     <View style={styles.headerRight}>
                         <View style={[styles.onlineDot, { backgroundColor: isOnline ? Colors.brand.primary : Colors.alert.medium }]} />
-                        <Ionicons name="notifications-outline" size={22} color={Colors.text.secondary} />
+                        <TouchableOpacity
+                            onPress={() => showDialog({
+                                title: t('profile_notifications_section'),
+                                message: t('profile_notif_status')
+                                    .replace('%sound%', settings.soundEnabled ? t('notif_on') : t('notif_off'))
+                                    .replace('%vibration%', settings.vibrationEnabled ? t('notif_on') : t('notif_off')),
+                                icon: 'notifications',
+                                iconColor: Colors.brand.primary,
+                                buttons: [{ text: t('cancel'), style: 'cancel' }],
+                            })}
+                        >
+                            <Ionicons name="notifications-outline" size={22} color={Colors.text.secondary} />
+                        </TouchableOpacity>
                     </View>
                 </View>
 
-                {/* ── ROLE BADGE (Nothing-style pill) ──────────────── */}
-                {/* 🎨 ANIMATION_SLOT: role_badge_transition */}
-                <TouchableOpacity style={[styles.roleBadge, { borderColor: roleCfg.color + '40' }]} onPress={handleRoleChange}>
+                {/* ── ROLE BADGE (Nothing-style pill) — только отображение ── */}
+                <View style={[styles.roleBadge, { borderColor: roleCfg.color + '40' }]}>
                     <View style={[styles.roleIcon, { backgroundColor: roleCfg.color + '18' }]}>
                         <Ionicons name={roleCfg.icon as any} size={14} color={roleCfg.color} />
                     </View>
@@ -167,14 +192,16 @@ export default function ProfileScreen() {
                         <Text style={[styles.roleLabel, { color: roleCfg.color }]}>{roleCfg.label}</Text>
                         <Text style={styles.roleDesc}>{roleCfg.desc}</Text>
                     </View>
-                    <Ionicons name="swap-horizontal-outline" size={16} color={Colors.text.muted} style={{ marginLeft: 'auto' }} />
-                </TouchableOpacity>
+                    <View style={[styles.roleLockIcon, { marginLeft: 'auto' }]}>
+                        <Ionicons name="lock-closed" size={12} color={Colors.text.muted} />
+                    </View>
+                </View>
 
                 {/* ── ACTIVE ROUTE CARD (like "Current Order" in ref) ── */}
                 <View style={styles.routeCard}>
                     <View style={styles.routeCardTop}>
                         <View>
-                            <Text style={styles.routeCardLabel}>БЕЛСЕНДІ МАРШРУТ</Text>
+                            <Text style={styles.routeCardLabel}>{t('profile_active_route')}</Text>
                             <Text style={styles.routeCardName}>{activeRoute.name}</Text>
                         </View>
                         <View style={[styles.routeChip, { backgroundColor: Colors.brand.primary + '20' }]}>
@@ -199,14 +226,14 @@ export default function ProfileScreen() {
 
                     <View style={styles.routeFromTo}>
                         <View>
-                            <Text style={styles.routePointLabel}>Бастапқы</Text>
+                            <Text style={styles.routePointLabel}>{t('route_start')}</Text>
                             <Text style={styles.routePoint}>{activeRoute.from}</Text>
                         </View>
                         <View style={styles.routeLengthBadge}>
                             <Text style={styles.routeLength}>{activeRoute.lengthKm} км</Text>
                         </View>
                         <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={styles.routePointLabel}>Соңғы</Text>
+                            <Text style={styles.routePointLabel}>{t('route_end')}</Text>
                             <Text style={styles.routePoint}>{activeRoute.to}</Text>
                         </View>
                     </View>
@@ -216,38 +243,42 @@ export default function ProfileScreen() {
                 <View style={styles.grid}>
                     <StatCard
                         value={activeIncidents}
-                        label="Белсенді белгі"
+                        label={t('stat_active')}
                         icon="warning"
                         color={activeIncidents > 3 ? Colors.alert.critical : Colors.alert.high}
                     />
                     <StatCard
                         value={profile.totalReports}
-                        label="Менің репорттарым"
+                        label={t('stat_reports')}
                         icon="shield-checkmark"
                         color={Colors.brand.primary}
                     />
                     <StatCard
                         value={ROUTES.length}
-                        label="Маршруттар"
+                        label={t('stat_routes')}
                         icon="map"
                         color={Colors.alert.info}
                     />
                     <StatCard
                         value="A-17"
-                        label="Негізгі жол"
+                        label={t('stat_main_road')}
                         icon="navigate"
                         color={Colors.brand.secondary}
                     />
                 </View>
 
                 {/* ── МАРШРУТТАР ───────────────────────────────────── */}
-                <SectionHeader title="МАРШРУТТАР" />
+                <SectionHeader title={t('profile_routes_section')} />
                 <View style={styles.card}>
                     {ROUTES.map((route, idx) => (
                         <React.Fragment key={route.id}>
                             <TouchableOpacity
                                 style={styles.routeRow}
-                                onPress={() => { setActiveRouteId(route.id); Haptics.selectionAsync(); }}
+                                onPress={async () => {
+                                    setActiveRouteId(route.id);
+                                    Haptics.selectionAsync();
+                                    await AsyncStorage.setItem(STORAGE.ACTIVE_ROUTE, route.id);
+                                }}
                             >
                                 <View style={[
                                     styles.routeRowDot,
@@ -270,47 +301,45 @@ export default function ProfileScreen() {
                 {/* ── МАЛ ИЕСІ СЕКЦИЯ ──────────────────────────────── */}
                 {(profile.role === 'livestock_owner') && (
                     <>
-                        <SectionHeader title="МАЛ ИЕЛЕНУ" />
+                        <SectionHeader title={t('livestock_section')} />
                         <View style={styles.card}>
                             <TouchableOpacity
                                 style={styles.settingsRow}
                                 onPress={() => showDialog({
-                                    title: 'Мал тіркеу',
-                                    message: 'Малды тіркеу функционалы дамытылуда. Картадан "Мен с табуном" режимін пайдаланыңыз.',
+                                    title: t('livestock_register'),
+                                    message: t('livestock_tracker_info'),
                                     icon: 'paw',
                                     iconColor: Colors.alert.high,
-                                    buttons: [{ text: 'Түсіндім', style: 'default' }]
+                                    buttons: [{ text: t('understand'), style: 'default' }]
                                 })}
                             >
                                 <View style={[styles.rowIcon, { backgroundColor: Colors.alert.high + '18' }]}>
                                     <Ionicons name="paw" size={18} color={Colors.alert.high} />
                                 </View>
                                 <View style={styles.rowBody}>
-                                    <Text style={styles.rowLabel}>Малды тіркеу</Text>
-                                    <Text style={styles.rowValue}>GPS немесе қолмен режим</Text>
+                                    <Text style={styles.rowLabel}>{t('livestock_register')}</Text>
+                                    <Text style={styles.rowValue}>{t('livestock_register_desc')}</Text>
                                 </View>
                                 <Ionicons name="chevron-forward" size={18} color={Colors.text.muted} />
                             </TouchableOpacity>
                             <View style={styles.rowDivider} />
                             <View style={styles.trackerInfoBox}>
                                 <Ionicons name="radio" size={14} color={Colors.alert.info} />
-                                <Text style={styles.trackerInfoText}>
-                                    Tort Tulik интеграциясы дамытылуда. Қазіргі кезде қолмен режим қолжетімді.
-                                </Text>
+                                <Text style={styles.trackerInfoText}>{t('livestock_tracker_info')}</Text>
                             </View>
                         </View>
                     </>
                 )}
 
                 {/* ── ХАБАРЛАНДЫРУЛАР ───────────────────────────────── */}
-                <SectionHeader title="ХАБАРЛАНДЫРУЛАР" />
+                <SectionHeader title={t('profile_notifications_section')} />
                 <View style={styles.card}>
                     <View style={styles.settingsRow}>
                         <View style={[styles.rowIcon, { backgroundColor: Colors.brand.primary + '18' }]}>
                             <Ionicons name="volume-high" size={18} color={Colors.brand.primary} />
                         </View>
                         <View style={styles.rowBody}>
-                            <Text style={styles.rowLabel}>Дыбыс</Text>
+                            <Text style={styles.rowLabel}>{t('profile_sound')}</Text>
                         </View>
                         <Switch
                             value={settings.soundEnabled}
@@ -325,7 +354,7 @@ export default function ProfileScreen() {
                             <Ionicons name="phone-portrait" size={18} color={Colors.alert.info} />
                         </View>
                         <View style={styles.rowBody}>
-                            <Text style={styles.rowLabel}>Діріл</Text>
+                            <Text style={styles.rowLabel}>{t('profile_vibration')}</Text>
                         </View>
                         <Switch
                             value={settings.vibrationEnabled}
@@ -334,10 +363,25 @@ export default function ProfileScreen() {
                             thumbColor={Colors.white}
                         />
                     </View>
+                    <View style={styles.rowDivider} />
+                    <View style={styles.settingsRow}>
+                        <View style={[styles.rowIcon, { backgroundColor: Colors.brand.primary + '18' }]}>
+                            <Ionicons name="language" size={18} color={Colors.brand.primary} />
+                        </View>
+                        <View style={styles.rowBody}>
+                            <Text style={styles.rowLabel}>{settings.language === 'kk' ? 'Қазақша' : 'Русский'}</Text>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.langToggle}
+                            onPress={() => { Haptics.selectionAsync(); updateSettings({ language: settings.language === 'kk' ? 'ru' : 'kk' }); }}
+                        >
+                            <Text style={styles.langToggleText}>{settings.language === 'kk' ? 'RU' : 'ҚАЗ'}</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* ── ҚОСЫМША ТУРАЛЫ ───────────────────────────────── */}
-                <SectionHeader title="ҚОСЫМША" />
+                <SectionHeader title={t('profile_about_section')} />
                 <View style={styles.card}>
                     <View style={styles.settingsRow}>
                         <View style={[styles.rowIcon, { backgroundColor: Colors.brand.primary + '18' }]}>
@@ -360,6 +404,16 @@ export default function ProfileScreen() {
                             </Text>
                         </View>
                     </TouchableOpacity>
+                    <View style={styles.rowDivider} />
+                    <TouchableOpacity style={styles.settingsRow} onPress={handleLogout}>
+                        <View style={[styles.rowIcon, { backgroundColor: Colors.alert.critical + '18' }]}>
+                            <Ionicons name="log-out-outline" size={18} color={Colors.alert.critical} />
+                        </View>
+                        <View style={styles.rowBody}>
+                            <Text style={[styles.rowLabel, { color: Colors.alert.critical }]}>{t('profile_logout')}</Text>
+                            <Text style={styles.rowValue}>{t('profile_logout_desc')}</Text>
+                        </View>
+                    </TouchableOpacity>
                 </View>
 
                 {/* ── DOT PATTERN MISSION CARD ─────────────────────── */}
@@ -372,23 +426,21 @@ export default function ProfileScreen() {
                     </View>
                     <Ionicons name="leaf" size={22} color={Colors.brand.primary} />
                     <Text style={styles.missionTitle}>Sapa Jol</Text>
-                    <Text style={styles.missionText}>
-                        Жануарларды және жүргізушілерді{'\n'}интеллектуалды мониторинг арқылы қорғаймыз
-                    </Text>
+                    <Text style={styles.missionText}>{t('mission_text')}</Text>
                     <View style={styles.missionStats}>
                         <View style={styles.missionStat}>
                             <Text style={styles.missionStatValue}>{activeIncidents}</Text>
-                            <Text style={styles.missionStatLabel}>белгі</Text>
+                            <Text style={styles.missionStatLabel}>{t('incidents_stat')}</Text>
                         </View>
                         <View style={styles.missionDivider} />
                         <View style={styles.missionStat}>
                             <Text style={styles.missionStatValue}>{ROUTES.length}</Text>
-                            <Text style={styles.missionStatLabel}>маршрут</Text>
+                            <Text style={styles.missionStatLabel}>{t('routes_stat')}</Text>
                         </View>
                         <View style={styles.missionDivider} />
                         <View style={styles.missionStat}>
                             <Text style={styles.missionStatValue}>A-17</Text>
-                            <Text style={styles.missionStatLabel}>негізгі</Text>
+                            <Text style={styles.missionStatLabel}>{t('main_road')}</Text>
                         </View>
                     </View>
                 </View>
@@ -400,9 +452,9 @@ export default function ProfileScreen() {
             <Modal visible={editModal} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Профильді өзгерту</Text>
+                        <Text style={styles.modalTitle}>{t('profile_edit_title')}</Text>
 
-                        <Text style={styles.inputLabel}>Аты-жөні</Text>
+                        <Text style={styles.inputLabel}>{t('profile_name_label')}</Text>
                         <TextInput
                             style={styles.input}
                             value={editName}
@@ -412,7 +464,7 @@ export default function ProfileScreen() {
                             maxLength={40}
                         />
 
-                        <Text style={styles.inputLabel}>Телефон</Text>
+                        <Text style={styles.inputLabel}>{t('profile_phone_label')}</Text>
                         <TextInput
                             style={styles.input}
                             value={editPhone}
@@ -428,13 +480,13 @@ export default function ProfileScreen() {
                                 style={[styles.modalBtn, styles.modalBtnCancel]}
                                 onPress={() => setEditModal(false)}
                             >
-                                <Text style={styles.modalBtnCancelText}>Бас тарту</Text>
+                                <Text style={styles.modalBtnCancelText}>{t('cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.modalBtn, styles.modalBtnSave]}
                                 onPress={saveEdit}
                             >
-                                <Text style={styles.modalBtnSaveText}>Сақтау</Text>
+                                <Text style={styles.modalBtnSaveText}>{t('save')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -484,6 +536,13 @@ const styles = StyleSheet.create({
     roleIcon: { width: 32, height: 32, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
     roleLabel: { fontSize: 14, fontWeight: '700' },
     roleDesc: { fontSize: 11, color: Colors.text.muted, marginTop: 1 },
+    roleLockIcon: { width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
+    langToggle: {
+        paddingHorizontal: 12, paddingVertical: 6,
+        backgroundColor: Colors.bg.tertiary,
+        borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border,
+    },
+    langToggleText: { fontSize: 11, fontWeight: '800', color: Colors.text.secondary },
 
     // Route card (референс: "Current Order")
     routeCard: {

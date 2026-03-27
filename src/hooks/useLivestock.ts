@@ -5,20 +5,39 @@
  * При офлайне — пустой список (нет мок-данных).
  * Manual mode: владелец активирует "Я с табуном" — его позиция становится позицией стада.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Livestock, LIVESTOCK_DANGER_DISTANCE_M } from '../constants/livestock';
 import { GeoPoint } from './useLocation';
 import { Config } from '../config';
 import axios from 'axios';
 
+/** Расстояние в км между двумя точками */
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const LIVESTOCK_STORAGE_KEY = 'saferoute:livestock:registered';
+
+/** 3+ стада в радиусе 500м от пользователя — опасная зона для водителей */
+const DANGER_ZONE_RADIUS_KM = 0.5;
+const DANGER_ZONE_MIN_HERDS = 3;
 
 interface UseLivestockReturn {
     livestock: Livestock[];
     dangerousLivestock: Livestock[];
     myLivestock: Livestock[];
     isManualMode: boolean;
+    /** true когда 3+ групп скота в радиусе 500м от пользователя */
+    dangerZoneAlert: boolean;
     activateManualMode: (type: Livestock['type'], count: number, name: string) => void;
     deactivateManualMode: () => void;
     registerLivestock: (data: Omit<Livestock, 'id' | 'ownerId' | 'lastUpdated' | 'isNearRoad' | 'distanceToRoadM'>) => Promise<void>;
@@ -178,11 +197,21 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
         l => l.isNearRoad && l.distanceToRoadM < LIVESTOCK_DANGER_DISTANCE_M
     );
 
+    /** Danger Zone: 3+ групп скота в радиусе 500м от пользователя */
+    const dangerZoneAlert = useMemo(() => {
+        if (!userLocation) return false;
+        const nearby = livestock.filter(l =>
+            haversineKm(userLocation.lat, userLocation.lon, l.latitude, l.longitude) <= DANGER_ZONE_RADIUS_KM
+        );
+        return nearby.length >= DANGER_ZONE_MIN_HERDS;
+    }, [livestock, userLocation]);
+
     return {
         livestock,
         dangerousLivestock,
         myLivestock,
         isManualMode,
+        dangerZoneAlert,
         activateManualMode,
         deactivateManualMode,
         registerLivestock,

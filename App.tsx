@@ -13,6 +13,7 @@ import { Colors } from './src/constants/colors';
 import { STORAGE } from './src/constants/storage';
 import { getDeviceId } from './src/services/deviceId';
 import { registerForPushNotifications } from './src/services/notifications';
+import { AppResetEvent } from './src/services/appReset';
 import type { UserProfile } from './src/constants/livestock';
 
 // Держим splash пока читаем AsyncStorage
@@ -20,6 +21,11 @@ SplashScreen.preventAutoHideAsync();
 
 export default function App() {
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+
+  // Слушаем logout из ProfileScreen
+  useEffect(() => {
+    AppResetEvent.subscribe(() => setOnboardingDone(false));
+  }, []);
 
   useEffect(() => {
     (async () => {

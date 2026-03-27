@@ -1,10 +1,10 @@
 /**
  * RoadStatusBadge — SafeRoute / Sapa Jol
  *
- * Отображает текущий статус дороги (A-17 или текущий маршрут).
- * Три состояния: ТАЗА (зелёный) / САҚТЫҚ (оранжевый) / ЖАБЫҚ (красный)
+ * Отображает текущий статус дороги (выбранный маршрут).
+ * Три состояния: open / caution / closed
  *
- * 🎨 ANIMATION_SLOT: status_pulse — Lottie/Reanimated пульс для ЖАБЫҚ
+ * 🎨 ANIMATION_SLOT: status_pulse — Lottie/Reanimated пульс для closed
  * 🎨 ANIMATION_SLOT: status_transition — анимация смены статуса
  */
 import React from 'react';
@@ -12,26 +12,28 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius } from '../constants/colors';
 import type { RoadStatus } from '../hooks/useRoute';
+import { useT } from '../i18n';
 
 interface Props {
     status: RoadStatus;
-    routeName?: string;       // 'A-17' по умолчанию
+    routeName?: string;
     isRouteMode: boolean;
     onToggleRoute: () => void;
 }
 
-const STATUS_CONFIG: Record<RoadStatus, { color: string; bg: string; icon: string; labelKk: string }> = {
-    open: { color: Colors.brand.primary, bg: Colors.brand.primary + '20', icon: 'checkmark-circle', labelKk: 'Жол таза' },
-    caution: { color: Colors.alert.high, bg: Colors.alert.high + '20', icon: 'warning', labelKk: 'Сақтық!' },
-    closed: { color: Colors.alert.critical, bg: Colors.alert.critical + '20', icon: 'close-circle', labelKk: 'Жол жабық' },
+const STATUS_STYLE: Record<RoadStatus, { color: string; bg: string; icon: string; key: 'road_open' | 'road_caution' | 'road_closed' }> = {
+    open:    { color: Colors.brand.primary,   bg: Colors.brand.primary   + '20', icon: 'checkmark-circle', key: 'road_open' },
+    caution: { color: Colors.alert.high,      bg: Colors.alert.high      + '20', icon: 'warning',          key: 'road_caution' },
+    closed:  { color: Colors.alert.critical,  bg: Colors.alert.critical  + '20', icon: 'close-circle',     key: 'road_closed' },
 };
 
 export default function RoadStatusBadge({ status, routeName = 'A-17', isRouteMode, onToggleRoute }: Props) {
-    const cfg = STATUS_CONFIG[status];
+    const t = useT();
+    const cfg = STATUS_STYLE[status];
 
     return (
         <View style={styles.wrap}>
-            {/* Кнопка режима маршрута */}
+            {/* Кнопка маршрута */}
             <TouchableOpacity
                 style={[styles.routeBtn, isRouteMode && styles.routeBtnActive]}
                 onPress={onToggleRoute}
@@ -48,9 +50,9 @@ export default function RoadStatusBadge({ status, routeName = 'A-17', isRouteMod
 
             {/* Статус */}
             <View style={[styles.badge, { backgroundColor: cfg.bg }]}>
-                {/* 🎨 ANIMATION_SLOT: status_pulse — заменить Ionicons на Lottie для ЖАБЫҚ */}
+                {/* 🎨 ANIMATION_SLOT: status_pulse */}
                 <Ionicons name={cfg.icon as any} size={13} color={cfg.color} />
-                <Text style={[styles.badgeText, { color: cfg.color }]}>{cfg.labelKk}</Text>
+                <Text style={[styles.badgeText, { color: cfg.color }]}>{t(cfg.key)}</Text>
             </View>
         </View>
     );
@@ -65,10 +67,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.bg.secondary,
         borderWidth: 1, borderColor: Colors.border,
     },
-    routeBtnActive: {
-        backgroundColor: Colors.brand.primary,
-        borderColor: Colors.brand.primary,
-    },
+    routeBtnActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
     routeBtnText: { fontSize: 12, fontWeight: '700', color: Colors.text.secondary },
     routeBtnTextActive: { color: Colors.bg.primary },
     badge: {

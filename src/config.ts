@@ -33,6 +33,9 @@ export const Config = {
     /** Location watch distance (m) */
     LOCATION_DISTANCE_M: 50,
 
+    /** Google Maps / Directions API key (set in .env) */
+    GOOGLE_MAPS_API_KEY: extra.googleMapsApiKey ?? '',
+
     /** App version (for display) */
     VERSION: Constants.expoConfig?.version ?? '1.0.0',
 } as const;

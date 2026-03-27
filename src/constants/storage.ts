@@ -17,6 +17,8 @@ export const STORAGE = {
     TRIP_HISTORY: 'saferoute:trip:history',
     /** Полный профиль пользователя (имя, телефон, роль, статистика) */
     USER_PROFILE: 'saferoute:user:profile',
+    /** Выбранный маршрут на карте (a17 | a1 | a21 | e40) */
+    ACTIVE_ROUTE: 'saferoute:active:route',
 } as const;
 
 export type StorageKey = (typeof STORAGE)[keyof typeof STORAGE];

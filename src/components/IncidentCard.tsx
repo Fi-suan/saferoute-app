@@ -14,7 +14,12 @@ import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { Incident, getIncidentMeta } from '../constants/incidents';
 
 function timeAgo(dateStr: string): string {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    // Бэкенд возвращает UTC без суффикса 'Z' — принудительно помечаем как UTC
+    const utc = dateStr.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateStr)
+        ? dateStr
+        : dateStr + 'Z';
+    const diff = Date.now() - new Date(utc).getTime();
+    if (diff < 0) return 'жаңа ғана';
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'жаңа ғана';
     if (mins < 60) return `${mins} мин бұрын`;
@@ -81,7 +86,8 @@ export default function IncidentCard({ item, onPress, compact }: Props) {
                     <Text style={styles.cardTime}>{timeAgo(item.created_at)}</Text>
                 </View>
 
-                {item.ai_verified && (
+                {/* AI бейдж: только при верификации с уверенностью ≥75% */}
+                {item.ai_verified && (item.ai_confidence === undefined || item.ai_confidence >= 0.75) && (
                     <View style={styles.aiBadge}>
                         <Ionicons name="checkmark-circle" size={14} color={Colors.brand.primary} />
                         <Text style={styles.aiBadgeText}>AI</Text>

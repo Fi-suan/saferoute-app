@@ -1,47 +1,41 @@
 /**
- * useRoute.ts — Режим маршрута Астана → Павлодар (A-17)
+ * useRoute.ts — Режим маршрута (multi-route)
  *
- * Фича: пользователь включает режим поездки по A-17.
- * В этом режиме:
- * - Карта показывает только инциденты вдоль трассы
- * - Активируется повышенная частота GPS (каждые 2 сек вместо 5)
- * - Вверху показывается баннер "Маршрут белсенді: A-17"
- * - При въезде в зону инцидента — немедленный push
- *
- * Граница трассы A-17 — грубый bounding box:
- * Lat: 51.1 → 52.5, Lon: 71.3 → 77.2
+ * Поддерживаемые маршруты: A-17, A-1, A-21, E-40
+ * При активации режима маршрута — показываются только инциденты
+ * вдоль выбранного коридора (bounding box с запасом 20–30 км).
  */
 import { useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE } from '../constants/storage';
 import { Incident } from '../constants/incidents';
 
-// Bounding box трассы A-17 Астана—Павлодар (с запасом ~20 км)
-const A17_BOUNDS = {
-    latMin: 51.0,
-    latMax: 52.5,
-    lonMin: 71.3,
-    lonMax: 77.2,
+/** Bounding box для каждого маршрута */
+const ROUTE_BOUNDS: Record<string, { latMin: number; latMax: number; lonMin: number; lonMax: number }> = {
+    a17: { latMin: 51.0, latMax: 52.5, lonMin: 71.3, lonMax: 77.2 }, // Астана → Павлодар
+    a1:  { latMin: 43.0, latMax: 52.0, lonMin: 71.0, lonMax: 77.5 }, // Астана → Алматы
+    a21: { latMin: 50.2, latMax: 52.0, lonMin: 75.0, lonMax: 80.8 }, // Екібастұз → Семей
+    e40: { latMin: 42.0, latMax: 43.2, lonMin: 69.3, lonMax: 71.8 }, // Шымкент → Тараз
 };
 
+export function isOnCorridor(lat: number, lon: number, routeId: string = 'a17'): boolean {
+    const b = ROUTE_BOUNDS[routeId] ?? ROUTE_BOUNDS.a17;
+    return lat >= b.latMin && lat <= b.latMax && lon >= b.lonMin && lon <= b.lonMax;
+}
+
+/** @deprecated use isOnCorridor(lat, lon, 'a17') */
 export function isOnA17Corridor(lat: number, lon: number): boolean {
-    return (
-        lat >= A17_BOUNDS.latMin && lat <= A17_BOUNDS.latMax &&
-        lon >= A17_BOUNDS.lonMin && lon <= A17_BOUNDS.lonMax
-    );
+    return isOnCorridor(lat, lon, 'a17');
 }
 
 /**
  * Вычисляет статус дороги из списка активных инцидентов.
- * Используется для отображения "Дорога открыта/закрыта".
  */
 export type RoadStatus = 'open' | 'caution' | 'closed';
 
 export function computeRoadStatus(incidents: Incident[]): RoadStatus {
     const active = incidents.filter(i => i.is_active);
-    // Закрыта: есть инцидент severity=5 с типом hazard (дорожная блокировка)
     if (active.some(i => i.severity >= 5 && i.incident_type === 'hazard')) return 'closed';
-    // Сақтық: 3+ инцидента severity>=4 или ДТП severity>=4
     const dangerous = active.filter(i => i.severity >= 4);
     if (dangerous.length >= 2 || active.some(i => i.incident_type === 'crash' && i.severity >= 4)) return 'caution';
     return 'open';
@@ -50,24 +44,23 @@ export function computeRoadStatus(incidents: Incident[]): RoadStatus {
 export interface UseRouteReturn {
     isRouteMode: boolean;
     toggleRouteMode: () => Promise<void>;
-    routeIncidents: Incident[];            // только инциденты вдоль A-17
+    routeIncidents: Incident[];
     roadStatus: RoadStatus;
 }
 
-export function useRoute(allIncidents: Incident[]): UseRouteReturn {
+export function useRoute(allIncidents: Incident[], routeId: string = 'a17'): UseRouteReturn {
     const [isRouteMode, setIsRouteMode] = useState(false);
 
     const toggleRouteMode = useCallback(async () => {
         const next = !isRouteMode;
         setIsRouteMode(next);
-        // Persist выбора
         try {
             await AsyncStorage.setItem(STORAGE.ROUTE_MODE, next ? '1' : '0');
         } catch { /* ignore */ }
     }, [isRouteMode]);
 
     const routeIncidents = allIncidents.filter(
-        i => isOnA17Corridor(i.latitude, i.longitude)
+        i => isOnCorridor(i.latitude, i.longitude, routeId),
     );
 
     const src = isRouteMode ? routeIncidents : allIncidents;

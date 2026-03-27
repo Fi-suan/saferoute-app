@@ -52,6 +52,9 @@ module.exports = {
     web: {
       favicon: './assets/image.png',
     },
+    extra: {
+      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+    },
     plugins: [
       [
         'expo-location',
