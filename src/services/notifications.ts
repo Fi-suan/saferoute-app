@@ -10,9 +10,9 @@
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import axios from 'axios';
-import { Config } from '../config';
 import { getDeviceId } from './deviceId';
+import { registerDevice } from './api';
+import { storeAuthToken } from './auth';
 
 // Флаг: поддерживаются ли уведомления в текущей среде
 let _notificationsSupported = true;
@@ -32,6 +32,20 @@ try {
     _notificationsSupported = false;
 }
 
+async function registerAndStoreToken(role: string, fcmToken?: string): Promise<void> {
+    const deviceId = await getDeviceId();
+    try {
+        const res = await registerDevice({
+            device_id: deviceId,
+            role,
+            fcm_token: fcmToken,
+        });
+        if (res?.token) {
+            await storeAuthToken(res.token);
+        }
+    } catch { /* ignore */ }
+}
+
 /**
  * Запрашивает разрешение на локальные уведомления.
  * Remote push (FCM) в Expo Go SDK53+ не работают — не пытаемся их запросить.
@@ -40,17 +54,6 @@ export async function registerForPushNotifications(role: string = 'driver'): Pro
     if (!_notificationsSupported) return null;
 
     try {
-        // Для Android — создаём канал (нужен для локальных тоже)
-        if (Platform.OS === 'android') {
-            await Notifications.setNotificationChannelAsync('saferoute-alerts', {
-                name: 'SafeRoute Alerts',
-                importance: Notifications.AndroidImportance.HIGH,
-                vibrationPattern: [0, 250, 250, 250],
-                lightColor: '#2ECC71',
-                sound: 'default',
-            });
-        }
-
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
 
@@ -64,31 +67,28 @@ export async function registerForPushNotifications(role: string = 'driver'): Pro
             return null;
         }
 
+        // Для Android — создаём канал (нужен для локальных тоже)
+        if (Platform.OS === 'android') {
+            await Notifications.setNotificationChannelAsync('saferoute-alerts', {
+                name: 'SafeRoute Alerts',
+                importance: Notifications.AndroidImportance.HIGH,
+                vibrationPattern: [0, 250, 250, 250],
+                lightColor: '#2ECC71',
+                sound: 'default',
+            });
+        }
+
         // Пытаемся получить Expo Push Token (только для dev builds)
         if (Constants.appOwnership === 'expo') {
             console.log("[Notifications] Expo Go detected: bypassing remote push (SDK 53 limit). Local notifications work.");
-            
-            // Still register device to map role locally to remote
-            const deviceId = await getDeviceId();
-            axios.post(`${Config.BACKEND_URL}/api/v1/devices/register`, {
-                device_id: deviceId,
-                role: role,
-                fcm_token: null,
-            }, { timeout: 5000 }).catch(() => { });
-            
+            await registerAndStoreToken(role);
             return null;
         }
 
         try {
-            const token = await Notifications.getExpoPushTokenAsync();
-            const deviceId = await getDeviceId();
-            // Отправить токен на бэкенд (тихо, не блокирует UI)
-            axios.post(`${Config.BACKEND_URL}/api/v1/devices/register`, {
-                device_id: deviceId,
-                role: role,
-                fcm_token: token.data,
-            }, { timeout: 5000 }).catch(() => { });
-            return token.data;
+            const pushToken = await Notifications.getExpoPushTokenAsync();
+            await registerAndStoreToken(role, pushToken.data);
+            return pushToken.data;
         } catch {
             // Expo Go без EAS — токен недоступен, но локальные уведомления работают
             return null;

@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const VERSION_CODE = parseInt(process.env.VERSION_CODE || '1', 10);
+
 module.exports = {
   expo: {
     name: 'Sapa Jol',
@@ -27,7 +29,7 @@ module.exports = {
     },
     android: {
       package: 'kz.saferoute.app',
-      versionCode: 1,
+      versionCode: VERSION_CODE,
       adaptiveIcon: {
         foregroundImage: './assets/image.png',
         backgroundColor: '#0A0F1C',

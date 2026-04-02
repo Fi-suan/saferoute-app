@@ -1,14 +1,14 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from app.models import AlertLevel, AnimalType
 
 
 class HerdBase(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=100)
     animal_type: AnimalType = AnimalType.SAIGA
-    estimated_count: int = 1
-    owner_name: Optional[str] = None
+    estimated_count: int = Field(1, ge=1, le=100_000)
+    owner_name: Optional[str] = Field(None, max_length=200)
 
 
 class HerdCreate(HerdBase):
@@ -18,9 +18,23 @@ class HerdCreate(HerdBase):
 class LocationPoint(BaseModel):
     latitude: float
     longitude: float
-    speed_kmh: float = 0.0
-    heading_degrees: Optional[float] = None
-    source: str = "api"
+    speed_kmh: float = Field(0.0, ge=0, le=500)
+    heading_degrees: Optional[float] = Field(None, ge=0, le=360)
+    source: str = Field("api", max_length=50)
+
+    @field_validator("latitude")
+    @classmethod
+    def validate_lat(cls, v: float) -> float:
+        if not -90 <= v <= 90:
+            raise ValueError("latitude must be between -90 and 90")
+        return v
+
+    @field_validator("longitude")
+    @classmethod
+    def validate_lon(cls, v: float) -> float:
+        if not -180 <= v <= 180:
+            raise ValueError("longitude must be between -180 and 180")
+        return v
 
 
 class HerdLocationOut(BaseModel):
@@ -86,18 +100,46 @@ class AlertOut(BaseModel):
 
 
 class DeviceRegister(BaseModel):
-    device_id: str
-    role: str = "driver"
-    fcm_token: Optional[str] = None
-    phone_number: Optional[str] = None
+    device_id: str = Field(..., min_length=1, max_length=200)
+    role: str = Field("driver", pattern=r"^(driver|owner)$")
+    fcm_token: Optional[str] = Field(None, max_length=500)
+    phone_number: Optional[str] = Field(None, max_length=20)
     latitude: Optional[float] = None
     longitude: Optional[float] = None
 
+    @field_validator("latitude")
+    @classmethod
+    def validate_lat(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and not -90 <= v <= 90:
+            raise ValueError("latitude must be between -90 and 90")
+        return v
+
+    @field_validator("longitude")
+    @classmethod
+    def validate_lon(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and not -180 <= v <= 180:
+            raise ValueError("longitude must be between -180 and 180")
+        return v
+
 
 class DeviceLocationUpdate(BaseModel):
-    device_id: str
+    device_id: str = Field(..., min_length=1, max_length=200)
     latitude: float
     longitude: float
+
+    @field_validator("latitude")
+    @classmethod
+    def validate_lat(cls, v: float) -> float:
+        if not -90 <= v <= 90:
+            raise ValueError("latitude must be between -90 and 90")
+        return v
+
+    @field_validator("longitude")
+    @classmethod
+    def validate_lon(cls, v: float) -> float:
+        if not -180 <= v <= 180:
+            raise ValueError("longitude must be between -180 and 180")
+        return v
 
 
 class SimulatorStatus(BaseModel):

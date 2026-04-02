@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.database import get_db
-from app.models import Herd, HerdLocation
+from app.models import Herd, HerdLocation, Device
 from app.schemas import HerdCreate, HerdOut, HerdLocationOut, LocationPoint
 from app.services.geofencing import process_location_update
 from app.services.notifications import notify_nearby_drivers
+from app.services.auth import get_current_device
 
 router = APIRouter(prefix="/herds", tags=["herds"])
 
@@ -47,7 +48,7 @@ def get_herd(herd_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=HerdOut, status_code=201)
-def create_herd(data: HerdCreate, db: Session = Depends(get_db)):
+def create_herd(data: HerdCreate, db: Session = Depends(get_db), current: Device = Depends(get_current_device)):
     herd = Herd(**data.model_dump())
     db.add(herd)
     db.commit()
@@ -56,7 +57,7 @@ def create_herd(data: HerdCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/{herd_id}/location")
-def update_herd_location(herd_id: int, loc: LocationPoint, db: Session = Depends(get_db)):
+def update_herd_location(herd_id: int, loc: LocationPoint, db: Session = Depends(get_db), current: Device = Depends(get_current_device)):
     """Принять новую GPS-координату от ошейника / симулятора"""
     herd = db.query(Herd).filter(Herd.id == herd_id).first()
     if not herd:

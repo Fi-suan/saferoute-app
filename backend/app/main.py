@@ -8,18 +8,23 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List, Set
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import Session
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import engine, Base, SessionLocal, get_db
-from app.routers import herds, alerts, geozones, devices, incidents
+from app.routers import herds, alerts, geozones, devices, incidents, auth
 from app.services.simulator import simulator_tick, get_simulator_status, initialize_simulator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 class ConnectionManager:
@@ -99,14 +104,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
+# Auth (public — no token required)
+app.include_router(auth.router, prefix="/api/v1")
+
+# Protected + public routes
 app.include_router(herds.router, prefix="/api/v1")
 app.include_router(alerts.router, prefix="/api/v1")
 app.include_router(geozones.router, prefix="/api/v1")
@@ -167,6 +179,34 @@ async def websocket_live(ws: WebSocket):
         ws_manager.disconnect(ws)
 
 
+# ── Directions Proxy ─────────────────────────────────────────────────────────
+@app.get("/api/v1/directions")
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
+async def proxy_directions(
+    request: Request,
+    origin_lat: float = Query(...),
+    origin_lon: float = Query(...),
+    dest_lat: float = Query(...),
+    dest_lon: float = Query(...),
+):
+    """Proxy Google Directions API — keeps API key server-side."""
+    if not settings.GOOGLE_MAPS_API_KEY:
+        return {"error": "Google Maps API key not configured on server"}
+
+    import httpx
+    url = (
+        f"https://maps.googleapis.com/maps/api/directions/json"
+        f"?origin={origin_lat},{origin_lon}"
+        f"&destination={dest_lat},{dest_lon}"
+        f"&key={settings.GOOGLE_MAPS_API_KEY}"
+        f"&language=ru&mode=driving"
+    )
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(url)
+        return resp.json()
+
+
+# ── Simulator ────────────────────────────────────────────────────────────────
 @app.post("/api/v1/simulator/tick")
 def manual_tick(steps: int = 1, db: Session = Depends(get_db)):
     results = []

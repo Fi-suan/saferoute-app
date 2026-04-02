@@ -26,6 +26,7 @@ import { useIncidents } from '../hooks/useIncidents';
 import { Config } from '../config';
 import { getDeviceId } from '../services/deviceId';
 import { AppResetEvent } from '../services/appReset';
+import { deleteUserData } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE } from '../constants/storage';
 import { useT } from '../i18n';
@@ -402,6 +403,46 @@ export default function ProfileScreen() {
                             <Text style={styles.rowValue} numberOfLines={1}>
                                 {showDeviceId ? deviceId : '· · · · · · · · · · ·'}
                             </Text>
+                        </View>
+                    </TouchableOpacity>
+                    <View style={styles.rowDivider} />
+                    <TouchableOpacity style={styles.settingsRow} onPress={() => {
+                        showDialog({
+                            title: 'Деректерді жою',
+                            message: 'Барлық деректеріңіз (хабарламалар, инциденттер, құрылғы) біржола жойылады. Жалғастырасыз ба?',
+                            icon: 'trash',
+                            iconColor: Colors.alert.critical,
+                            buttons: [
+                                {
+                                    text: 'Жою',
+                                    style: 'destructive',
+                                    onPress: async () => {
+                                        try {
+                                            const id = await getDeviceId();
+                                            await deleteUserData(id);
+                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                            await AppResetEvent.trigger();
+                                        } catch {
+                                            showDialog({
+                                                title: 'Қате',
+                                                message: 'Деректерді жою мүмкін болмады',
+                                                icon: 'close-circle',
+                                                iconColor: Colors.alert.critical,
+                                                buttons: [{ text: 'Жабу', style: 'cancel' }],
+                                            });
+                                        }
+                                    },
+                                },
+                                { text: 'Бас тарту', style: 'cancel' },
+                            ],
+                        });
+                    }}>
+                        <View style={[styles.rowIcon, { backgroundColor: Colors.alert.critical + '18' }]}>
+                            <Ionicons name="trash-outline" size={18} color={Colors.alert.critical} />
+                        </View>
+                        <View style={styles.rowBody}>
+                            <Text style={[styles.rowLabel, { color: Colors.alert.critical }]}>Деректерімді жою</Text>
+                            <Text style={styles.rowValue}>GDPR — барлық деректер жойылады</Text>
                         </View>
                     </TouchableOpacity>
                     <View style={styles.rowDivider} />

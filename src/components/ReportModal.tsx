@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { INCIDENT_TYPES_LIST } from '../constants/incidents';
 import { GeoPoint } from '../hooks/useLocation';
@@ -85,16 +86,21 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
         }
         setSubmitting(true);
 
-        // Convert photo to base64 for AI validation
+        // Resize + compress photo before base64 to avoid OOM on weak devices
         let photo_base64: string | undefined;
         if (photoUri) {
             try {
-                const base64Data = await FileSystem.readAsStringAsync(photoUri, {
+                const resized = await ImageManipulator.manipulateAsync(
+                    photoUri,
+                    [{ resize: { width: 800 } }],
+                    { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG },
+                );
+                const base64Data = await FileSystem.readAsStringAsync(resized.uri, {
                     encoding: 'base64',
                 });
                 photo_base64 = base64Data;
             } catch (e) {
-                console.warn('[ReportModal] Failed to read photo as base64:', e);
+                console.warn('[ReportModal] Failed to process photo:', e);
             }
         }
 

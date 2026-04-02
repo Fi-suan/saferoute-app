@@ -1,47 +1,53 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 
 from app.database import get_db
-from app.models import Device, Role
-from app.schemas import DeviceRegister, DeviceLocationUpdate
+from app.models import Device, IncidentReport, IncidentConfirmation
+from app.schemas import DeviceLocationUpdate
+from app.services.auth import get_current_device
 
 router = APIRouter(prefix="/devices", tags=["devices"])
 
 
-@router.post("/register")
-def register_device(data: DeviceRegister, db: Session = Depends(get_db)):
-    device = db.query(Device).filter(Device.device_id == data.device_id).first()
-    if device:
-        # User is already registered; update token/location but not role
-        device.fcm_token = data.fcm_token or device.fcm_token
-        device.phone_number = data.phone_number or device.phone_number
-        device.latitude = data.latitude or device.latitude
-        device.longitude = data.longitude or device.longitude
-        device.last_seen = datetime.utcnow()
-    else:
-        # Assign role from enum or fallback 
-        role = Role.OWNER if data.role == 'owner' else Role.DRIVER
-        device = Device(
-            device_id=data.device_id,
-            role=role,
-            fcm_token=data.fcm_token,
-            phone_number=data.phone_number,
-            latitude=data.latitude,
-            longitude=data.longitude
-        )
-        db.add(device)
-    db.commit()
-    return {"status": "registered", "device_id": data.device_id, "role": device.role.value}
-
-
 @router.post("/location")
-def update_device_location(data: DeviceLocationUpdate, db: Session = Depends(get_db)):
-    device = db.query(Device).filter(Device.device_id == data.device_id).first()
-    if not device:
-        return {"error": "Device not found"}
-    device.latitude = data.latitude
-    device.longitude = data.longitude
-    device.last_seen = datetime.utcnow()
+def update_device_location(
+    data: DeviceLocationUpdate,
+    db: Session = Depends(get_db),
+    current: Device = Depends(get_current_device),
+):
+    """Update device location (requires auth)."""
+    if current.device_id != data.device_id:
+        raise HTTPException(status_code=403, detail="Cannot update another device")
+    current.latitude = data.latitude
+    current.longitude = data.longitude
+    current.last_seen = datetime.utcnow()
     db.commit()
     return {"status": "ok"}
+
+
+@router.delete("/{device_id}/data")
+def delete_device_data(
+    device_id: str,
+    db: Session = Depends(get_db),
+    current: Device = Depends(get_current_device),
+):
+    """Delete all user data for GDPR compliance."""
+    if current.device_id != device_id:
+        raise HTTPException(status_code=403, detail="Cannot delete another device's data")
+
+    # Delete incident confirmations
+    db.query(IncidentConfirmation).filter(
+        IncidentConfirmation.device_id == device_id
+    ).delete()
+
+    # Delete incident reports
+    db.query(IncidentReport).filter(
+        IncidentReport.reporter_device_id == device_id
+    ).delete()
+
+    # Delete device record
+    db.query(Device).filter(Device.device_id == device_id).delete()
+
+    db.commit()
+    return {"status": "deleted", "device_id": device_id}

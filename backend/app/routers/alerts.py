@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
 
 from app.database import get_db
-from app.models import Alert, Herd, GeoZone
+from app.models import Alert, Herd, GeoZone, Device
 from app.schemas import AlertOut
+from app.services.auth import get_current_device
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
@@ -45,10 +46,10 @@ def get_alert_history(limit: int = 50, db: Session = Depends(get_db)):
 
 
 @router.post("/{alert_id}/resolve")
-def resolve_alert(alert_id: int, db: Session = Depends(get_db)):
+def resolve_alert(alert_id: int, db: Session = Depends(get_db), current: Device = Depends(get_current_device)):
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
-        return {"error": "Alert not found"}
+        raise HTTPException(status_code=404, detail="Alert not found")
     alert.is_active = False
     alert.resolved_at = datetime.utcnow()
     db.commit()

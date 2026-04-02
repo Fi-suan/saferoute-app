@@ -1,10 +1,20 @@
 import axios from 'axios';
 import { Config } from '../config';
+import { getAuthToken } from './auth';
 
 const api = axios.create({
     baseURL: `${Config.BACKEND_URL}/api/v1`,
     timeout: 10000,
     headers: { 'Content-Type': 'application/json' },
+});
+
+// Attach JWT token to every request
+api.interceptors.request.use(async (config) => {
+    const token = await getAuthToken();
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
 });
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -80,10 +90,14 @@ export const registerDevice = (data: {
     phone_number?: string;
     latitude?: number;
     longitude?: number;
-}) => api.post('/devices/register', data).then(r => r.data);
+}) => api.post('/auth/register', data).then(r => r.data);
 
 export const updateDeviceLocation = (device_id: string, latitude: number, longitude: number) =>
     api.post('/devices/location', { device_id, latitude, longitude }).then(r => r.data);
+
+// ── User Data Deletion (GDPR) ─────────────────────────────────────────────────
+export const deleteUserData = (device_id: string) =>
+    api.delete(`/devices/${device_id}/data`).then(r => r.data);
 
 // ── Simulator ──────────────────────────────────────────────────────────────────
 export const triggerSimulatorTick = (steps = 1) =>

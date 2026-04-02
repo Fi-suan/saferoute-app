@@ -1,29 +1,56 @@
 """
 Incidents Router — создание, просмотр, подтверждение инцидентов
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.database import get_db
-from app.models import IncidentReport, IncidentConfirmation, IncidentType
+from app.config import settings
+from app.models import IncidentReport, IncidentConfirmation, IncidentType, Device
 from app.services.geofencing import haversine_km
+from app.services.auth import get_current_device
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
 
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class IncidentCreate(BaseModel):
     incident_type: str = "animal"
-    description: Optional[str] = None
-    severity: int = 3
+    description: Optional[str] = Field(None, max_length=2000)
+    severity: int = Field(3, ge=1, le=5)
     latitude: float
     longitude: float
     photo_base64: Optional[str] = None
     reporter_device_id: Optional[str] = None
+
+    @field_validator("latitude")
+    @classmethod
+    def validate_lat(cls, v: float) -> float:
+        if not -90 <= v <= 90:
+            raise ValueError("latitude must be between -90 and 90")
+        return v
+
+    @field_validator("longitude")
+    @classmethod
+    def validate_lon(cls, v: float) -> float:
+        if not -180 <= v <= 180:
+            raise ValueError("longitude must be between -180 and 180")
+        return v
+
+    @field_validator("photo_base64")
+    @classmethod
+    def validate_photo_size(cls, v: Optional[str]) -> Optional[str]:
+        if v and len(v) > 2_000_000:  # ~1.5MB decoded
+            raise ValueError("photo_base64 too large (max ~1.5MB)")
+        return v
 
 
 class ConfirmRequest(BaseModel):
@@ -99,7 +126,13 @@ async def verify_photo_with_ai(photo_base64: Optional[str], incident_type: str) 
 
 
 @router.post("/report", status_code=201)
-async def create_incident(data: IncidentCreate, db: Session = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_REPORT)
+async def create_incident(
+    request: Request,
+    data: IncidentCreate,
+    db: Session = Depends(get_db),
+    current: Device = Depends(get_current_device),
+):
     """Создать инцидент: фото → AI проверка → метка на карте"""
     ai_result = await verify_photo_with_ai(data.photo_base64, data.incident_type)
 
@@ -114,7 +147,7 @@ async def create_incident(data: IncidentCreate, db: Session = Depends(get_db)):
         severity=data.severity,
         latitude=data.latitude,
         longitude=data.longitude,
-        reporter_device_id=data.reporter_device_id,
+        reporter_device_id=current.device_id,
         ai_verified=ai_result["verified"],
         ai_confidence=ai_result["confidence"],
         ai_analysis=ai_result["analysis"],
@@ -157,7 +190,12 @@ def get_incident_feed(limit: int = 50, db: Session = Depends(get_db)):
 
 
 @router.post("/{incident_id}/confirm")
-def confirm_incident(incident_id: int, data: ConfirmRequest, db: Session = Depends(get_db)):
+def confirm_incident(
+    incident_id: int,
+    data: ConfirmRequest,
+    db: Session = Depends(get_db),
+    current: Device = Depends(get_current_device),
+):
     incident = db.query(IncidentReport).filter(IncidentReport.id == incident_id).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -176,11 +214,10 @@ def confirm_incident(incident_id: int, data: ConfirmRequest, db: Session = Depen
     )
     db.add(confirmation)
 
-    if data.is_resolved:
-        incident.confirmations_count += 1
-        if incident.confirmations_count >= 3:
-            incident.is_active = False
-            incident.resolved_at = datetime.utcnow()
+    incident.confirmations_count += 1
+    if data.is_resolved and incident.confirmations_count >= 3:
+        incident.is_active = False
+        incident.resolved_at = datetime.utcnow()
 
     db.commit()
     return {

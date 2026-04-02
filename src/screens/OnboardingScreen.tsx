@@ -9,7 +9,9 @@ import { BlurView } from 'expo-blur';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import type { UserRole } from '../constants/livestock';
 import OnboardingIllustration from '../components/OnboardingIllustration';
-import { backendLogin, backendRegister } from '../services/auth';
+import { registerDevice } from '../services/api';
+import { storeAuthToken } from '../services/auth';
+import { getDeviceId } from '../services/deviceId';
 
 const { width, height } = Dimensions.get('window');
 
@@ -146,16 +148,18 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
                 totalReports: 0,
                 avatarInitials: name.trim().split(' ').map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || 'АА',
             };
-            // Try to register on backend (fire-and-forget)
-            if (email.trim() && password) {
-                backendRegister({
-                    name: profile.name,
-                    phone: profile.phone,
-                    email: email.trim().toLowerCase(),
-                    password,
-                    role: role!,
-                }).catch(() => { });
-            }
+            // Register device on backend and store JWT token
+            try {
+                const deviceId = await getDeviceId();
+                const res = await registerDevice({
+                    device_id: deviceId,
+                    role: role === 'livestock_owner' ? 'owner' : 'driver',
+                    phone_number: profile.phone || undefined,
+                });
+                if (res?.token) {
+                    await storeAuthToken(res.token);
+                }
+            } catch { /* ignore — will retry on next app open */ }
             onFinish({ name: profile.name, phone: profile.phone, role: role!, email: email || undefined });
         } catch (err: any) {
             setErrors({ submit: err?.message ?? 'Қате' });
@@ -173,12 +177,19 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
         if (Object.keys(e).length) return;
         setLoading(true);
         try {
-            const profile = await backendLogin(lEmail.trim().toLowerCase(), lPass);
-            onFinish({ name: profile.name, phone: profile.phone, role: profile.role });
+            // Device-based auth — register device and get token
+            const deviceId = await getDeviceId();
+            const res = await registerDevice({
+                device_id: deviceId,
+                role: 'driver',
+            });
+            if (res?.token) {
+                await storeAuthToken(res.token);
+            }
+            // Login is device-based now — email/password not used
+            setErrors({ login: ui.loginNotReady });
         } catch (err: any) {
-            // 404 = endpoint not found, backend auth not ready yet
-            const is404 = err?.response?.status === 404 || err?.message === 'no_profile';
-            setErrors({ login: is404 ? ui.loginNotReady : ui.loginErr });
+            setErrors({ login: ui.loginErr });
         } finally {
             setLoading(false);
         }
@@ -413,6 +424,7 @@ function RegForm({ ui, name, setName, phone, setPhone, email, setEmail, password
                 title={ui.owner} desc={ui.ownerDesc}
                 selected={role === 'livestock_owner'} onPress={() => setRole('livestock_owner')}
             />
+
             {errors.submit && <Text style={styles.formError}>{errors.submit}</Text>}
         </ScrollView>
     );

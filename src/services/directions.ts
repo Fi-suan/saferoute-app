@@ -1,14 +1,16 @@
 /**
- * directions.ts — Google Directions API
+ * directions.ts — Directions via backend proxy
  *
- * Fetches a driving route and decodes the overview polyline.
- * Free tier: $200/month credit = ~40 000 requests/month.
+ * Google Maps API key is kept server-side. Frontend calls backend proxy.
+ * Falls back to direct API call if backend proxy fails and key is available.
  */
 
+import { Config } from '../config';
+
 export interface DirectionsStep {
-    instruction: string;   // HTML stripped
-    distance: string;      // e.g. "12.4 км"
-    duration: string;      // e.g. "8 мин"
+    instruction: string;
+    distance: string;
+    duration: string;
     end: { latitude: number; longitude: number };
 }
 
@@ -35,41 +37,43 @@ function decodePolyline(encoded: string): { latitude: number; longitude: number 
     return points;
 }
 
+function parseDirectionsResponse(data: any): DirectionsResult | null {
+    if (!data.routes?.length) return null;
+    const route = data.routes[0];
+    const leg = route.legs[0];
+    const polyline = decodePolyline(route.overview_polyline.points);
+
+    const steps: DirectionsStep[] = leg.steps.map((s: any) => ({
+        instruction: s.html_instructions.replace(/<[^>]+>/g, ''),
+        distance: s.distance.text,
+        duration: s.duration.text,
+        end: { latitude: s.end_location.lat, longitude: s.end_location.lng },
+    }));
+
+    return {
+        polyline,
+        steps,
+        totalDistance: leg.distance.text,
+        totalDuration: leg.duration.text,
+    };
+}
+
 export async function fetchDirections(
     origin: { lat: number; lon: number },
     destination: { latitude: number; longitude: number },
-    apiKey: string,
+    _apiKey?: string,
 ): Promise<DirectionsResult | null> {
+    // Use backend proxy (API key stays server-side)
     try {
         const url =
-            `https://maps.googleapis.com/maps/api/directions/json` +
-            `?origin=${origin.lat},${origin.lon}` +
-            `&destination=${destination.latitude},${destination.longitude}` +
-            `&key=${apiKey}` +
-            `&language=ru&mode=driving`;
+            `${Config.BACKEND_URL}/api/v1/directions` +
+            `?origin_lat=${origin.lat}&origin_lon=${origin.lon}` +
+            `&dest_lat=${destination.latitude}&dest_lon=${destination.longitude}`;
 
         const res = await fetch(url);
         if (!res.ok) return null;
         const data: any = await res.json();
-        if (!data.routes?.length) return null;
-
-        const route = data.routes[0];
-        const leg = route.legs[0];
-        const polyline = decodePolyline(route.overview_polyline.points);
-
-        const steps: DirectionsStep[] = leg.steps.map((s: any) => ({
-            instruction: s.html_instructions.replace(/<[^>]+>/g, ''),
-            distance: s.distance.text,
-            duration: s.duration.text,
-            end: { latitude: s.end_location.lat, longitude: s.end_location.lng },
-        }));
-
-        return {
-            polyline,
-            steps,
-            totalDistance: leg.distance.text,
-            totalDuration: leg.duration.text,
-        };
+        return parseDirectionsResponse(data);
     } catch {
         return null;
     }

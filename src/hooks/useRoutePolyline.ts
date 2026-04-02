@@ -109,8 +109,6 @@ export function useRoutePolyline(routeId: string): LatLng[] {
         // Reset to static immediately when route changes
         setPolyline(STATIC_WAYPOINTS[routeId] ?? STATIC_WAYPOINTS.a17);
 
-        if (!Config.GOOGLE_MAPS_API_KEY) return;
-
         (async () => {
             // 1. Try cache first
             try {
@@ -126,7 +124,7 @@ export function useRoutePolyline(routeId: string): LatLng[] {
                 }
             } catch { /* ignore */ }
 
-            // 2. Fetch from Directions API
+            // 2. Fetch from Directions API (via backend proxy)
             if (fetchingRef.current) return;
             fetchingRef.current = true;
 
@@ -136,7 +134,6 @@ export function useRoutePolyline(routeId: string): LatLng[] {
             const result = await fetchDirections(
                 { lat: ep.start.latitude, lon: ep.start.longitude },
                 ep.end,
-                Config.GOOGLE_MAPS_API_KEY,
             );
 
             if (result && !cancelled) {
