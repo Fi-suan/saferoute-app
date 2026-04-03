@@ -1,50 +1,42 @@
 /**
- * incidentStore.ts — модульный in-memory кэш инцидентов
+ * incidentStore.ts — Zustand store for incidents
  *
- * Решает проблему разных экземпляров useIncidents():
- * MapScreen и AlertsScreen видят ОДНИ и те же данные через этот store.
- *
- * Паттерн: module-level singleton с подписками (pub/sub).
- * Не используем Zustand/Redux чтобы не добавлять зависимость.
+ * Thread-safe shared state between MapScreen and AlertsScreen.
  */
+import { create } from 'zustand';
 import { Incident } from '../constants/incidents';
 
-type Listener = (incidents: Incident[]) => void;
+interface IncidentState {
+    incidents: Incident[];
+    set: (data: Incident[]) => void;
+    prepend: (incident: Incident) => void;
+    update: (id: number, patch: Partial<Incident>) => void;
+}
 
-let _incidents: Incident[] = [];
-const _listeners = new Set<Listener>();
+const useIncidentZustand = create<IncidentState>((set) => ({
+    incidents: [],
+    set: (data) => set({ incidents: data }),
+    prepend: (incident) => set((s) => ({ incidents: [incident, ...s.incidents] })),
+    update: (id, patch) => set((s) => ({
+        incidents: s.incidents.map(i => i.id === id ? { ...i, ...patch } : i),
+    })),
+}));
 
+// Backward-compatible API so useIncidents.ts doesn't need major refactor
 export const incidentStore = {
-    /** Текущее состояние */
     get(): Incident[] {
-        return _incidents;
+        return useIncidentZustand.getState().incidents;
     },
-
-    /** Полная замена (от сервера/mock) */
     set(data: Incident[]) {
-        _incidents = data;
-        _notify();
+        useIncidentZustand.getState().set(data);
     },
-
-    /** Добавить оптимистичный инцидент в начало */
     prepend(incident: Incident) {
-        _incidents = [incident, ..._incidents];
-        _notify();
+        useIncidentZustand.getState().prepend(incident);
     },
-
-    /** Обновить конкретный инцидент по id */
     update(id: number, patch: Partial<Incident>) {
-        _incidents = _incidents.map(i => i.id === id ? { ...i, ...patch } : i);
-        _notify();
+        useIncidentZustand.getState().update(id, patch);
     },
-
-    /** Подписаться на изменения */
-    subscribe(listener: Listener): () => void {
-        _listeners.add(listener);
-        return () => _listeners.delete(listener);
+    subscribe(listener: (incidents: Incident[]) => void): () => void {
+        return useIncidentZustand.subscribe((s) => listener(s.incidents));
     },
 };
-
-function _notify() {
-    _listeners.forEach(l => l(_incidents));
-}

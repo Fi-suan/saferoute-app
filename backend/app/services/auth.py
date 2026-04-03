@@ -2,7 +2,7 @@
 Auth service — JWT-based device authentication
 """
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
@@ -19,8 +19,8 @@ security = HTTPBearer(auto_error=False)
 def create_device_token(device_id: str) -> str:
     payload = {
         "sub": device_id,
-        "iat": datetime.utcnow(),
-        "exp": datetime.utcnow() + timedelta(days=settings.JWT_EXPIRE_DAYS),
+        "iat": datetime.now(timezone.utc),
+        "exp": datetime.now(timezone.utc) + timedelta(days=settings.JWT_EXPIRE_DAYS),
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 

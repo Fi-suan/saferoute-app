@@ -85,7 +85,7 @@ export default function ProfileScreen() {
     const [editName, setEditName] = useState('');
     const [editPhone, setEditPhone] = useState('');
     const [activeRouteId, setActiveRouteId] = useState<string>('a17');
-    const [deviceId, setDeviceId] = useState('...');
+    const [deviceId, setDeviceId] = useState('Жүктелуде...');
     const [showDeviceId, setShowDeviceId] = useState(false);
 
     // Загружаем сохранённый маршрут

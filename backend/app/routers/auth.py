@@ -3,7 +3,7 @@ Auth Router — device registration and token management
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models import Device, Role
@@ -22,7 +22,7 @@ def register_device(data: DeviceRegister, db: Session = Depends(get_db)):
         device.phone_number = data.phone_number or device.phone_number
         device.latitude = data.latitude
         device.longitude = data.longitude
-        device.last_seen = datetime.utcnow()
+        device.last_seen = datetime.now(timezone.utc)
     else:
         role = Role.OWNER if data.role == "owner" else Role.DRIVER
         device = Device(

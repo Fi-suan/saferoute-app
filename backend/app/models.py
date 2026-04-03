@@ -1,8 +1,12 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum, Index
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database import Base
 import enum
+
+
+def utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class AlertLevel(str, enum.Enum):
@@ -34,7 +38,7 @@ class Herd(Base):
     estimated_count = Column(Integer, default=1)
     owner_name = Column(String(200), nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     locations = relationship(
         "HerdLocation", back_populates="herd",
@@ -49,12 +53,12 @@ class HerdLocation(Base):
     __tablename__ = "herd_locations"
 
     id = Column(Integer, primary_key=True, index=True)
-    herd_id = Column(Integer, ForeignKey("herds.id"), nullable=False)
+    herd_id = Column(Integer, ForeignKey("herds.id"), nullable=False, index=True)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     speed_kmh = Column(Float, default=0.0)
     heading_degrees = Column(Float, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime, default=utcnow, index=True)
     source = Column(String(50), default="simulator")
 
     herd = relationship("Herd", back_populates="locations")
@@ -77,7 +81,7 @@ class GeoZone(Base):
     road_lat = Column(Float, nullable=False, default=0.0)
     road_lon = Column(Float, nullable=False, default=0.0)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     alerts = relationship("Alert", back_populates="geozone")
 
@@ -87,8 +91,8 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id = Column(Integer, primary_key=True, index=True)
-    herd_id = Column(Integer, ForeignKey("herds.id"), nullable=False)
-    geozone_id = Column(Integer, ForeignKey("geozones.id"), nullable=False)
+    herd_id = Column(Integer, ForeignKey("herds.id"), nullable=False, index=True)
+    geozone_id = Column(Integer, ForeignKey("geozones.id"), nullable=False, index=True)
     level = Column(Enum(AlertLevel), default=AlertLevel.MEDIUM)
     message_ru = Column(Text, nullable=False)
     message_kk = Column(Text, nullable=False)
@@ -96,7 +100,7 @@ class Alert(Base):
     estimated_arrival_minutes = Column(Float, nullable=True)
     is_active = Column(Boolean, default=True)
     notified_count = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=utcnow, index=True)
     resolved_at = Column(DateTime, nullable=True)
 
     herd = relationship("Herd", back_populates="alerts")
@@ -114,7 +118,7 @@ class Device(Base):
     phone_number = Column(String(20), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    last_seen = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=utcnow)
     is_active = Column(Boolean, default=True)
 
 
@@ -139,10 +143,10 @@ class IncidentReport(Base):
     ai_analysis = Column(Text, nullable=True)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-    reporter_device_id = Column(String(200), nullable=True)
+    reporter_device_id = Column(String(200), nullable=True, index=True)
     confirmations_count = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=utcnow, index=True)
     resolved_at = Column(DateTime, nullable=True)
 
     confirmations = relationship("IncidentConfirmation", back_populates="incident")
@@ -153,9 +157,9 @@ class IncidentConfirmation(Base):
     __tablename__ = "incident_confirmations"
 
     id = Column(Integer, primary_key=True, index=True)
-    incident_id = Column(Integer, ForeignKey("incident_reports.id"), nullable=False)
-    device_id = Column(String(200), nullable=False)
+    incident_id = Column(Integer, ForeignKey("incident_reports.id"), nullable=False, index=True)
+    device_id = Column(String(200), nullable=False, index=True)
     is_resolved = Column(Boolean, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     incident = relationship("IncidentReport", back_populates="confirmations")

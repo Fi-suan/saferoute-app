@@ -33,7 +33,7 @@ interface Props {
         longitude: number;
         photo_uri?: string;
         photo_base64?: string;
-    }) => Promise<{ ok: boolean; error?: string }>;
+    }) => Promise<{ ok: boolean; error?: string; queued?: boolean }>;
 }
 
 export default function ReportModal({ visible, onClose, location, onSubmit }: Props) {
@@ -121,10 +121,12 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
             setReportType('crash');
             onClose();
             showDialog({
-                title: 'Дайын!',
-                message: 'Белгі қойылды. AI тексеруі жүргізілуде.',
-                icon: 'checkmark-circle',
-                iconColor: Colors.brand.primary,
+                title: result.queued ? 'Кезекте' : 'Дайын!',
+                message: result.queued
+                    ? 'Интернет жоқ. Белгі кезекке қойылды — байланыс болғанда жіберіледі.'
+                    : 'Белгі қойылды. AI тексеруі жүргізілуде.',
+                icon: result.queued ? 'cloud-offline' : 'checkmark-circle',
+                iconColor: result.queued ? Colors.text.muted : Colors.brand.primary,
                 buttons: [{ text: 'Түсіндім', style: 'default' }],
             });
         } else {

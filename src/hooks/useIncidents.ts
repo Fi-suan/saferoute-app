@@ -6,8 +6,8 @@
  * При офлайне — пустой список + очередь репортов (отправятся при reconnect).
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../services/api';
 import { Config } from '../config';
 import { STORAGE } from '../constants/storage';
 import { Incident } from '../constants/incidents';
@@ -34,17 +34,15 @@ interface UseIncidentsReturn {
     loading: boolean;
     refreshing: boolean;
     refresh: () => Promise<void>;
-    submitReport: (params: SubmitReportParams) => Promise<{ ok: boolean; error?: string }>;
+    submitReport: (params: SubmitReportParams) => Promise<{ ok: boolean; error?: string; queued?: boolean }>;
     confirmIncident: (id: number, isResolved: boolean) => Promise<void>;
     pendingReportsCount: number;
 }
 
 async function fetchFromServer(tab: 'active' | 'all'): Promise<{ data: Incident[]; online: boolean }> {
-    const endpoint = tab === 'active' ? '/api/v1/incidents/active' : '/api/v1/incidents/feed';
+    const endpoint = tab === 'active' ? '/incidents/active' : '/incidents/feed';
     try {
-        const res = await axios.get<Incident[]>(`${Config.BACKEND_URL}${endpoint}`, {
-            timeout: 8000,
-        });
+        const res = await api.get<Incident[]>(endpoint, { timeout: 8000 });
         if (Array.isArray(res.data)) {
             return { data: res.data, online: true };
         }
@@ -71,7 +69,7 @@ async function flushQueue(deviceId: string): Promise<void> {
     const failed: QueuedReport[] = [];
     for (const report of queue) {
         try {
-            await axios.post(`${Config.BACKEND_URL}/api/v1/incidents/report`, {
+            await api.post('/incidents/report', {
                 ...report,
                 reporter_device_id: deviceId,
             }, { timeout: 5000 });
@@ -163,8 +161,8 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
             if (params.photo_base64) {
                 payload.photo_base64 = params.photo_base64;
             }
-            const res = await axios.post<Incident>(
-                `${Config.BACKEND_URL}/api/v1/incidents/report`,
+            const res = await api.post<Incident>(
+                '/incidents/report',
                 payload,
                 { timeout: 5000 },
             );
@@ -176,7 +174,7 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
             queue.push({ ...params, queuedAt: new Date().toISOString() });
             await saveQueue(queue);
             setPendingReportsCount(queue.length);
-            return { ok: true };
+            return { ok: true, queued: true };
         }
     }, [refresh]);
 
@@ -190,7 +188,7 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
             });
         }
         try {
-            await axios.post(`${Config.BACKEND_URL}/api/v1/incidents/${id}/confirm`, {
+            await api.post(`/incidents/${id}/confirm`, {
                 device_id: deviceId,
                 is_resolved: isResolved,
             }, { timeout: 4000 });

@@ -14,11 +14,12 @@ import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { Incident, getIncidentMeta } from '../constants/incidents';
 
 function timeAgo(dateStr: string): string {
-    // Бэкенд возвращает UTC без суффикса 'Z' — принудительно помечаем как UTC
-    const utc = dateStr.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateStr)
-        ? dateStr
-        : dateStr + 'Z';
-    const diff = Date.now() - new Date(utc).getTime();
+    // Ensure UTC: backend may return with +00:00, Z suffix, or naive (assume UTC)
+    let normalized = dateStr;
+    if (!/Z$|[+-]\d{2}:\d{2}$/.test(dateStr)) {
+        normalized = dateStr + 'Z';
+    }
+    const diff = Date.now() - new Date(normalized).getTime();
     if (diff < 0) return 'жаңа ғана';
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'жаңа ғана';

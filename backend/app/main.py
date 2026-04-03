@@ -5,10 +5,10 @@ import json
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Set
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Request, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Request, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import Session
@@ -75,7 +75,7 @@ async def lifespan(app: FastAPI):
                 await ws_manager.broadcast({
                     "type": "tick",
                     "data": result,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
         except Exception as e:
             logger.error(f"Scheduler tick error: {e}")
@@ -111,7 +111,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -166,14 +166,14 @@ async def websocket_live(ws: WebSocket):
                 "type": "snapshot",
                 "herds": herds_data,
                 "alerts": active_alerts,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
         finally:
             db.close()
 
         while True:
             await asyncio.sleep(30)
-            await ws.send_json({"type": "ping", "ts": datetime.utcnow().isoformat()})
+            await ws.send_json({"type": "ping", "ts": datetime.now(timezone.utc).isoformat()})
 
     except WebSocketDisconnect:
         ws_manager.disconnect(ws)
@@ -184,23 +184,25 @@ async def websocket_live(ws: WebSocket):
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def proxy_directions(
     request: Request,
-    origin_lat: float = Query(...),
-    origin_lon: float = Query(...),
-    dest_lat: float = Query(...),
-    dest_lon: float = Query(...),
+    origin_lat: float = Query(..., ge=-90, le=90),
+    origin_lon: float = Query(..., ge=-180, le=180),
+    dest_lat: float = Query(..., ge=-90, le=90),
+    dest_lon: float = Query(..., ge=-180, le=180),
 ):
     """Proxy Google Directions API — keeps API key server-side."""
     if not settings.GOOGLE_MAPS_API_KEY:
-        return {"error": "Google Maps API key not configured on server"}
+        raise HTTPException(status_code=503, detail="Google Maps API key not configured")
 
     import httpx
-    url = (
-        f"https://maps.googleapis.com/maps/api/directions/json"
-        f"?origin={origin_lat},{origin_lon}"
-        f"&destination={dest_lat},{dest_lon}"
-        f"&key={settings.GOOGLE_MAPS_API_KEY}"
-        f"&language=ru&mode=driving"
-    )
+    from urllib.parse import urlencode
+    params = urlencode({
+        "origin": f"{origin_lat},{origin_lon}",
+        "destination": f"{dest_lat},{dest_lon}",
+        "key": settings.GOOGLE_MAPS_API_KEY,
+        "language": "ru",
+        "mode": "driving",
+    })
+    url = f"https://maps.googleapis.com/maps/api/directions/json?{params}"
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.get(url)
         return resp.json()
@@ -208,7 +210,8 @@ async def proxy_directions(
 
 # ── Simulator ────────────────────────────────────────────────────────────────
 @app.post("/api/v1/simulator/tick")
-def manual_tick(steps: int = 1, db: Session = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
+def manual_tick(request: Request, steps: int = 1, db: Session = Depends(get_db)):
     results = []
     for _ in range(min(steps, 50)):
         results.append(simulator_tick(db))
@@ -221,15 +224,23 @@ def sim_status():
 
 
 @app.post("/api/v1/simulator/reset")
-def sim_reset(db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def sim_reset(request: Request, db: Session = Depends(get_db)):
     from app.services.simulator import reset_simulator
     reset_simulator(db)
     return {"status": "reset"}
 
 
 @app.get("/health")
-def health():
-    return {"status": "ok", "app": settings.APP_NAME, "time": datetime.utcnow().isoformat()}
+def health(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        db.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        db_ok = False
+    status = "ok" if db_ok else "degraded"
+    return {"status": status, "db": db_ok, "app": settings.APP_NAME, "time": datetime.now(timezone.utc).isoformat()}
 
 
 @app.get("/")

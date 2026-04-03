@@ -8,11 +8,26 @@ export const useWebSocket = () => {
     const ws = useRef<WebSocket | null>(null);
     const { setHerds, setActiveAlerts, addAlert, setLastUpdated, setLoading } = useAlertStore();
     const retryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const staleTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const retryCount = useRef(0);
     const appState = useRef(AppState.currentState);
 
+    const resetStaleTimer = () => {
+        if (staleTimeout.current) clearTimeout(staleTimeout.current);
+        // If no message received in 90s (server pings every 30s), reconnect
+        staleTimeout.current = setTimeout(() => {
+            console.log('[WS] No message in 90s, reconnecting...');
+            ws.current?.close();
+        }, 90_000);
+    };
+
     const connect = () => {
-        if (ws.current?.readyState === WebSocket.OPEN) return;
+        // Prevent stacking: clear pending retry before new connection
+        if (retryTimeout.current) {
+            clearTimeout(retryTimeout.current);
+            retryTimeout.current = null;
+        }
+        if (ws.current?.readyState === WebSocket.OPEN || ws.current?.readyState === WebSocket.CONNECTING) return;
 
         setLoading(true);
         const socket = new WebSocket(Config.BACKEND_WS);
@@ -21,10 +36,12 @@ export const useWebSocket = () => {
         socket.onopen = () => {
             retryCount.current = 0;
             setLoading(false);
+            resetStaleTimer();
             console.log('[WS] Connected to SafeRoute live feed');
         };
 
         socket.onmessage = (event) => {
+            resetStaleTimer();
             try {
                 const msg = JSON.parse(event.data);
                 setLastUpdated(new Date());
@@ -81,6 +98,7 @@ export const useWebSocket = () => {
 
         return () => {
             if (retryTimeout.current) clearTimeout(retryTimeout.current);
+            if (staleTimeout.current) clearTimeout(staleTimeout.current);
             ws.current?.close();
             subscription.remove();
         };

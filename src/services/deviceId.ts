@@ -49,8 +49,3 @@ export async function getDeviceId(): Promise<string> {
     _cachedDeviceId = newId;
     return newId;
 }
-
-/** Синхронное получение (только если уже был загружен ранее) */
-export function getDeviceIdSync(): string {
-    return _cachedDeviceId ?? 'uninitialized';
-}

@@ -102,7 +102,9 @@ def simulator_tick(db: Session) -> Dict:
         state["current_lon"] = new_lon
 
         from app.config import settings
-        speed = (step * 111.0) / (settings.SIMULATOR_INTERVAL_SECONDS / 3600.0)
+        # At Kazakhstan's latitude (~51°N), 1° lon ≈ 70 km; average with lat (111 km) ≈ 90 km
+        km_per_degree = 90.0
+        speed = (step * km_per_degree) / (settings.SIMULATOR_INTERVAL_SECONDS / 3600.0)
 
         try:
             loc = HerdLocation(
@@ -110,9 +112,8 @@ def simulator_tick(db: Session) -> Dict:
                 speed_kmh=speed, source="simulator",
             )
             db.add(loc)
-            db.commit()
-
             alert = process_location_update(db, herd, new_lat, new_lon, speed)
+            db.commit()
             results.append({
                 "herd_id": herd_id,
                 "lat": new_lat, "lon": new_lon,
@@ -121,6 +122,11 @@ def simulator_tick(db: Session) -> Dict:
         except Exception as e:
             logger.error(f"Simulator tick error for herd {herd_id}: {e}")
             db.rollback()
+
+    # Clean up arrived herds to prevent unbounded growth
+    arrived_ids = [hid for hid, s in _sim_state.items() if s["arrived"]]
+    for hid in arrived_ids:
+        del _sim_state[hid]
 
     return {"tick": _tick_count, "herds": results}
 

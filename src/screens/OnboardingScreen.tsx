@@ -68,7 +68,7 @@ const L = {
         owner: 'Мал иесі', ownerDesc: 'Малды тіркеу және қорғау',
         next: 'Келесі', back: 'Артқа', start: 'Бастау', skip: 'Өткізу',
         loginBtn: 'Кіру', loginEmail: 'EMAIL', loginPass: 'ҚҰПИЯ СӨЗ',
-        loginErr: 'Email немесе пароль қате', loginNotReady: 'Авторизация серверде әзірленуде',
+        loginErr: 'Email немесе пароль қате',
         toRegister: 'Аккаунт жоқ па? → Тіркелу',
         langToggle: 'RU',
     },
@@ -83,7 +83,7 @@ const L = {
         owner: 'Владелец скота', ownerDesc: 'Регистрация и защита скота',
         next: 'Далее', back: 'Назад', start: 'Начать', skip: 'Пропустить',
         loginBtn: 'Войти', loginEmail: 'EMAIL', loginPass: 'ПАРОЛЬ',
-        loginErr: 'Неверный email или пароль', loginNotReady: 'Авторизация на сервере в разработке',
+        loginErr: 'Неверный email или пароль',
         toRegister: 'Нет аккаунта? → Регистрация',
         langToggle: 'ҚАЗ',
     },
@@ -170,14 +170,9 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
 
     // ── Handle login ─────────────────────────────────────────────────
     const handleLogin = useCallback(async () => {
-        const e: Record<string, string> = {};
-        if (!isValidEmail(lEmail)) e.lemail = ui.emailErr;
-        if (lPass.length < 6) e.lpass = ui.passErr;
-        setErrors(e);
-        if (Object.keys(e).length) return;
+        // Device-based auth — email/password are optional identifiers only
         setLoading(true);
         try {
-            // Device-based auth — register device and get token
             const deviceId = await getDeviceId();
             const res = await registerDevice({
                 device_id: deviceId,
@@ -186,8 +181,7 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
             if (res?.token) {
                 await storeAuthToken(res.token);
             }
-            // Login is device-based now — email/password not used
-            setErrors({ login: ui.loginNotReady });
+            onFinish({ name: lEmail.split('@')[0] || 'User', phone: '', role: 'driver' });
         } catch (err: any) {
             setErrors({ login: ui.loginErr });
         } finally {

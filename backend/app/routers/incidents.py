@@ -1,12 +1,15 @@
 """
 Incidents Router — создание, просмотр, подтверждение инцидентов
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.config import settings
@@ -48,8 +51,13 @@ class IncidentCreate(BaseModel):
     @field_validator("photo_base64")
     @classmethod
     def validate_photo_size(cls, v: Optional[str]) -> Optional[str]:
-        if v and len(v) > 2_000_000:  # ~1.5MB decoded
+        if not v:
+            return v
+        if len(v) > 2_000_000:  # ~1.5MB decoded
             raise ValueError("photo_base64 too large (max ~1.5MB)")
+        import re
+        if not re.fullmatch(r'[A-Za-z0-9+/=\s]+', v):
+            raise ValueError("photo_base64 contains invalid characters")
         return v
 
 
@@ -120,7 +128,7 @@ async def verify_photo_with_ai(photo_base64: Optional[str], incident_type: str) 
                     "analysis": parsed.get("analysis_kk", "AI талдауы аяқталды.")
                 }
     except Exception as e:
-        pass
+        logger.exception(f"AI verification failed: {e}")
 
     return {"verified": False, "confidence": 0.3, "analysis": "AI қатесі — қоғамдастық растауын күтуде."}
 
@@ -182,10 +190,10 @@ def get_nearby_incidents(lat: float, lon: float, radius_km: float = 3.0, db: Ses
 
 
 @router.get("/feed")
-def get_incident_feed(limit: int = 50, db: Session = Depends(get_db)):
+def get_incident_feed(limit: int = 50, offset: int = 0, db: Session = Depends(get_db)):
     incidents = db.query(IncidentReport).order_by(
         IncidentReport.created_at.desc()
-    ).limit(limit).all()
+    ).offset(offset).limit(min(limit, 200)).all()
     return [_to_dict(i) for i in incidents]
 
 
@@ -214,10 +222,16 @@ def confirm_incident(
     )
     db.add(confirmation)
 
-    incident.confirmations_count += 1
+    # Atomic increment to avoid race condition
+    db.query(IncidentReport).filter(IncidentReport.id == incident_id).update(
+        {IncidentReport.confirmations_count: IncidentReport.confirmations_count + 1}
+    )
+    db.flush()
+    db.refresh(incident)
+
     if data.is_resolved and incident.confirmations_count >= 3:
         incident.is_active = False
-        incident.resolved_at = datetime.utcnow()
+        incident.resolved_at = datetime.now(timezone.utc)
 
     db.commit()
     return {

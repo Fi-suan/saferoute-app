@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models import Alert, Herd, GeoZone, Device
@@ -26,6 +26,7 @@ def get_active_alerts(db: Session = Depends(get_db)):
     """Все активные предупреждения"""
     alerts = (
         db.query(Alert)
+        .options(joinedload(Alert.herd), joinedload(Alert.geozone))
         .filter(Alert.is_active == True)
         .order_by(Alert.created_at.desc())
         .all()
@@ -38,6 +39,7 @@ def get_alert_history(limit: int = 50, db: Session = Depends(get_db)):
     """История всех предупреждений"""
     alerts = (
         db.query(Alert)
+        .options(joinedload(Alert.herd), joinedload(Alert.geozone))
         .order_by(Alert.created_at.desc())
         .limit(limit)
         .all()
@@ -51,6 +53,6 @@ def resolve_alert(alert_id: int, db: Session = Depends(get_db), current: Device 
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
     alert.is_active = False
-    alert.resolved_at = datetime.utcnow()
+    alert.resolved_at = datetime.now(timezone.utc)
     db.commit()
     return {"status": "resolved", "alert_id": alert_id}

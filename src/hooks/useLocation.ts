@@ -12,6 +12,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Location from 'expo-location';
 import { Incident } from '../constants/incidents';
 import { Config } from '../config';
+import { updateDeviceLocation } from '../services/api';
+import { getDeviceId } from '../services/deviceId';
 
 export interface GeoPoint {
     lat: number;
@@ -57,6 +59,7 @@ export function useLocation(
     const alertedIds = useRef<Set<number>>(new Set());
     const confirmIds = useRef<Set<number>>(new Set());
     const sub = useRef<Location.LocationSubscription | null>(null);
+    const lastSentRef = useRef<number>(0);
 
     useEffect(() => {
         let cancelled = false;
@@ -86,10 +89,18 @@ export function useLocation(
                 },
                 (newLoc) => {
                     if (!cancelled) {
-                        setLocation({
-                            lat: newLoc.coords.latitude,
-                            lon: newLoc.coords.longitude,
-                        });
+                        const lat = newLoc.coords.latitude;
+                        const lon = newLoc.coords.longitude;
+                        setLocation({ lat, lon });
+
+                        // Send location to backend every 30s
+                        const now = Date.now();
+                        if (now - lastSentRef.current > 30_000) {
+                            lastSentRef.current = now;
+                            getDeviceId().then(id =>
+                                updateDeviceLocation(id, lat, lon).catch(() => {})
+                            );
+                        }
                     }
                 },
             );

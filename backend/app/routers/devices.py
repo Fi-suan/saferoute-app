@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models import Device, IncidentReport, IncidentConfirmation
@@ -21,7 +21,7 @@ def update_device_location(
         raise HTTPException(status_code=403, detail="Cannot update another device")
     current.latitude = data.latitude
     current.longitude = data.longitude
-    current.last_seen = datetime.utcnow()
+    current.last_seen = datetime.now(timezone.utc)
     db.commit()
     return {"status": "ok"}
 
@@ -37,17 +37,25 @@ def delete_device_data(
         raise HTTPException(status_code=403, detail="Cannot delete another device's data")
 
     # Delete incident confirmations
-    db.query(IncidentConfirmation).filter(
+    confirmations_deleted = db.query(IncidentConfirmation).filter(
         IncidentConfirmation.device_id == device_id
     ).delete()
 
     # Delete incident reports
-    db.query(IncidentReport).filter(
+    reports_deleted = db.query(IncidentReport).filter(
         IncidentReport.reporter_device_id == device_id
     ).delete()
 
     # Delete device record
-    db.query(Device).filter(Device.device_id == device_id).delete()
+    device_deleted = db.query(Device).filter(Device.device_id == device_id).delete()
 
     db.commit()
-    return {"status": "deleted", "device_id": device_id}
+    return {
+        "status": "deleted",
+        "device_id": device_id,
+        "deleted": {
+            "confirmations": confirmations_deleted,
+            "reports": reports_deleted,
+            "device": device_deleted,
+        },
+    }

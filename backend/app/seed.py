@@ -2,9 +2,12 @@
 Database seeder — creates initial Kazakhstan road geozones.
 No PostGIS required — uses bounding boxes + centerpoint.
 """
+import logging
 from sqlalchemy.orm import Session
 from app.database import engine, Base, SessionLocal
 from app.models import GeoZone
+
+logger = logging.getLogger(__name__)
 
 
 # Kazakhstan highways: (name, road_type, buffer_km, lat_min, lat_max, lon_min, lon_max, road_lat, road_lon)
@@ -49,10 +52,13 @@ ROAD_ZONES = [
 
 def seed_geozones(db: Session):
     if db.query(GeoZone).count() > 0:
-        print("[seed] Geozones already seeded, skipping.")
+        logger.info("Geozones already seeded, skipping.")
         return
 
     for r in ROAD_ZONES:
+        if r["lat_min"] >= r["lat_max"] or r["lon_min"] >= r["lon_max"]:
+            logger.error(f"Invalid bounding box for zone '{r['name']}': lat_min >= lat_max or lon_min >= lon_max")
+            continue
         zone = GeoZone(
             name=r["name"],
             road_type=r["road_type"],
@@ -67,8 +73,13 @@ def seed_geozones(db: Session):
         )
         db.add(zone)
 
-    db.commit()
-    print(f"[seed] Seeded {len(ROAD_ZONES)} geozones ✅")
+    try:
+        db.commit()
+        count = db.query(GeoZone).count()
+        logger.info(f"Seeded {count} geozones successfully")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to seed geozones: {e}")
 
 
 def init_db():

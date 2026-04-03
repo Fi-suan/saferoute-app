@@ -4,7 +4,7 @@ Uses Haversine formula for distance calculations.
 """
 import math
 from typing import Optional, Tuple, List
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models import Herd, HerdLocation, GeoZone, Alert, AlertLevel
 from app.config import settings
@@ -12,6 +12,8 @@ from app.config import settings
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Distance between two points on Earth (Haversine formula)"""
+    if not (-90 <= lat1 <= 90 and -90 <= lat2 <= 90 and -180 <= lon1 <= 180 and -180 <= lon2 <= 180):
+        return float('inf')
     R = 6371.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
@@ -92,7 +94,7 @@ def get_movement_vector(db: Session, herd_id: int, current_lat: float, current_l
         return None, 0.0, None
     bearing = bearing_degrees(prev.latitude, prev.longitude, current_lat, current_lon)
     dist = haversine_km(prev.latitude, prev.longitude, current_lat, current_lon)
-    time_hours = (datetime.utcnow() - prev.timestamp).total_seconds() / 3600.0
+    time_hours = (datetime.now(timezone.utc) - prev.timestamp).total_seconds() / 3600.0
     speed = (dist / time_hours) if time_hours > 0.001 else 0.0
     return bearing, min(speed, 100.0), prev
 
@@ -118,7 +120,7 @@ def process_location_update(
         if existing:
             existing.distance_to_road_km = dist
             existing.estimated_arrival_minutes = eta_minutes
-            db.commit()
+            # No commit here — caller is responsible for committing the transaction
             return existing
 
         geozone = db.query(GeoZone).filter(GeoZone.id == zone_data["id"]).first()
@@ -132,7 +134,7 @@ def process_location_update(
             is_active=True,
         )
         db.add(alert)
-        db.commit()
+        db.flush()
         db.refresh(alert)
         return alert
 

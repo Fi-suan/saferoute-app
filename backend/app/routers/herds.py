@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 from app.database import get_db
@@ -35,8 +35,39 @@ def _build_herd_out(herd: Herd, db: Session) -> HerdOut:
 @router.get("/", response_model=List[HerdOut])
 def list_herds(db: Session = Depends(get_db)):
     """Список всех активных стад с текущей позицией"""
+    from sqlalchemy import func
     herds = db.query(Herd).filter(Herd.is_active == True).all()
-    return [_build_herd_out(h, db) for h in herds]
+    if not herds:
+        return []
+
+    # Batch load latest locations for all herds in 1 query (fixes N+1)
+    herd_ids = [h.id for h in herds]
+    latest_subq = (
+        db.query(
+            HerdLocation.herd_id,
+            func.max(HerdLocation.id).label("max_id"),
+        )
+        .filter(HerdLocation.herd_id.in_(herd_ids))
+        .group_by(HerdLocation.herd_id)
+        .subquery()
+    )
+    latest_locs = (
+        db.query(HerdLocation)
+        .join(latest_subq, HerdLocation.id == latest_subq.c.max_id)
+        .all()
+    )
+    loc_map = {loc.herd_id: loc for loc in latest_locs}
+
+    result = []
+    for herd in herds:
+        loc = loc_map.get(herd.id)
+        result.append(HerdOut(
+            id=herd.id, name=herd.name, animal_type=herd.animal_type,
+            estimated_count=herd.estimated_count, owner_name=herd.owner_name,
+            is_active=herd.is_active, created_at=herd.created_at,
+            current_location=HerdLocationOut.model_validate(loc) if loc else None,
+        ))
+    return result
 
 
 @router.get("/{herd_id}", response_model=HerdOut)
@@ -72,9 +103,15 @@ def update_herd_location(herd_id: int, loc: LocationPoint, db: Session = Depends
         source=loc.source,
     )
     db.add(location)
-    db.commit()
 
-    alert = process_location_update(db, herd, loc.latitude, loc.longitude, loc.speed_kmh)
+    # Location insert + alert creation in single transaction
+    try:
+        alert = process_location_update(db, herd, loc.latitude, loc.longitude, loc.speed_kmh)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
     notified = notify_nearby_drivers(db, alert, loc.latitude, loc.longitude) if alert else 0
 
     return {

@@ -1,6 +1,13 @@
 from pydantic_settings import BaseSettings
 from typing import Optional, List
+import logging
+import os
 import secrets
+
+_logger = logging.getLogger(__name__)
+
+# Generate stable fallback only once per process
+_FALLBACK_JWT_SECRET = secrets.token_urlsafe(32)
 
 
 class Settings(BaseSettings):
@@ -19,8 +26,8 @@ class Settings(BaseSettings):
     APP_NAME: str = "SafeRoute / Sapa Jol"
     DEBUG: bool = False
 
-    # Auth
-    JWT_SECRET: str = secrets.token_urlsafe(32)
+    # Auth — MUST be set via env var in production
+    JWT_SECRET: str = _FALLBACK_JWT_SECRET
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_DAYS: int = 365
 
@@ -52,3 +59,9 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+if not os.environ.get("JWT_SECRET"):
+    _logger.warning(
+        "JWT_SECRET not set — using random fallback. "
+        "Tokens will be invalid after restart. Set JWT_SECRET in .env for production."
+    )
