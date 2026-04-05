@@ -79,10 +79,11 @@ async def verify_photo_with_ai(photo_base64: Optional[str], incident_type: str) 
         }
 
     if not api_key:
+        logger.warning("OPENAI_API_KEY not set — AI photo verification skipped")
         return {
-            "verified": True,
-            "confidence": 0.75,
-            "analysis": f"AI: Фото '{incident_type}' түріне сәйкес келеді. (API кілті жоқ — mock режим)"
+            "verified": False,
+            "confidence": 0.0,
+            "analysis": "AI тексеруі қолжетімсіз — қоғамдастық растауын күтуде."
         }
 
     try:

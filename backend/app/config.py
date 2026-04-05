@@ -61,7 +61,12 @@ class Settings(BaseSettings):
 settings = Settings()
 
 if not os.environ.get("JWT_SECRET"):
+    if not settings.DEBUG:
+        raise RuntimeError(
+            "JWT_SECRET environment variable is required in production. "
+            "Set JWT_SECRET in .env or set DEBUG=true for development."
+        )
     _logger.warning(
-        "JWT_SECRET not set — using random fallback. "
-        "Tokens will be invalid after restart. Set JWT_SECRET in .env for production."
+        "JWT_SECRET not set — using random fallback (DEBUG mode). "
+        "Tokens will be invalid after restart."
     )

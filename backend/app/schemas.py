@@ -66,6 +66,12 @@ class GeoZoneOut(BaseModel):
     name: str
     road_type: str
     buffer_km: float
+    lat_min: float
+    lat_max: float
+    lon_min: float
+    lon_max: float
+    road_lat: float
+    road_lon: float
     is_active: bool
 
     class Config:

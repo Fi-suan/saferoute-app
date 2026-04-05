@@ -43,7 +43,9 @@ async function registerAndStoreToken(role: string, fcmToken?: string): Promise<v
         if (res?.token) {
             await storeAuthToken(res.token);
         }
-    } catch { /* ignore */ }
+    } catch (e) {
+        console.warn('[Notifications] registerAndStoreToken failed:', e);
+    }
 }
 
 /**
@@ -122,7 +124,7 @@ export async function scheduleProximityNotification(params: {
             },
             trigger: null, // Немедленно
         });
-    } catch {
-        // Тихо игнорируем
+    } catch (e) {
+        console.warn('[Notifications] scheduleProximityNotification failed:', e);
     }
 }

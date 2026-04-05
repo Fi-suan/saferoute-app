@@ -15,7 +15,8 @@
       "Bash(grep -r \"hardcoded\\\\|TODO\\\\|FIXME\\\\|XXX\\\\|HACK\" /c/Users/zhant/.gemini/antigravity/scratch/saferoute-app/src /c/Users/zhant/.gemini/antigravity/scratch/saferoute-app/backend/app --include=*.ts --include=*.tsx --include=*.py -i)",
       "Bash(find /c/Users/zhant/.gemini/antigravity/scratch/saferoute-app -type f \\\\\\(-name *.py -o -name *.js -o -name *.ts -o -name *.tsx \\\\\\) ! -path */.venv/* ! -path */.git/* ! -path */node_modules/* ! -path */.expo/* ! -path */.next/*)",
       "Bash(find . -not -path */node_modules/* -not -path */.venv/* -not -path */.expo/* -not -path */.git/* -not -path */.claude/* -type d)",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(grep:*)"
     ]
   }
 }

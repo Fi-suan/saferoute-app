@@ -20,6 +20,7 @@ def send_push_notification(fcm_token: str, alert: Alert) -> bool:
 
         if not firebase_admin._apps:
             if not settings.FIREBASE_CREDENTIALS_PATH:
+                logger.warning("FIREBASE_CREDENTIALS_PATH not set — push notifications disabled")
                 return False
             cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
             firebase_admin.initialize_app(cred)
@@ -40,7 +41,7 @@ def send_push_notification(fcm_token: str, alert: Alert) -> bool:
         messaging.send(msg)
         return True
     except ImportError:
-        # firebase-admin not installed — silent skip
+        logger.warning("firebase-admin not installed — push notifications unavailable")
         return False
     except Exception as e:
         logger.error(f"FCM send failed: {e}")
@@ -48,8 +49,8 @@ def send_push_notification(fcm_token: str, alert: Alert) -> bool:
 
 
 def notify_nearby_drivers(db: Session, alert: Alert, herd_lat: float, herd_lon: float) -> int:
-    from datetime import datetime, timedelta
-    cutoff = datetime.utcnow() - timedelta(minutes=30)
+    from datetime import datetime, timedelta, timezone
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
     devices: List[Device] = (
         db.query(Device)
         .filter(

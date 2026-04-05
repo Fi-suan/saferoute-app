@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { Config } from '../config';
 import { useAlertStore } from '../store/useAlertStore';
-import { Alert as AlertType, Herd } from './api';
+import { Alert as AlertType, Herd, getActiveAlerts } from './api';
 
 export const useWebSocket = () => {
     const ws = useRef<WebSocket | null>(null);
@@ -51,13 +51,14 @@ export const useWebSocket = () => {
                     if (msg.herds) setHerds(msg.herds as Herd[]);
                     if (msg.alerts) setActiveAlerts(msg.alerts as AlertType[]);
                 } else if (msg.type === 'tick') {
-                    // Incremental update from simulator tick
+                    // Incremental update — update herd positions
                     if (msg.data?.herds) {
-                        msg.data.herds.forEach((h: any) => {
-                            if (h.alert_level) {
-                                // Alert fired — we'll refresh from API
-                            }
-                        });
+                        const hasNewAlert = msg.data.herds.some((h: any) => h.alert_level);
+                        if (hasNewAlert) {
+                            getActiveAlerts()
+                                .then(alerts => setActiveAlerts(alerts))
+                                .catch(() => {});
+                        }
                     }
                 }
             } catch (e) {
