@@ -66,6 +66,7 @@ export interface Incident {
     ai_verified: boolean;
     ai_analysis: string | null;
     ai_confidence?: number;
+    ai_severity_suggestion?: number;
     confirmations_count: number;
     created_at: string;        // ISO string
     resolved_at: string | null;

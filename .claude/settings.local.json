@@ -16,7 +16,10 @@
       "Bash(find /c/Users/zhant/.gemini/antigravity/scratch/saferoute-app -type f \\\\\\(-name *.py -o -name *.js -o -name *.ts -o -name *.tsx \\\\\\) ! -path */.venv/* ! -path */.git/* ! -path */node_modules/* ! -path */.expo/* ! -path */.next/*)",
       "Bash(find . -not -path */node_modules/* -not -path */.venv/* -not -path */.expo/* -not -path */.git/* -not -path */.claude/* -type d)",
       "Bash(python3 -c \":*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(python -c \"from app.routers.incidents import AI_SYSTEM_PROMPT, AI_RESPONSE_SCHEMA; print\\(''OK, prompt length:'', len\\(AI_SYSTEM_PROMPT\\)\\)\")",
+      "Bash(python:*)",
+      "Bash(curl:*)"
     ]
   }
 }

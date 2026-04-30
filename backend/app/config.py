@@ -14,13 +14,6 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/saferoute"
 
-    # Firebase FCM
-    FIREBASE_CREDENTIALS_PATH: Optional[str] = None
-
-    # Twilio SMS
-    TWILIO_ACCOUNT_SID: Optional[str] = None
-    TWILIO_AUTH_TOKEN: Optional[str] = None
-    TWILIO_PHONE_NUMBER: Optional[str] = None
 
     # App
     APP_NAME: str = "SafeRoute / Sapa Jol"
@@ -46,8 +39,6 @@ class Settings(BaseSettings):
     ALERT_RADIUS_KM: float = 15.0
     DANGER_THRESHOLD_KM: float = 3.0
 
-    # Simulator
-    SIMULATOR_INTERVAL_SECONDS: int = 5
 
     @property
     def cors_origins_list(self) -> List[str]:

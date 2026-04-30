@@ -141,6 +141,7 @@ class IncidentReport(Base):
     ai_verified = Column(Boolean, default=False)
     ai_confidence = Column(Float, nullable=True)
     ai_analysis = Column(Text, nullable=True)
+    ai_severity_suggestion = Column(Integer, nullable=True)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     reporter_device_id = Column(String(200), nullable=True, index=True)

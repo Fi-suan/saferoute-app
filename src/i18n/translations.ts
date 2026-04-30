@@ -22,6 +22,8 @@ const translations = {
         road_caution: 'Сақтық!',
         road_closed: 'Жол жабық',
         route_mode_label: 'Маршрут режимі',
+        nav_arrived: 'Сіз мақсатыңызға жеттіңіз!',
+        nav_failed: 'Бағытты жүктеу сәтсіз болды. Интернетті тексеріңіз.',
 
         // ─── Инциденты ───────────────────────────────────────
         incident_animal: 'Жануар',
@@ -181,6 +183,8 @@ const translations = {
         road_caution: 'Осторожно!',
         road_closed: 'Дорога закрыта',
         route_mode_label: 'Режим маршрута',
+        nav_arrived: 'Вы прибыли!',
+        nav_failed: 'Не удалось загрузить маршрут. Проверьте интернет.',
 
         incident_animal: 'Животное',
         incident_crash: 'ДТП',

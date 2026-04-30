@@ -183,9 +183,17 @@ export default function IncidentDetailScreen() {
                         {incident.ai_analysis && (
                             <Text style={styles.aiAnalysisText}>{incident.ai_analysis}</Text>
                         )}
+                        {incident.ai_severity_suggestion !== undefined && incident.ai_severity_suggestion !== incident.severity && (
+                            <View style={styles.aiSeverityRow}>
+                                <Ionicons name="analytics" size={14} color={Colors.text.secondary} />
+                                <Text style={styles.aiSeverityText}>
+                                    AI қауiптiлiк бағасы: {incident.ai_severity_suggestion}/5
+                                </Text>
+                            </View>
+                        )}
                         {!incident.ai_verified && !incident.ai_analysis && (
                             <Text style={styles.aiAnalysisText}>
-                                AI сараптамасы кезегінде. Қауымдастық растауы болғаннан кейін жарияланады.
+                                AI сараптамасы кезегiнде. Қауымдастық растауы болғаннан кейiн жарияланады.
                             </Text>
                         )}
                     </View>
@@ -345,6 +353,8 @@ const styles = StyleSheet.create({
         height: '100%', backgroundColor: Colors.brand.primary, borderRadius: 2,
     },
     aiAnalysisText: { fontSize: 13, color: Colors.text.muted, lineHeight: 18 },
+    aiSeverityRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+    aiSeverityText: { fontSize: 12, color: Colors.text.secondary },
 
     statsRow: {
         flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md,

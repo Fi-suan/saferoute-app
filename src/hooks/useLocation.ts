@@ -18,6 +18,7 @@ import { getDeviceId } from '../services/deviceId';
 export interface GeoPoint {
     lat: number;
     lon: number;
+    heading: number | null;
 }
 
 interface UseLocationReturn {
@@ -77,7 +78,7 @@ export function useLocation(
                 accuracy: Location.Accuracy.High,
             });
             if (!cancelled) {
-                setLocation({ lat: loc.coords.latitude, lon: loc.coords.longitude });
+                setLocation({ lat: loc.coords.latitude, lon: loc.coords.longitude, heading: loc.coords.heading ?? null });
                 setLoading(false);
             }
 
@@ -91,7 +92,8 @@ export function useLocation(
                     if (!cancelled) {
                         const lat = newLoc.coords.latitude;
                         const lon = newLoc.coords.longitude;
-                        setLocation({ lat, lon });
+                        const heading = newLoc.coords.heading ?? null;
+                        setLocation({ lat, lon, heading });
 
                         // Send location to backend every 30s
                         const now = Date.now();

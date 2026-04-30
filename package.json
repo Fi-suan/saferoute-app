@@ -4,7 +4,11 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android"
+    "android": "expo start --android",
+    "build:android": "eas build --platform android --profile production",
+    "build:preview": "eas build --platform android --profile preview",
+    "submit:android": "eas submit --platform android --profile production",
+    "deploy": "npm run build:android && npm run submit:android"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

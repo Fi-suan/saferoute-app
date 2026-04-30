@@ -1,6 +1,7 @@
 """
 Incidents Router — создание, просмотр, подтверждение инцидентов
 """
+import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -66,73 +67,177 @@ class ConfirmRequest(BaseModel):
     is_resolved: bool
 
 
-async def verify_photo_with_ai(photo_base64: Optional[str], incident_type: str) -> dict:
-    """AI verification via OpenAI GPT-4o Vision (if API key set)"""
+# ── AI Photo Verification ────────────────────────────────────────────────────
+
+AI_SYSTEM_PROMPT = """\
+You are an AI road safety analyst for the Sapa Jol mobile app in Kazakhstan.
+
+Your task: analyze a photo from the road and decide whether to verify the reported incident.
+
+## What you evaluate:
+
+1. **Match with incident type** - does the photo content match the reported type:
+   - animal: livestock (horses, cows, camels, sheep, goats) on or near the road
+   - crash: traffic accident, damaged vehicles, collisions
+   - hazard: road obstacles (rocks, potholes, flooding, fallen trees, ice)
+   - other: any other road danger
+
+2. **Danger level** (severity 1-5):
+   - 1: Minimal - object is far from the road, does not obstruct traffic
+   - 2: Low - potential threat exists, but easy to bypass
+   - 3: Medium - part of the lane is occupied, speed reduction required
+   - 4: High - serious danger, potential skidding or collision
+   - 5: Critical - road is completely blocked, full stop required
+
+3. **Decision factors to consider:**
+   - Distance of the object from the roadway
+   - Number of animals / size of obstacle
+   - Visibility (day/night/fog/rain)
+   - Speed limit context (highway vs city - assess from background)
+   - Animal behavior (stationary / moving toward road / crossing)
+   - Presence of fences or barriers
+   - Road surface condition
+   - Whether vehicles are already stopped or slowing
+
+4. **Rejection criteria:**
+   - Photo is not from a road (selfie, food, text, interior) -> verified: false
+   - Photo shows a road but no incident -> verified: false
+   - Screenshot / photo of a screen -> verified: false
+   - Poor quality but object is visible -> verified: true, lower confidence
+
+Always respond in the specified JSON format. Write analysis_kk in Kazakh language."""
+
+AI_RESPONSE_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "incident_verification",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "verified": {
+                    "type": "boolean",
+                    "description": "true if photo confirms the reported incident type",
+                },
+                "confidence": {
+                    "type": "number",
+                    "description": "Confidence in the decision from 0.0 to 1.0",
+                },
+                "severity_suggestion": {
+                    "type": "integer",
+                    "description": "Suggested danger level from 1 to 5",
+                },
+                "analysis_kk": {
+                    "type": "string",
+                    "description": "Brief analysis in Kazakh language (1-2 sentences)",
+                },
+                "factors": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Key factors that influenced the decision",
+                },
+            },
+            "required": ["verified", "confidence", "severity_suggestion", "analysis_kk", "factors"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
+def _ai_fallback(user_severity: int, reason_kk: str) -> dict:
+    return {
+        "verified": False,
+        "confidence": 0.0,
+        "severity_suggestion": user_severity,
+        "analysis": reason_kk,
+        "factors": [],
+    }
+
+
+async def verify_photo_with_ai(
+    photo_base64: Optional[str],
+    incident_type: str,
+    user_severity: int = 3,
+) -> dict:
+    """AI verification via OpenAI GPT-4o Vision with structured output."""
     import os
     api_key = os.environ.get("OPENAI_API_KEY", "")
 
     if not photo_base64:
-        return {
-            "verified": False,
-            "confidence": 0.5,
-            "analysis": "Фото берілмеген. Белгі тексерусіз жасалды."
-        }
+        return _ai_fallback(user_severity, "Фото берiлмеген. Белгi тексерусiз жасалды.")
 
     if not api_key:
-        logger.warning("OPENAI_API_KEY not set — AI photo verification skipped")
-        return {
-            "verified": False,
-            "confidence": 0.0,
-            "analysis": "AI тексеруі қолжетімсіз — қоғамдастық растауын күтуде."
-        }
+        logger.warning("OPENAI_API_KEY not set - AI photo verification skipped")
+        return _ai_fallback(user_severity, "AI тексеруi қолжетiмсiз - қоғамдастық растауын кутуде.")
 
     try:
         import httpx
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=25.0) as client:
             resp = await client.post(
                 "https://api.openai.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {api_key}"},
                 json={
                     "model": "gpt-4o",
-                    "max_tokens": 200,
+                    "max_tokens": 300,
+                    "temperature": 0.1,
+                    "response_format": AI_RESPONSE_SCHEMA,
                     "messages": [
                         {
                             "role": "system",
-                            "content": (
-                                "Ты — AI-аналитик дорожной безопасности Казахстана для приложения Sapa Jol. "
-                                "Анализируй фото дорожных инцидентов. Отвечай СТРОГО в JSON: "
-                                '{"verified": true/false, "confidence": 0.0-1.0, "analysis_kk": "анализ на казахском"}'
-                            )
+                            "content": AI_SYSTEM_PROMPT,
                         },
                         {
                             "role": "user",
                             "content": [
-                                {"type": "text", "text": f"Тип: {incident_type}. Фотоны талда:"},
-                                {"type": "image_url", "image_url": {
-                                    "url": f"data:image/jpeg;base64,{photo_base64}",
-                                    "detail": "low"
-                                }}
-                            ]
-                        }
-                    ]
-                }
+                                {
+                                    "type": "text",
+                                    "text": (
+                                        f"Reported incident type: {incident_type}\n"
+                                        f"User-reported severity: {user_severity}/5\n"
+                                        f"Analyze the photo and make your decision."
+                                    ),
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{photo_base64}",
+                                        "detail": "low",
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
             )
+
+            if resp.status_code != 200:
+                logger.error(f"OpenAI API error {resp.status_code}: {resp.text[:300]}")
+                return _ai_fallback(user_severity, "API қатесi - қоғамдастық растауын кутуде.")
+
             data = resp.json()
             text = data["choices"][0]["message"]["content"]
-            import re, json
-            m = re.search(r'\{[\s\S]*\}', text)
-            if m:
-                parsed = json.loads(m.group(0))
-                return {
-                    "verified": bool(parsed.get("verified", False)),
-                    "confidence": float(parsed.get("confidence", 0.5)),
-                    "analysis": parsed.get("analysis_kk", "AI талдауы аяқталды.")
-                }
+            parsed = json.loads(text)
+
+            confidence = max(0.0, min(1.0, float(parsed["confidence"])))
+            severity = max(1, min(5, int(parsed["severity_suggestion"])))
+
+            return {
+                "verified": bool(parsed["verified"]),
+                "confidence": confidence,
+                "severity_suggestion": severity,
+                "analysis": parsed.get("analysis_kk", "AI талдауы аяқталды."),
+                "factors": parsed.get("factors", []),
+            }
+
+    except json.JSONDecodeError as e:
+        logger.error(f"AI response JSON parse failed: {e}")
+        return _ai_fallback(user_severity, "AI жауабын өңдеу қатесi.")
     except Exception as e:
         logger.exception(f"AI verification failed: {e}")
+        return _ai_fallback(user_severity, "AI қатесi - қоғамдастық растауын кутуде.")
 
-    return {"verified": False, "confidence": 0.3, "analysis": "AI қатесі — қоғамдастық растауын күтуде."}
 
+# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/report", status_code=201)
 @limiter.limit(settings.RATE_LIMIT_REPORT)
@@ -142,24 +247,30 @@ async def create_incident(
     db: Session = Depends(get_db),
     current: Device = Depends(get_current_device),
 ):
-    """Создать инцидент: фото → AI проверка → метка на карте"""
-    ai_result = await verify_photo_with_ai(data.photo_base64, data.incident_type)
+    """Create incident: photo -> AI verification -> map marker"""
+    ai_result = await verify_photo_with_ai(data.photo_base64, data.incident_type, data.severity)
 
     try:
         inc_type = IncidentType(data.incident_type)
     except ValueError:
         inc_type = IncidentType.OTHER
 
+    # AI can override severity if it has high confidence
+    final_severity = data.severity
+    if ai_result["verified"] and ai_result["confidence"] >= 0.7:
+        final_severity = ai_result["severity_suggestion"]
+
     incident = IncidentReport(
         incident_type=inc_type,
         description=data.description,
-        severity=data.severity,
+        severity=final_severity,
         latitude=data.latitude,
         longitude=data.longitude,
         reporter_device_id=current.device_id,
         ai_verified=ai_result["verified"],
         ai_confidence=ai_result["confidence"],
         ai_analysis=ai_result["analysis"],
+        ai_severity_suggestion=ai_result.get("severity_suggestion"),
         is_active=True,
     )
     db.add(incident)
@@ -262,6 +373,7 @@ def _to_dict(inc: IncidentReport) -> dict:
         "ai_verified": inc.ai_verified,
         "ai_confidence": inc.ai_confidence,
         "ai_analysis": inc.ai_analysis,
+        "ai_severity_suggestion": inc.ai_severity_suggestion,
         "confirmations_count": inc.confirmations_count,
         "is_active": inc.is_active,
         "created_at": inc.created_at.isoformat() if inc.created_at else None,

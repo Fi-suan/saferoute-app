@@ -332,8 +332,19 @@ export default function MapScreen() {
             setNavStepIdx(0);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } else {
-            showDialog({ title: t('route_mode_label'), message: 'Бағытты жүктеу сәтсіз болды. Интернетті тексеріңіз.', icon: 'warning', iconColor: Colors.alert.high, buttons: [{ text: t('understand'), style: 'default' }] });
+            showDialog({ title: t('route_mode_label'), message: t('nav_failed'), icon: 'warning', iconColor: Colors.alert.high, buttons: [{ text: t('understand'), style: 'default' }] });
         }
+    };
+
+    // Haversine distance in meters (for step advancement)
+    const haversineM = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+        const R = 6_371_000;
+        const dLat = ((lat2 - lat1) * Math.PI) / 180;
+        const dLon = ((lon2 - lon1) * Math.PI) / 180;
+        const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     };
 
     // Advance navigation step when within 80m of current step endpoint
@@ -341,25 +352,37 @@ export default function MapScreen() {
         if (!navResult || !location) return;
         const step = navResult.steps[navStepIdx];
         if (!step) return;
-        const dlat = location.lat - step.end.latitude;
-        const dlon = location.lon - step.end.longitude;
-        const distM = Math.sqrt(dlat * dlat + dlon * dlon) * 111_000;
-        if (distM < 80 && navStepIdx < navResult.steps.length - 1) {
-            setNavStepIdx(i => i + 1);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const distM = haversineM(location.lat, location.lon, step.end.latitude, step.end.longitude);
+        if (distM < 80) {
+            if (navStepIdx < navResult.steps.length - 1) {
+                setNavStepIdx(i => i + 1);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else {
+                // Arrived at destination
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                setNavResult(null);
+                setNavStepIdx(0);
+                showDialog({
+                    title: t('route_mode_label'),
+                    message: t('nav_arrived'),
+                    icon: 'checkmark-circle',
+                    iconColor: Colors.brand.primary,
+                    buttons: [{ text: t('understand'), style: 'default' }],
+                });
+            }
         }
     }, [location?.lat, location?.lon]);
 
-    // When navigating, camera follows location with 15° tilt for driving perspective
+    // When navigating, camera follows location with tilt and heading for driving perspective
     useEffect(() => {
         if (!navResult || !location) return;
         mapRef.current?.animateCamera({
             center: { latitude: location.lat, longitude: location.lon },
-            zoom: 15,
-            pitch: 30,
-            heading: 0,
-        } as Camera, { duration: 800 });
-    }, [location?.lat, location?.lon, !!navResult]);
+            zoom: 16,
+            pitch: 45,
+            heading: location.heading ?? 0,
+        } as Camera, { duration: 600 });
+    }, [location?.lat, location?.lon, location?.heading, !!navResult]);
 
     const displayedIncidents = isRouteMode ? routeIncidents : incidents.filter(i => i.is_active);
     const showIncidents = filter === 'all' || filter === 'incidents';

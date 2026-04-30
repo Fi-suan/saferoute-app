@@ -49,7 +49,7 @@ module.exports = {
           apiKey: process.env.GOOGLE_MAPS_API_KEY,
         },
       },
-      privacyPolicyUrl: 'https://saferoute.kz/privacy',
+      privacyPolicyUrl: 'https://saferoute.kz/privacy.html',
     },
     web: {
       favicon: './assets/image.png',
