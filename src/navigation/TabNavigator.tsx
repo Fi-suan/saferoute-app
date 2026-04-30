@@ -50,7 +50,8 @@ export default function TabNavigator() {
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: styles.tabBar,
-                tabBarShowLabel: false,   // Nothing-style: без подписей
+                tabBarShowLabel: true,
+                tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginTop: -2 },
                 tabBarActiveTintColor: Colors.brand.primary,
                 tabBarInactiveTintColor: Colors.text.muted,
             }}
@@ -61,6 +62,7 @@ export default function TabNavigator() {
                     name={tab.name}
                     component={tab.screen}
                     options={{
+                        tabBarLabel: tab.label,
                         tabBarIcon: ({ focused, color }) => (
                             <TabIcon name={tab.icon} focused={focused} color={color} />
                         ),
@@ -76,16 +78,14 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.bg.secondary,
         borderTopWidth: 1,
         borderTopColor: Colors.border,
-        height: 64,
-        paddingBottom: 0,
-        paddingTop: 0,
+        height: 72,
+        paddingBottom: 8,
+        paddingTop: 6,
     },
     iconContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        height: 64,
-        paddingTop: 8,
-        gap: 4,
+        gap: 3,
     },
     // Nothing Phone style: крошечная точка вместо highlight-background
     activeDot: {

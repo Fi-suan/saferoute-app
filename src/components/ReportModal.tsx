@@ -179,27 +179,32 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
                         {/* Тяжесть */}
                         <Text style={styles.label}>Қауіп деңгейі</Text>
                         <View style={styles.severityRow}>
-                            {[1, 2, 3, 4, 5].map((s) => (
+                            {([
+                                { n: 1, label: 'Төмен', color: Colors.alert.medium },
+                                { n: 2, label: 'Орташа', color: Colors.alert.medium },
+                                { n: 3, label: 'Жоғары', color: Colors.alert.high },
+                                { n: 4, label: 'Қауіпті', color: Colors.alert.critical },
+                                { n: 5, label: 'Сыни', color: Colors.alert.critical },
+                            ] as const).map(({ n, label, color }) => (
                                 <TouchableOpacity
-                                    key={s}
+                                    key={n}
                                     style={[
                                         styles.severityBtn,
-                                        severity === s && {
-                                            backgroundColor:
-                                                s >= 4
-                                                    ? Colors.alert.critical
-                                                    : s >= 3
-                                                        ? Colors.alert.high
-                                                        : Colors.alert.medium,
-                                        },
+                                        severity === n && { backgroundColor: color, borderColor: color },
                                     ]}
-                                    onPress={() => setSeverity(s)}
+                                    onPress={() => setSeverity(n)}
                                 >
                                     <Text style={[
                                         styles.severityBtnText,
-                                        severity === s && { color: Colors.white },
+                                        severity === n && { color: Colors.white },
                                     ]}>
-                                        {s}
+                                        {n}
+                                    </Text>
+                                    <Text style={[
+                                        styles.severityLabel,
+                                        severity === n && { color: Colors.white },
+                                    ]}>
+                                        {label}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -307,11 +312,12 @@ const styles = StyleSheet.create({
     typeChipTextActive: { color: Colors.bg.primary },
     severityRow: { flexDirection: 'row', gap: 8 },
     severityBtn: {
-        width: 42, height: 42, borderRadius: Radius.md,
+        flex: 1, height: 52, borderRadius: Radius.md,
         alignItems: 'center', justifyContent: 'center',
         backgroundColor: Colors.bg.tertiary, borderWidth: 1, borderColor: Colors.border,
     },
     severityBtnText: { fontSize: 16, fontWeight: '700', color: Colors.text.secondary },
+    severityLabel: { fontSize: 9, fontWeight: '600', color: Colors.text.muted, marginTop: 1 },
     textInput: {
         backgroundColor: Colors.bg.tertiary, borderRadius: Radius.md, padding: Spacing.md,
         color: Colors.text.primary, fontSize: 14, minHeight: 60, textAlignVertical: 'top',

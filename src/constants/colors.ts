@@ -24,7 +24,7 @@ export const Colors = {
     text: {
         primary: '#FFFFFF',
         secondary: '#8A8A8A',   // Nothing uses cooler grey
-        muted: '#444444',
+        muted: '#666666',
         accent: '#2ECC71',
     },
 

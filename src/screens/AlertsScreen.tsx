@@ -34,9 +34,7 @@ export default function AlertsScreen() {
     const { incidents, loading, refreshing, refresh, pendingReportsCount } = useIncidents(activeTab);
 
     const handleCardPress = (incident: Incident) => {
-        if (navigation.canGoBack !== undefined || true) {
-            navigation.navigate('IncidentDetail', { incident });
-        }
+        navigation.navigate('IncidentDetail', { incident });
     };
 
     return (

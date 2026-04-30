@@ -99,10 +99,4 @@ export const updateDeviceLocation = (device_id: string, latitude: number, longit
 export const deleteUserData = (device_id: string) =>
     api.delete(`/devices/${device_id}/data`).then(r => r.data);
 
-// ── Simulator ──────────────────────────────────────────────────────────────────
-export const triggerSimulatorTick = (steps = 1) =>
-    api.post(`/simulator/tick?steps=${steps}`).then(r => r.data);
-
-export const getSimulatorStatus = () => api.get('/simulator/status').then(r => r.data);
-
 export default api;

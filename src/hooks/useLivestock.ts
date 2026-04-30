@@ -37,8 +37,8 @@ interface UseLivestockReturn {
     isManualMode: boolean;
     /** true когда 3+ групп скота в радиусе 500м от пользователя */
     dangerZoneAlert: boolean;
-    activateManualMode: (type: Livestock['type'], count: number, name: string) => void;
-    deactivateManualMode: () => void;
+    activateManualMode: (type: Livestock['type'], count: number, name: string) => Promise<void>;
+    deactivateManualMode: () => Promise<void>;
     registerLivestock: (data: Omit<Livestock, 'id' | 'ownerId' | 'lastUpdated' | 'isNearRoad' | 'distanceToRoadM'>) => Promise<void>;
     refreshLivestock: () => Promise<void>;
 }
@@ -124,6 +124,9 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
     const [myLivestock, setMyLivestock] = useState<Livestock[]>([]);
     const [isManualMode, setIsManualMode] = useState(false);
     const [manualEntry, setManualEntry] = useState<Livestock | null>(null);
+    /** Backend herd ID for the active manual mode session */
+    const backendHerdIdRef = useRef<number | null>(null);
+    const lastLocationSentRef = useRef<number>(0);
 
     useEffect(() => {
         AsyncStorage.getItem(LIVESTOCK_STORAGE_KEY).then(raw => {
@@ -134,11 +137,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
     const refreshLivestock = useCallback(async () => {
         await loadRoadZones();
         const data = await fetchLivestockFromServer();
-        setLivestock(prev => {
-            // Сохраняем ручные записи поверх данных с сервера
-            const manualEntries = prev.filter(l => l.trackingMode === 'phone');
-            return [...manualEntries, ...data];
-        });
+        setLivestock(data);
     }, []);
 
     useEffect(() => {
@@ -147,7 +146,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
         return () => clearInterval(interval);
     }, [refreshLivestock]);
 
-    const activateManualMode = useCallback((
+    const activateManualMode = useCallback(async (
         type: Livestock['type'],
         count: number,
         name: string,
@@ -157,7 +156,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
         const entry: Livestock = {
             id: `manual-${Date.now()}`,
             ownerId,
-            ownerName: 'Мен (қолмен режим)',
+            ownerName: 'Мен',
             ownerPhone: '',
             type,
             count,
@@ -172,9 +171,31 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
         };
         setManualEntry(entry);
         setIsManualMode(true);
-        setLivestock(prev => [entry, ...prev.filter(l => l.id !== entry.id)]);
+        setLivestock(prev => [entry, ...prev]);
+
+        // Create herd on backend so other users see it
+        try {
+            const res = await api.post('/herds/', {
+                name,
+                animal_type: type,
+                estimated_count: count,
+                owner_name: 'manual',
+            });
+            const herdId = res.data?.id;
+            if (herdId) {
+                backendHerdIdRef.current = herdId;
+                // Send initial location
+                await api.post(`/herds/${herdId}/location`, {
+                    latitude: userLocation.lat,
+                    longitude: userLocation.lon,
+                    speed_kmh: 0,
+                    source: 'manual',
+                }).catch(() => {});
+            }
+        } catch { /* offline — will sync on next refresh */ }
     }, [userLocation, ownerId]);
 
+    // Update position on backend while in manual mode (throttled to every 10s)
     useEffect(() => {
         if (!isManualMode || !userLocation || !manualEntry) return;
         const road = isNearAnyRoadSync(userLocation.lat, userLocation.lon);
@@ -188,14 +209,34 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
         };
         setManualEntry(updated);
         setLivestock(prev => prev.map(l => l.id === updated.id ? updated : l));
+
+        // Sync to backend every 10 seconds
+        const now = Date.now();
+        if (backendHerdIdRef.current && now - lastLocationSentRef.current > 10_000) {
+            lastLocationSentRef.current = now;
+            api.post(`/herds/${backendHerdIdRef.current}/location`, {
+                latitude: userLocation.lat,
+                longitude: userLocation.lon,
+                speed_kmh: 0,
+                source: 'manual',
+            }).catch(() => {});
+        }
     }, [userLocation?.lat, userLocation?.lon, isManualMode]);
 
-    const deactivateManualMode = useCallback(() => {
+    const deactivateManualMode = useCallback(async () => {
         setIsManualMode(false);
         if (manualEntry) {
             setLivestock(prev => prev.filter(l => l.id !== manualEntry.id));
         }
         setManualEntry(null);
+
+        // Deactivate on backend
+        if (backendHerdIdRef.current) {
+            try {
+                await api.patch(`/herds/${backendHerdIdRef.current}/deactivate`);
+            } catch { /* ignore */ }
+            backendHerdIdRef.current = null;
+        }
     }, [manualEntry]);
 
     const registerLivestock = useCallback(async (

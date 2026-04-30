@@ -320,16 +320,19 @@ def confirm_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
+    # Use authenticated device_id, ignore client-supplied value
+    device_id = current.device_id
+
     existing = db.query(IncidentConfirmation).filter(
         IncidentConfirmation.incident_id == incident_id,
-        IncidentConfirmation.device_id == data.device_id,
+        IncidentConfirmation.device_id == device_id,
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Already confirmed")
 
     confirmation = IncidentConfirmation(
         incident_id=incident_id,
-        device_id=data.device_id,
+        device_id=device_id,
         is_resolved=data.is_resolved,
     )
     db.add(confirmation)

@@ -10,11 +10,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE } from '../constants/storage';
 
 type Listener = () => void;
-let _listener: Listener | null = null;
+const _listeners = new Set<Listener>();
 
 export const AppResetEvent = {
     subscribe: (fn: Listener) => {
-        _listener = fn;
+        _listeners.add(fn);
+        return () => { _listeners.delete(fn); };
     },
     trigger: async () => {
         // Clear auth token
@@ -31,6 +32,6 @@ export const AppResetEvent = {
             STORAGE.ROUTE_MODE,
             STORAGE.REPORT_QUEUE,
         ]);
-        _listener?.();
+        _listeners.forEach(fn => fn());
     },
 };

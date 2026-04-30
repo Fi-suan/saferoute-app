@@ -128,7 +128,7 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
 
     const submitReport = useCallback(async (
         params: SubmitReportParams,
-    ): Promise<{ ok: boolean; error?: string }> => {
+    ): Promise<{ ok: boolean; error?: string; queued?: boolean }> => {
         const deviceId = await getDeviceId();
 
         const optimistic: Incident & { photo_uri?: string } = {

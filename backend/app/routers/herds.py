@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 from app.database import get_db
-from app.models import Herd, HerdLocation, Device
+from app.models import Herd, HerdLocation, Device, Role
 from app.schemas import HerdCreate, HerdOut, HerdLocationOut, LocationPoint
 from app.services.geofencing import process_location_update
 from app.services.notifications import notify_nearby_drivers
@@ -90,6 +90,9 @@ def create_herd(data: HerdCreate, db: Session = Depends(get_db), current: Device
 @router.post("/{herd_id}/location")
 def update_herd_location(herd_id: int, loc: LocationPoint, db: Session = Depends(get_db), current: Device = Depends(get_current_device)):
     """Принять новую GPS-координату от ошейника / симулятора"""
+    if current.role != Role.OWNER:
+        raise HTTPException(status_code=403, detail="Only livestock owners can update herd locations")
+
     herd = db.query(Herd).filter(Herd.id == herd_id).first()
     if not herd:
         raise HTTPException(status_code=404, detail="Стадо не найдено")
@@ -120,6 +123,17 @@ def update_herd_location(herd_id: int, loc: LocationPoint, db: Session = Depends
         "alert_id": alert.id if alert else None,
         "drivers_notified": notified,
     }
+
+
+@router.patch("/{herd_id}/deactivate")
+def deactivate_herd(herd_id: int, db: Session = Depends(get_db), current: Device = Depends(get_current_device)):
+    """Deactivate herd (manual mode off)"""
+    herd = db.query(Herd).filter(Herd.id == herd_id).first()
+    if not herd:
+        raise HTTPException(status_code=404, detail="Herd not found")
+    herd.is_active = False
+    db.commit()
+    return {"status": "ok", "herd_id": herd_id}
 
 
 @router.get("/{herd_id}/track", response_model=List[HerdLocationOut])
