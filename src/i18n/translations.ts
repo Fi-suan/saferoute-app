@@ -167,6 +167,30 @@ const translations = {
         livestock_camel: 'Түйе',
         livestock_sheep: 'Қой',
         livestock_goat: 'Ешкі',
+
+        // ─── Tabs ─────────────────────────────────────────────
+        tab_map: 'Карта',
+        tab_alerts: 'Белгілер',
+        tab_profile: 'Профиль',
+
+        // ─── Alerts screen ────────────────────────────────────
+        alerts_title: 'Инциденттер',
+        alerts_active: 'Белсенді',
+        alerts_all: 'Барлығы',
+        alerts_count_active: 'белсенді',
+        alerts_count_all: 'барлығы',
+        alerts_pending_send: 'жіберілуде',
+        alerts_empty_title: 'Инцидент жоқ',
+        alerts_empty_subtitle: 'Жол таза! Сапарыңыз сәтті болсын.',
+
+        // ─── Errors / boundaries ──────────────────────────────
+        error_title: 'Қате орын алды',
+        error_unknown: 'Белгісіз қате',
+        error_retry: 'Қайталау',
+
+        // ─── Profile validation ───────────────────────────────
+        profile_name_err: 'Мин. 2 таңба',
+        profile_phone_err: 'Формат: +7XXXXXXXXXX',
     },
 
     ru: {
@@ -320,6 +344,30 @@ const translations = {
         livestock_camel: 'Верблюд',
         livestock_sheep: 'Овца',
         livestock_goat: 'Коза',
+
+        // ─── Tabs ─────────────────────────────────────────────
+        tab_map: 'Карта',
+        tab_alerts: 'Метки',
+        tab_profile: 'Профиль',
+
+        // ─── Alerts screen ────────────────────────────────────
+        alerts_title: 'Инциденты',
+        alerts_active: 'Активные',
+        alerts_all: 'Все',
+        alerts_count_active: 'активных',
+        alerts_count_all: 'всего',
+        alerts_pending_send: 'отправляется',
+        alerts_empty_title: 'Инцидентов нет',
+        alerts_empty_subtitle: 'Дорога свободна! Доброго пути.',
+
+        // ─── Errors / boundaries ──────────────────────────────
+        error_title: 'Произошла ошибка',
+        error_unknown: 'Неизвестная ошибка',
+        error_retry: 'Повторить',
+
+        // ─── Profile validation ───────────────────────────────
+        profile_name_err: 'Мин. 2 символа',
+        profile_phone_err: 'Формат: +7XXXXXXXXXX',
     },
 } as const;
 

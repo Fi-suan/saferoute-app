@@ -1,20 +1,25 @@
 """
 Auth Router — device registration and token management
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.database import get_db
 from app.models import Device, Role
 from app.schemas import DeviceRegister
 from app.services.auth import create_device_token, get_current_device
 
+limiter = Limiter(key_func=get_remote_address)
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register")
-def register_device(data: DeviceRegister, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def register_device(request: Request, data: DeviceRegister, db: Session = Depends(get_db)):
     """Register device and return JWT token."""
     device = db.query(Device).filter(Device.device_id == data.device_id).first()
     if device:

@@ -248,7 +248,10 @@ async def create_incident(
     current: Device = Depends(get_current_device),
 ):
     """Create incident: photo -> AI verification -> map marker"""
-    ai_result = await verify_photo_with_ai(data.photo_base64, data.incident_type, data.severity)
+    if data.photo_base64:
+        ai_result = await verify_photo_with_ai(data.photo_base64, data.incident_type, data.severity)
+    else:
+        ai_result = _ai_fallback(data.severity, "Фото берiлмеген. Белгi тексерусiз жасалды.")
 
     try:
         inc_type = IncidentType(data.incident_type)

@@ -10,13 +10,31 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile, UserRole } from '../constants/livestock';
 import { STORAGE } from '../constants/storage';
 
+/**
+ * Build avatar initials from a free-form name. Works for any script
+ * (Cyrillic, Latin, etc.) and handles single-word names + edge cases.
+ *  - "Айбек Жанбосынов" → "АЖ"
+ *  - "Айбек"           → "АЙ"
+ *  - "  "  / undefined → "?"
+ */
+export function deriveInitials(rawName: string | undefined): string {
+    const name = (rawName ?? '').trim();
+    if (!name) return '?';
+    const words = name.split(/\s+/).filter(Boolean);
+    if (words.length >= 2) {
+        return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    // Single word — take first two characters
+    return words[0].slice(0, 2).toUpperCase();
+}
+
 const DEFAULT_PROFILE: UserProfile = {
     name: 'Пайдаланушы',
     phone: '',
     role: 'driver',
     joinedAt: new Date().toISOString(),
     totalReports: 0,
-    avatarInitials: 'ПА',
+    avatarInitials: deriveInitials('Пайдаланушы'),
 };
 
 interface UseUserProfileReturn {
@@ -40,8 +58,9 @@ export function useUserProfile(): UseUserProfileReturn {
     }, []);
 
     const updateProfile = useCallback(async (patch: Partial<UserProfile>) => {
-        const initials = patch.name
-            ? patch.name.trim().split(' ').map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase()
+        // Recompute initials only if the name changed; otherwise keep them.
+        const initials = patch.name !== undefined
+            ? deriveInitials(patch.name)
             : profile.avatarInitials;
         const updated = { ...profile, ...patch, avatarInitials: initials };
         setProfile(updated);

@@ -55,9 +55,12 @@ interface RoadZone {
 }
 
 let _cachedRoads: RoadZone[] = [];
+let _cachedRoadsAt = 0;
+const ROAD_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 async function loadRoadZones(): Promise<RoadZone[]> {
-    if (_cachedRoads.length > 0) return _cachedRoads;
+    const fresh = _cachedRoads.length > 0 && Date.now() - _cachedRoadsAt < ROAD_CACHE_TTL_MS;
+    if (fresh) return _cachedRoads;
     try {
         const res = await api.get<any[]>('/geozones/', { timeout: 5000 });
         if (Array.isArray(res.data)) {
@@ -71,8 +74,9 @@ async function loadRoadZones(): Promise<RoadZone[]> {
                 roadLon: z.road_lon ?? 0,
                 bufferKm: z.buffer_km ?? 5,
             }));
+            _cachedRoadsAt = Date.now();
         }
-    } catch { /* use empty — will retry next refresh */ }
+    } catch { /* keep stale cache — will retry next refresh */ }
     return _cachedRoads;
 }
 

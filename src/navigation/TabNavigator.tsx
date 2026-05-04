@@ -19,14 +19,32 @@ import { Ionicons } from '@expo/vector-icons';
 import MapScreen from '../screens/MapScreen';
 import AlertsScreen from '../screens/AlertsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { Colors, Radius } from '../constants/colors';
+import { useT } from '../i18n';
+import type { TranslationKey } from '../i18n/translations';
 
 const Tab = createBottomTabNavigator();
 
-const TABS = [
-    { name: 'Map', label: 'Карта', icon: 'map', screen: MapScreen },
-    { name: 'Alerts', label: 'Белгілер', icon: 'warning', screen: AlertsScreen },
-    { name: 'Profile', label: 'Профиль', icon: 'person-circle', screen: ProfileScreen },
+// Wrap each screen so a crash isolates to that tab.
+const withBoundary = (Screen: React.ComponentType<any>) => (props: any) =>
+    <ErrorBoundary><Screen {...props} /></ErrorBoundary>;
+
+const MapScreenSafe = withBoundary(MapScreen);
+const AlertsScreenSafe = withBoundary(AlertsScreen);
+const ProfileScreenSafe = withBoundary(ProfileScreen);
+
+interface TabDef {
+    name: string;
+    labelKey: TranslationKey;
+    icon: string;
+    screen: React.ComponentType<any>;
+}
+
+const TABS: TabDef[] = [
+    { name: 'Map', labelKey: 'tab_map', icon: 'map', screen: MapScreenSafe },
+    { name: 'Alerts', labelKey: 'tab_alerts', icon: 'warning', screen: AlertsScreenSafe },
+    { name: 'Profile', labelKey: 'tab_profile', icon: 'person-circle', screen: ProfileScreenSafe },
 ];
 
 function TabIcon({ name, focused, color }: { name: string; focused: boolean; color: string }) {
@@ -45,6 +63,7 @@ function TabIcon({ name, focused, color }: { name: string; focused: boolean; col
 }
 
 export default function TabNavigator() {
+    const t = useT();
     return (
         <Tab.Navigator
             screenOptions={{
@@ -62,7 +81,7 @@ export default function TabNavigator() {
                     name={tab.name}
                     component={tab.screen}
                     options={{
-                        tabBarLabel: tab.label,
+                        tabBarLabel: t(tab.labelKey),
                         tabBarIcon: ({ focused, color }) => (
                             <TabIcon name={tab.icon} focused={focused} color={color} />
                         ),

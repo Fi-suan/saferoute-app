@@ -20,7 +20,8 @@
       "Bash(python -c \"from app.routers.incidents import AI_SYSTEM_PROMPT, AI_RESPONSE_SCHEMA; print\\(''OK, prompt length:'', len\\(AI_SYSTEM_PROMPT\\)\\)\")",
       "Bash(python:*)",
       "Bash(curl:*)",
-      "Bash(xargs wc:*)"
+      "Bash(xargs wc:*)",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }

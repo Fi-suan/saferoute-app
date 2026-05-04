@@ -37,6 +37,9 @@ const ROLE_ICON: Record<UserRole, { icon: string; color: string }> = {
     livestock_owner: { icon: 'paw', color: Colors.alert.high },
 };
 
+const KZ_PHONE_RE = /^(\+7|8)\d{10}$/;
+const isValidPhone = (p: string) => KZ_PHONE_RE.test(p.replace(/\s/g, ''));
+
 
 
 /** Nothing Phone стиль: числа в monospace, геометрические карточки */
@@ -84,6 +87,7 @@ export default function ProfileScreen() {
     const [notifModal, setNotifModal] = useState(false);
     const [editName, setEditName] = useState('');
     const [editPhone, setEditPhone] = useState('');
+    const [editError, setEditError] = useState<string | null>(null);
     const [activeRouteId, setActiveRouteId] = useState<string>('a17');
     const [deviceId, setDeviceId] = useState('Жүктелуде...');
     const [showDeviceId, setShowDeviceId] = useState(false);
@@ -101,12 +105,25 @@ export default function ProfileScreen() {
     const openEdit = () => {
         setEditName(profile.name);
         setEditPhone(profile.phone);
+        setEditError(null);
         setEditModal(true);
     };
 
     const saveEdit = async () => {
-        if (!editName.trim()) return;
-        await updateProfile({ name: editName.trim(), phone: editPhone.trim() });
+        const name = editName.trim();
+        const phone = editPhone.trim();
+        if (name.length < 2) {
+            setEditError(t('profile_name_err') || 'Мин. 2 таңба');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            return;
+        }
+        if (phone && !isValidPhone(phone)) {
+            setEditError(t('profile_phone_err') || 'Формат: +7XXXXXXXXXX');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            return;
+        }
+        setEditError(null);
+        await updateProfile({ name, phone });
         setEditModal(false);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
@@ -547,7 +564,7 @@ export default function ProfileScreen() {
                         <TextInput
                             style={styles.input}
                             value={editName}
-                            onChangeText={setEditName}
+                            onChangeText={(v) => { setEditName(v); if (editError) setEditError(null); }}
                             placeholder="Аты-жөніңіз..."
                             placeholderTextColor={Colors.text.muted}
                             maxLength={40}
@@ -557,12 +574,16 @@ export default function ProfileScreen() {
                         <TextInput
                             style={styles.input}
                             value={editPhone}
-                            onChangeText={setEditPhone}
+                            onChangeText={(v) => { setEditPhone(v); if (editError) setEditError(null); }}
                             placeholder="+7 700 000 0000"
                             placeholderTextColor={Colors.text.muted}
                             keyboardType="phone-pad"
                             maxLength={17}
                         />
+
+                        {editError && (
+                            <Text style={styles.modalErrorText}>{editError}</Text>
+                        )}
 
                         <View style={styles.modalButtons}>
                             <TouchableOpacity
@@ -803,4 +824,5 @@ const styles = StyleSheet.create({
     modalBtnSave: { backgroundColor: Colors.brand.primary },
     modalBtnCancelText: { fontSize: 15, fontWeight: '600', color: Colors.text.secondary },
     modalBtnSaveText: { fontSize: 15, fontWeight: '700', color: Colors.bg.primary },
+    modalErrorText: { color: Colors.alert.critical, fontSize: 12, marginTop: -Spacing.xs, marginBottom: Spacing.xs },
 });

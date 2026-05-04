@@ -51,11 +51,13 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-if not os.environ.get("JWT_SECRET"):
+# Detect fallback usage: pydantic-settings loads from env vars AND .env file,
+# so check the resolved value rather than os.environ alone.
+if settings.JWT_SECRET == _FALLBACK_JWT_SECRET:
     if not settings.DEBUG:
         raise RuntimeError(
-            "JWT_SECRET environment variable is required in production. "
-            "Set JWT_SECRET in .env or set DEBUG=true for development."
+            "JWT_SECRET is required in production. "
+            "Set it via env var or .env file, or set DEBUG=true for development."
         )
     _logger.warning(
         "JWT_SECRET not set — using random fallback (DEBUG mode). "

@@ -13,6 +13,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TabNavigator from './TabNavigator';
 import IncidentDetailScreen from '../screens/IncidentDetailScreen';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { Colors } from '../constants/colors';
 import { Incident } from '../constants/incidents';
 
@@ -22,6 +23,12 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const IncidentDetailWithBoundary = (props: any) => (
+    <ErrorBoundary>
+        <IncidentDetailScreen {...props} />
+    </ErrorBoundary>
+);
 
 export default function RootNavigator() {
     return (
@@ -35,7 +42,7 @@ export default function RootNavigator() {
             <Stack.Screen name="Main" component={TabNavigator} />
             <Stack.Screen
                 name="IncidentDetail"
-                component={IncidentDetailScreen}
+                component={IncidentDetailWithBoundary}
                 options={{
                     animation: 'slide_from_bottom',
                     presentation: 'modal',

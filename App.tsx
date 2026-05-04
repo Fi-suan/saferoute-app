@@ -3,53 +3,23 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, View, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 
 import RootNavigator from './src/navigation/RootNavigator';
 import OnboardingScreen, { OnboardingResult } from './src/screens/OnboardingScreen';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { Colors } from './src/constants/colors';
 import { STORAGE } from './src/constants/storage';
 import { getDeviceId } from './src/services/deviceId';
 import { registerForPushNotifications } from './src/services/notifications';
 import { AppResetEvent } from './src/services/appReset';
+import { deriveInitials } from './src/hooks/useUserProfile';
 import type { UserProfile } from './src/constants/livestock';
 
 // Держим splash пока читаем AsyncStorage
 SplashScreen.preventAutoHideAsync();
-
-
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: Error | null }
-> {
-  state = { hasError: false, error: null as Error | null };
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={styles.errorWrap}>
-          <Text style={styles.errorTitle}>Қате орын алды</Text>
-          <Text style={styles.errorMessage}>
-            {this.state.error?.message || 'Белгісіз қате'}
-          </Text>
-          <TouchableOpacity
-            style={styles.errorButton}
-            onPress={() => this.setState({ hasError: false, error: null })}
-          >
-            <Text style={styles.errorButtonText}>Қайта көру</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 
 export default function App() {
@@ -83,22 +53,13 @@ export default function App() {
 
   const handleOnboardingFinish = useCallback(async (data: OnboardingResult) => {
     // Формируем инициалы из имени
-    const initials = data.name
-      .trim()
-      .split(' ')
-      .map(w => w[0])
-      .filter(Boolean)
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() || 'АА';
-
     const profile: UserProfile = {
       name: data.name || 'Пайдаланушы',
       phone: data.phone,
       role: data.role,
       joinedAt: new Date().toISOString(),
       totalReports: 0,
-      avatarInitials: initials,
+      avatarInitials: deriveInitials(data.name),
     };
 
     await AsyncStorage.setItem(STORAGE.USER_PROFILE, JSON.stringify(profile));
@@ -154,9 +115,4 @@ export default function App() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bg.primary },
   loadingWrap: { flex: 1, backgroundColor: Colors.bg.primary, alignItems: 'center', justifyContent: 'center' },
-  errorWrap: { flex: 1, backgroundColor: Colors.bg.primary, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  errorTitle: { fontSize: 20, fontWeight: '700', color: Colors.alert.critical, marginBottom: 12 },
-  errorMessage: { fontSize: 14, color: Colors.text.secondary, textAlign: 'center', marginBottom: 24 },
-  errorButton: { backgroundColor: Colors.brand.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
-  errorButtonText: { fontSize: 16, fontWeight: '600', color: Colors.bg.primary },
 });

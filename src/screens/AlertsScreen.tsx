@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, FlatList,
-    TouchableOpacity, RefreshControl, ActivityIndicator,
+    TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +19,9 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Colors, Spacing, Radius } from '../constants/colors';
 import { Incident } from '../constants/incidents';
 import { useIncidents } from '../hooks/useIncidents';
+import { useT } from '../i18n';
 import IncidentCard from '../components/IncidentCard';
+import { IncidentListSkeleton } from '../components/Skeleton';
 import { RootStackParamList } from '../navigation/RootNavigator';
 
 // Составной тип: Tab экран + выход в Root Stack
@@ -30,6 +32,7 @@ type NavProp = CompositeNavigationProp<
 
 export default function AlertsScreen() {
     const navigation = useNavigation<NavProp>();
+    const t = useT();
     const [activeTab, setActiveTab] = useState<'active' | 'all'>('active');
     const { incidents, loading, refreshing, refresh, pendingReportsCount } = useIncidents(activeTab);
 
@@ -42,10 +45,10 @@ export default function AlertsScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.headerTitle}>Инциденттер</Text>
+                    <Text style={styles.headerTitle}>{t('alerts_title')}</Text>
                     <Text style={styles.headerSub}>
-                        {incidents.length} {activeTab === 'active' ? 'белсенді' : 'барлығы'}
-                        {pendingReportsCount > 0 && ` · ${pendingReportsCount} жіберілуде`}
+                        {incidents.length} {activeTab === 'active' ? t('alerts_count_active') : t('alerts_count_all')}
+                        {pendingReportsCount > 0 && ` · ${pendingReportsCount} ${t('alerts_pending_send')}`}
                     </Text>
                 </View>
                 <View style={[styles.onlineBadge, { backgroundColor: Colors.brand.glow }]}>
@@ -56,19 +59,19 @@ export default function AlertsScreen() {
 
             {/* Tabs */}
             <View style={styles.tabs}>
-                {(['active', 'all'] as const).map((t) => (
+                {(['active', 'all'] as const).map((tab) => (
                     <TouchableOpacity
-                        key={t}
-                        style={[styles.tab, activeTab === t && styles.tabActive]}
-                        onPress={() => setActiveTab(t)}
+                        key={tab}
+                        style={[styles.tab, activeTab === tab && styles.tabActive]}
+                        onPress={() => setActiveTab(tab)}
                     >
                         <Ionicons
-                            name={t === 'active' ? 'alert-circle' : 'time'}
+                            name={tab === 'active' ? 'alert-circle' : 'time'}
                             size={16}
-                            color={activeTab === t ? Colors.brand.primary : Colors.text.muted}
+                            color={activeTab === tab ? Colors.brand.primary : Colors.text.muted}
                         />
-                        <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>
-                            {t === 'active' ? 'Белсенді' : 'Барлығы'}
+                        <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                            {tab === 'active' ? t('alerts_active') : t('alerts_all')}
                         </Text>
                     </TouchableOpacity>
                 ))}
@@ -76,9 +79,7 @@ export default function AlertsScreen() {
 
             {/* List */}
             {loading ? (
-                <View style={styles.centered}>
-                    <ActivityIndicator size="large" color={Colors.brand.primary} />
-                </View>
+                <IncidentListSkeleton count={5} />
             ) : (
                 <FlatList
                     data={incidents}
@@ -98,8 +99,8 @@ export default function AlertsScreen() {
                     ListEmptyComponent={
                         <View style={styles.centered}>
                             <Ionicons name="shield-checkmark" size={48} color={Colors.brand.primary} />
-                            <Text style={styles.emptyText}>Инцидент жоқ</Text>
-                            <Text style={styles.emptySubtext}>Жол таза! Барыңызда сою болсын.</Text>
+                            <Text style={styles.emptyText}>{t('alerts_empty_title')}</Text>
+                            <Text style={styles.emptySubtext}>{t('alerts_empty_subtitle')}</Text>
                         </View>
                     }
                 />

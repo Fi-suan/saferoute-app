@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 from app.database import get_db
-from app.models import Herd, HerdLocation, Device, Role
+from datetime import datetime, timezone
+from app.models import Herd, HerdLocation, Device, Role, Alert
 from app.schemas import HerdCreate, HerdOut, HerdLocationOut, LocationPoint
 from app.services.geofencing import process_location_update
 from app.services.notifications import notify_nearby_drivers
@@ -127,13 +128,21 @@ def update_herd_location(herd_id: int, loc: LocationPoint, db: Session = Depends
 
 @router.patch("/{herd_id}/deactivate")
 def deactivate_herd(herd_id: int, db: Session = Depends(get_db), current: Device = Depends(get_current_device)):
-    """Deactivate herd (manual mode off)"""
+    """Deactivate herd (manual mode off) and resolve associated active alerts."""
     herd = db.query(Herd).filter(Herd.id == herd_id).first()
     if not herd:
         raise HTTPException(status_code=404, detail="Herd not found")
     herd.is_active = False
+
+    # Resolve any active alerts for this herd — they no longer make sense.
+    now = datetime.now(timezone.utc)
+    resolved = db.query(Alert).filter(
+        Alert.herd_id == herd_id,
+        Alert.is_active == True,
+    ).update({"is_active": False, "resolved_at": now})
+
     db.commit()
-    return {"status": "ok", "herd_id": herd_id}
+    return {"status": "ok", "herd_id": herd_id, "alerts_resolved": resolved}
 
 
 @router.get("/{herd_id}/track", response_model=List[HerdLocationOut])
