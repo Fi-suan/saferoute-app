@@ -21,7 +21,9 @@
       "Bash(python:*)",
       "Bash(curl:*)",
       "Bash(xargs wc:*)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(rm -f backend/app/services/__pycache__/simulator.cpython-314.pyc)",
+      "Bash(ls backend/app/services/__pycache__/)"
     ]
   }
 }

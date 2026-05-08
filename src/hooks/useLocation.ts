@@ -61,6 +61,7 @@ export function useLocation(
     const confirmIds = useRef<Set<number>>(new Set());
     const sub = useRef<Location.LocationSubscription | null>(null);
     const lastSentRef = useRef<number>(0);
+    const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -130,8 +131,9 @@ export function useLocation(
                 const title = '⚠️ Абай болыңыз!';
                 const body = inc.description || inc.incident_type;
                 onNearbyAlert?.(inc.id, title, body);
-                // Автоматически скрыть через 8 сек
-                setTimeout(() => setNearbyAlert(null), 8000);
+                // Автоматически скрыть через 8 сек (отменяем предыдущий таймер)
+                if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+                dismissTimerRef.current = setTimeout(() => setNearbyAlert(null), 8000);
             }
 
             // Диалог подтверждения 0.5 км
@@ -142,8 +144,19 @@ export function useLocation(
         }
     }, [location, incidents, proximityRadiusKm]);
 
-    const dismissNearbyAlert = useCallback(() => setNearbyAlert(null), []);
+    const dismissNearbyAlert = useCallback(() => {
+        if (dismissTimerRef.current) {
+            clearTimeout(dismissTimerRef.current);
+            dismissTimerRef.current = null;
+        }
+        setNearbyAlert(null);
+    }, []);
     const dismissConfirmCandidate = useCallback(() => setConfirmCandidate(null), []);
+
+    // Cleanup auto-dismiss timer on unmount
+    useEffect(() => () => {
+        if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    }, []);
 
     return {
         location,

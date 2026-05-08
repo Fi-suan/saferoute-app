@@ -12,6 +12,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { Incident, getIncidentMeta } from '../constants/incidents';
+import { Config } from '../config';
 
 function timeAgo(dateStr: string): string {
     // Ensure UTC: backend may return with +00:00, Z suffix, or naive (assume UTC)
@@ -88,7 +89,7 @@ export default function IncidentCard({ item, onPress, compact }: Props) {
                 </View>
 
                 {/* AI бейдж: только при верификации с уверенностью ≥75% */}
-                {item.ai_verified && (item.ai_confidence === undefined || item.ai_confidence >= 0.75) && (
+                {item.ai_verified && (item.ai_confidence ?? 0) >= 0.75 && (
                     <View style={styles.aiBadge}>
                         <Ionicons name="checkmark-circle" size={14} color={Colors.brand.primary} />
                         <Text style={styles.aiBadgeText}>AI</Text>
@@ -116,7 +117,9 @@ export default function IncidentCard({ item, onPress, compact }: Props) {
 
                 <View style={styles.cardStat}>
                     <Ionicons name="people-outline" size={14} color={Colors.text.muted} />
-                    <Text style={styles.cardStatText}>{item.confirmations_count}/3</Text>
+                    <Text style={styles.cardStatText}>
+                        {item.confirmations_count}/{Config.CONFIRMATIONS_TO_RESOLVE}
+                    </Text>
                 </View>
 
                 <View style={styles.cardStat}>

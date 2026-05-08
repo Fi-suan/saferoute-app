@@ -22,8 +22,7 @@ export default function ProximityBanner({ incident, onDismiss, onViewDetail }: P
     const meta = getIncidentMeta(incident.incident_type);
 
     useEffect(() => {
-        // Slide-in анимация
-        Animated.parallel([
+        const anim = Animated.parallel([
             Animated.spring(translateY, {
                 toValue: 0,
                 useNativeDriver: true,
@@ -35,7 +34,9 @@ export default function ProximityBanner({ incident, onDismiss, onViewDetail }: P
                 duration: 200,
                 useNativeDriver: true,
             }),
-        ]).start();
+        ]);
+        anim.start();
+        return () => anim.stop();
     }, []);
 
     const dismiss = () => {

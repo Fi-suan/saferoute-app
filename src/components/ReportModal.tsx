@@ -10,7 +10,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, Modal,
-    TextInput, ScrollView, ActivityIndicator, Image, Alert,
+    TextInput, ScrollView, ActivityIndicator, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -88,6 +88,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
 
         // Resize + compress photo before base64 to avoid OOM on weak devices
         let photo_base64: string | undefined;
+        let photoFailed = false;
         if (photoUri) {
             try {
                 const resized = await ImageManipulator.manipulateAsync(
@@ -101,7 +102,27 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
                 photo_base64 = base64Data;
             } catch (e) {
                 console.warn('[ReportModal] Failed to process photo:', e);
+                photoFailed = true;
             }
+        }
+
+        if (photoFailed) {
+            setSubmitting(false);
+            showDialog({
+                title: 'Фото қатесі',
+                message: 'Фотоны өңдеу мүмкін болмады. Фотосыз жалғастыруға болады.',
+                icon: 'warning',
+                iconColor: Colors.alert.high,
+                buttons: [
+                    {
+                        text: 'Фотосыз жіберу',
+                        style: 'default',
+                        onPress: () => { setPhotoUri(null); handleSubmit(); },
+                    },
+                    { text: 'Болдырмау', style: 'cancel' },
+                ],
+            });
+            return;
         }
 
         const result = await onSubmit({

@@ -50,11 +50,18 @@ export function useNotificationLog(): UseNotificationLogReturn {
             timestamp: Date.now(),
             read: false,
         };
+        // Compute next state based on the latest log via functional update,
+        // then persist outside the reducer so the write happens exactly once.
+        let next: NotifEntry[] = [];
         setLog(prev => {
-            const next = [entry, ...prev].slice(0, MAX);
-            AsyncStorage.setItem(KEY, JSON.stringify(next));
+            next = [entry, ...prev].slice(0, MAX);
             return next;
         });
+        try {
+            await AsyncStorage.setItem(KEY, JSON.stringify(next));
+        } catch (err) {
+            console.warn('[useNotificationLog] persist failed:', err);
+        }
     }, []);
 
     const markAllRead = useCallback(async () => {

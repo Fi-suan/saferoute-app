@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum, Index
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum, Index, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from app.database import Base
@@ -156,6 +156,9 @@ class IncidentReport(Base):
 class IncidentConfirmation(Base):
     """Подтверждение от водителя"""
     __tablename__ = "incident_confirmations"
+    __table_args__ = (
+        UniqueConstraint("incident_id", "device_id", name="uq_incident_device_confirm"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     incident_id = Column(Integer, ForeignKey("incident_reports.id"), nullable=False, index=True)

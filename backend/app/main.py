@@ -91,9 +91,28 @@ async def proxy_directions(
         "mode": "driving",
     })
     url = f"https://maps.googleapis.com/maps/api/directions/json?{params}"
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(url)
-        return resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url)
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Directions upstream timeout")
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Directions upstream error")
+
+    if resp.status_code != 200:
+        logger.warning("Directions upstream returned %s", resp.status_code)
+        raise HTTPException(status_code=502, detail="Directions upstream error")
+
+    body = resp.json()
+    google_status = body.get("status")
+    if google_status != "OK":
+        # Log raw error server-side, return generic message to client.
+        logger.warning("Directions API status=%s msg=%s", google_status, body.get("error_message"))
+        if google_status == "ZERO_RESULTS":
+            raise HTTPException(status_code=404, detail="No route found")
+        raise HTTPException(status_code=502, detail="Directions unavailable")
+
+    return body
 
 
 @app.get("/health")

@@ -5,6 +5,7 @@ import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
 from typing import Optional
 from slowapi import Limiter
@@ -326,21 +327,21 @@ def confirm_incident(
     # Use authenticated device_id, ignore client-supplied value
     device_id = current.device_id
 
-    existing = db.query(IncidentConfirmation).filter(
-        IncidentConfirmation.incident_id == incident_id,
-        IncidentConfirmation.device_id == device_id,
-    ).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Already confirmed")
-
+    # Insert first — DB unique constraint (incident_id, device_id) enforces
+    # idempotency under concurrent requests. Race-safe.
     confirmation = IncidentConfirmation(
         incident_id=incident_id,
         device_id=device_id,
         is_resolved=data.is_resolved,
     )
     db.add(confirmation)
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Already confirmed")
 
-    # Atomic increment to avoid race condition
+    # Atomic counter increment
     db.query(IncidentReport).filter(IncidentReport.id == incident_id).update(
         {IncidentReport.confirmations_count: IncidentReport.confirmations_count + 1}
     )
