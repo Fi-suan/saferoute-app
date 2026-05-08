@@ -8,13 +8,15 @@
       "android": {
         "buildType": "apk",
         "autoIncrement": true
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "android": {
         "buildType": "app-bundle",
         "autoIncrement": true
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

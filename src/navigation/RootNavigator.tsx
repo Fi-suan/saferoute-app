@@ -14,6 +14,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TabNavigator from './TabNavigator';
 import IncidentDetailScreen from '../screens/IncidentDetailScreen';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { reportError } from '../services/sentry';
 import { Colors } from '../constants/colors';
 import { Incident } from '../constants/incidents';
 
@@ -25,7 +26,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const IncidentDetailWithBoundary = (props: any) => (
-    <ErrorBoundary>
+    <ErrorBoundary onError={reportError}>
         <IncidentDetailScreen {...props} />
     </ErrorBoundary>
 );

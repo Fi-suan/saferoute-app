@@ -16,10 +16,14 @@ import { getDeviceId } from './src/services/deviceId';
 import { registerForPushNotifications } from './src/services/notifications';
 import { AppResetEvent } from './src/services/appReset';
 import { deriveInitials } from './src/hooks/useUserProfile';
+import { initSentry, reportError, setUserContext, clearUserContext } from './src/services/sentry';
 import type { UserProfile } from './src/constants/livestock';
 
 // Держим splash пока читаем AsyncStorage
 SplashScreen.preventAutoHideAsync();
+
+// Initialize crash reporting before anything else
+initSentry();
 
 
 export default function App() {
@@ -27,19 +31,23 @@ export default function App() {
 
   // Слушаем logout из ProfileScreen
   useEffect(() => {
-    AppResetEvent.subscribe(() => setOnboardingDone(false));
+    AppResetEvent.subscribe(() => {
+      clearUserContext();
+      setOnboardingDone(false);
+    });
   }, []);
 
   useEffect(() => {
     (async () => {
       try {
-        await getDeviceId();
+        const deviceId = await getDeviceId();
         const done = await AsyncStorage.getItem(STORAGE.ONBOARDING_DONE);
         const profileRaw = await AsyncStorage.getItem(STORAGE.USER_PROFILE);
         setOnboardingDone(done === 'true' && !!profileRaw);
         if (profileRaw) {
           try {
             const profile: UserProfile = JSON.parse(profileRaw);
+            setUserContext({ deviceId, role: profile.role });
             registerForPushNotifications(profile.role).catch(() => { });
           } catch { /* ignore */ }
         }
@@ -77,7 +85,7 @@ export default function App() {
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary onError={reportError}>
       <GestureHandlerRootView style={styles.root}>
         <SafeAreaProvider>
           <StatusBar style="light" backgroundColor={Colors.bg.primary} />

@@ -1,0 +1,26 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+    ".venv",
+    "venv",
+    "__pycache__",
+    "alembic/versions",
+]
+
+[tool.ruff.lint]
+# Pyflakes (F), pycodestyle (E, W), isort (I),
+# pyupgrade (UP), bugbear (B), comprehensions (C4)
+select = ["E", "W", "F", "I", "UP", "B", "C4"]
+ignore = [
+    "E501",  # line too long — handled by formatter
+    "B008",  # FastAPI Depends() in default args — intentional
+]
+
+[tool.ruff.lint.per-file-ignores]
+"app/seed.py" = ["E402"]  # late imports OK in seed scripts
+"app/__init__.py" = ["F401"]  # re-exports
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

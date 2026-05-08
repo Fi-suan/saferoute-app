@@ -1,0 +1,46 @@
+name: Backend check
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-check.yml'
+  push:
+    branches: [master, main]
+
+jobs:
+  python:
+    name: Python syntax + imports
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff
+
+      - name: Ruff lint
+        run: ruff check app/
+
+      - name: Syntax check (py_compile)
+        run: python -m compileall -q app/
+
+      - name: Import check (does the app boot?)
+        env:
+          DATABASE_URL: sqlite:///./test.db
+          JWT_SECRET: ci-test-secret-please-replace
+          DEBUG: 'true'
+        run: python -c "from app.main import app; print('app imported OK, routes:', len(app.routes))"

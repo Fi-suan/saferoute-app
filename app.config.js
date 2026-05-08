@@ -31,7 +31,8 @@ module.exports = {
       package: 'kz.saferoute.app',
       versionCode: VERSION_CODE,
       adaptiveIcon: {
-        foregroundImage: './assets/image.png',
+        foregroundImage: './assets/android-icon-foreground.png',
+        monochromeImage: './assets/android-icon-monochrome.png',
         backgroundColor: '#0A0F1C',
       },
       predictiveBackGestureEnabled: false,
@@ -56,6 +57,7 @@ module.exports = {
     },
     extra: {
       googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+      sentryDsn: process.env.SENTRY_DSN,
     },
     plugins: [
       [

@@ -23,7 +23,14 @@
       "Bash(xargs wc:*)",
       "Bash(echo \"EXIT=$?\")",
       "Bash(rm -f backend/app/services/__pycache__/simulator.cpython-314.pyc)",
-      "Bash(ls backend/app/services/__pycache__/)"
+      "Bash(ls backend/app/services/__pycache__/)",
+      "Bash(cd \"c:/Users/zhant/.gemini/antigravity/scratch/saferoute-app\" && mkdir -p .husky)",
+      "Bash(mkdir -p alembic/versions)",
+      "Bash(ls alembic/)",
+      "Bash(echo \"TS_EXIT=$?\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\zhant\\.gemini\\antigravity\\scratch\\saferoute-app"
     ]
   }
 }
