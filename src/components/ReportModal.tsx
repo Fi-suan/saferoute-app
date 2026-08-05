@@ -73,7 +73,12 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
         }
     };
 
-    const handleSubmit = async () => {
+    /**
+     * Отправка репорта. Фото передаётся явным аргументом, а не читается из
+     * state — иначе повтор «отправить без фото» видел бы старое значение
+     * photoUri (setState асинхронный) и падал бы по кругу.
+     */
+    const doSubmit = async (uriToUse: string | null): Promise<void> => {
         if (!location) {
             showDialog({
                 title: 'Қате',
@@ -88,41 +93,33 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
 
         // Resize + compress photo before base64 to avoid OOM on weak devices
         let photo_base64: string | undefined;
-        let photoFailed = false;
-        if (photoUri) {
+        if (uriToUse) {
             try {
                 const resized = await ImageManipulator.manipulateAsync(
-                    photoUri,
+                    uriToUse,
                     [{ resize: { width: 800 } }],
                     { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG },
                 );
-                const base64Data = await FileSystem.readAsStringAsync(resized.uri, {
-                    encoding: 'base64',
-                });
-                photo_base64 = base64Data;
+                photo_base64 = await new FileSystem.File(resized.uri).base64();
             } catch (e) {
                 console.warn('[ReportModal] Failed to process photo:', e);
-                photoFailed = true;
+                setSubmitting(false);
+                showDialog({
+                    title: 'Фото қатесі',
+                    message: 'Фотоны өңдеу мүмкін болмады. Фотосыз жалғастыруға болады.',
+                    icon: 'warning',
+                    iconColor: Colors.alert.high,
+                    buttons: [
+                        {
+                            text: 'Фотосыз жіберу',
+                            style: 'default',
+                            onPress: () => { setPhotoUri(null); doSubmit(null); },
+                        },
+                        { text: 'Болдырмау', style: 'cancel' },
+                    ],
+                });
+                return;
             }
-        }
-
-        if (photoFailed) {
-            setSubmitting(false);
-            showDialog({
-                title: 'Фото қатесі',
-                message: 'Фотоны өңдеу мүмкін болмады. Фотосыз жалғастыруға болады.',
-                icon: 'warning',
-                iconColor: Colors.alert.high,
-                buttons: [
-                    {
-                        text: 'Фотосыз жіберу',
-                        style: 'default',
-                        onPress: () => { setPhotoUri(null); handleSubmit(); },
-                    },
-                    { text: 'Болдырмау', style: 'cancel' },
-                ],
-            });
-            return;
         }
 
         const result = await onSubmit({
@@ -131,7 +128,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
             severity,
             latitude: location.lat,
             longitude: location.lon,
-            photo_uri: photoUri ?? undefined,
+            photo_uri: uriToUse ?? undefined,
             photo_base64,
         });
         setSubmitting(false);
@@ -160,6 +157,8 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
             });
         }
     };
+
+    const handleSubmit = () => doSubmit(photoUri);
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
