@@ -10,9 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { Colors, Spacing, Radius } from '../constants/colors';
 import type { UserRole } from '../constants/livestock';
 import OnboardingIllustration from '../components/OnboardingIllustration';
-import { registerDevice } from '../services/api';
-import { storeAuthToken } from '../services/auth';
-import { getDeviceId } from '../services/deviceId';
+import { ensureRegistered } from '../services/registration';
 
 const { width } = Dimensions.get('window');
 
@@ -140,15 +138,10 @@ export default function OnboardingScreen({ onFinish }: { onFinish: (d: Onboardin
                 phone: phone.trim(),
                 role: role!,
             };
-            const deviceId = await getDeviceId();
-            const res = await registerDevice({
-                device_id: deviceId,
-                role: role === 'livestock_owner' ? 'owner' : 'driver',
-                phone_number: profile.phone || undefined,
-            });
-            if (res?.token) {
-                await storeAuthToken(res.token);
-            }
+            // Регистрация не должна блокировать вход: бэкенд на Render free plan
+            // может просыпаться до минуты. Если токен не получен — ensureRegistered
+            // сам уйдёт в фоновые повторы, а репорты до тех пор копятся в очереди.
+            await ensureRegistered({ role: profile.role, phone: profile.phone });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onFinish(profile);
         } catch (err: any) {

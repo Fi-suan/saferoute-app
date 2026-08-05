@@ -14,6 +14,7 @@ import { Colors } from './src/constants/colors';
 import { STORAGE } from './src/constants/storage';
 import { getDeviceId } from './src/services/deviceId';
 import { registerForPushNotifications } from './src/services/notifications';
+import { ensureRegistered } from './src/services/registration';
 import { AppResetEvent } from './src/services/appReset';
 import { deriveInitials } from './src/hooks/useUserProfile';
 import { initSentry, reportError, setUserContext, clearUserContext } from './src/services/sentry';
@@ -48,6 +49,10 @@ export default function App() {
           try {
             const profile: UserProfile = JSON.parse(profileRaw);
             setUserContext({ deviceId, role: profile.role });
+            // Страховка: если онбординг прошёл без связи с бэкендом — или
+            // пользователь отказал в уведомлениях, из-за чего push-регистрация
+            // выходит раньше времени — токен всё равно будет получен.
+            ensureRegistered({ role: profile.role, phone: profile.phone }).catch(() => { });
             registerForPushNotifications(profile.role).catch(() => { });
           } catch { /* ignore */ }
         }

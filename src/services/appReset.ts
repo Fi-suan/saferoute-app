@@ -18,6 +18,13 @@ export const AppResetEvent = {
         return () => { _listeners.delete(fn); };
     },
     trigger: async () => {
+        // Гасим фоновые повторы регистрации — иначе после логаута они
+        // перерегистрируют устройство со старой ролью.
+        try {
+            const { stopRegistrationRetry } = await import('./registration');
+            stopRegistrationRetry();
+        } catch { /* ignore */ }
+
         // Clear auth token
         try {
             const { backendLogout } = await import('./auth');

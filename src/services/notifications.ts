@@ -10,9 +10,7 @@
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { getDeviceId } from './deviceId';
-import { registerDevice } from './api';
-import { storeAuthToken } from './auth';
+import { registerNow } from './registration';
 
 // Флаг: поддерживаются ли уведомления в текущей среде
 let _notificationsSupported = true;
@@ -33,16 +31,8 @@ try {
 }
 
 async function registerAndStoreToken(role: string, fcmToken?: string): Promise<void> {
-    const deviceId = await getDeviceId();
     try {
-        const res = await registerDevice({
-            device_id: deviceId,
-            role,
-            fcm_token: fcmToken,
-        });
-        if (res?.token) {
-            await storeAuthToken(res.token);
-        }
+        await registerNow({ role, fcmToken });
     } catch (e) {
         console.warn('[Notifications] registerAndStoreToken failed:', e);
     }
