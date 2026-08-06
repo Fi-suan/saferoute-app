@@ -26,8 +26,6 @@ module.exports = {
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           'Sapa Jol геолокацияңызды жол бойындағы жануарлар туралы ескертулер үшін пайдаланады.',
-        NSLocationAlwaysAndWhenInUseUsageDescription:
-          'Sapa Jol қосымша жабық кезде де ескертулер алу үшін фондық геолокацияны пайдаланады.',
         NSCameraUsageDescription: 'Оқиғаларды хабарлау үшін фото түсіру қажет.',
         NSPhotoLibraryUsageDescription: 'Оқиға туралы хабарламаға фото қосу үшін қажет.',
       },
@@ -44,7 +42,6 @@ module.exports = {
       permissions: [
         'ACCESS_FINE_LOCATION',
         'ACCESS_COARSE_LOCATION',
-        'ACCESS_BACKGROUND_LOCATION',
         'CAMERA',
         'READ_MEDIA_IMAGES',
         'VIBRATE',
@@ -55,6 +52,14 @@ module.exports = {
           apiKey: process.env.GOOGLE_MAPS_API_KEY,
         },
       },
+      // Права, которые Expo кладёт в шаблон «на всякий случай». Приложение ими
+      // не пользуется, а в карточке Play они видны пользователю: «Показ поверх
+      // других приложений» и запись во внешнее хранилище. READ_EXTERNAL_STORAGE
+      // оставлен намеренно — без него не открыть галерею на Android 12 и ниже.
+      blockedPermissions: [
+        'android.permission.SYSTEM_ALERT_WINDOW',
+        'android.permission.WRITE_EXTERNAL_STORAGE',
+      ],
       privacyPolicyUrl: 'https://saferoute.kz/privacy.html',
     },
     web: {
@@ -92,8 +97,9 @@ module.exports = {
       [
         'expo-location',
         {
-          locationAlwaysAndWhenInUsePermission:
-            'Sapa Jol жол бойындағы жануарлар туралы ескертулер үшін фондық геолокацияны пайдаланады.',
+          // Только foreground: фонового отслеживания в коде нет (см. docs/permissions.md).
+          locationWhenInUsePermission:
+            'Sapa Jol геолокацияңызды жол бойындағы жануарлар туралы ескертулер үшін пайдаланады.',
         },
       ],
       [
@@ -101,6 +107,9 @@ module.exports = {
         {
           photosPermission: 'Оқиға туралы хабарламаға фото қосу үшін қажет.',
           cameraPermission: 'Оқиғаларды хабарлау үшін фото түсіру қажет.',
+          // Плагин по умолчанию просит RECORD_AUDIO ради записи видео.
+          // Приложение берёт только фото (mediaTypes: 'images'), микрофон не нужен.
+          microphonePermission: false,
         },
       ],
       'expo-secure-store',
