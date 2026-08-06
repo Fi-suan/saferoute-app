@@ -23,7 +23,7 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { useSettings } from '../hooks/useSettings';
 import { ROUTES, UserRole } from '../constants/livestock';
 import { useIncidents } from '../hooks/useIncidents';
-import { Config } from '../config';
+import { getBuildLabel } from '../services/appVersion';
 import { getDeviceId } from '../services/deviceId';
 import { AppResetEvent } from '../services/appReset';
 import { deleteUserData } from '../services/api';
@@ -407,7 +407,7 @@ export default function ProfileScreen() {
                         </View>
                         <View style={styles.rowBody}>
                             <Text style={styles.rowLabel}>SafeRoute · Sapa Jol</Text>
-                            <Text style={styles.rowValue}>Нұсқа {Config.VERSION} · Жол қауіпсіздігі</Text>
+                            <Text style={styles.rowValue}>Нұсқа {getBuildLabel()}</Text>
                         </View>
                     </View>
                     <View style={styles.rowDivider} />

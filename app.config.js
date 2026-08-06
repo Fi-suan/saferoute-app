@@ -2,6 +2,11 @@ require('dotenv').config();
 
 const VERSION_CODE = parseInt(process.env.VERSION_CODE || '1', 10);
 
+// EAS project ID — выдаётся один раз командой `eas init` и кладётся в .env
+// как EAS_PROJECT_ID. Без него OTA-обновления просто выключены: сборка и
+// запуск работают как раньше, приложение молча не ходит за апдейтами.
+const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || '';
+
 module.exports = {
   expo: {
     name: 'Sapa Jol',
@@ -55,9 +60,33 @@ module.exports = {
     web: {
       favicon: './assets/image.png',
     },
+
+    // ── OTA-обновления (EAS Update) ──────────────────────────────────────────
+    // Без них любая правка JS доезжает до людей только новым релизом в Play,
+    // с ревью на несколько дней. Для приложения про безопасность на дороге это
+    // слишком долго.
+    //
+    // Политика fingerprint, а не appVersion: EAS считает хеш нативной части
+    // (зависимости, плагины, конфиг) и отдаёт обновление только сборкам с таким
+    // же хешем. При appVersion достаточно добавить нативный модуль и забыть
+    // поднять version — и OTA уедет в бинарник, где этого модуля нет.
+    //
+    // fallbackToCacheTimeout: 0 — старт не ждёт сети. Проверка идёт фоном,
+    // обновление применяется при следующем запуске, а не посреди поездки.
+    ...(EAS_PROJECT_ID
+      ? {
+          updates: {
+            url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
+            fallbackToCacheTimeout: 0,
+          },
+          runtimeVersion: { policy: 'fingerprint' },
+        }
+      : {}),
+
     extra: {
       googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
       sentryDsn: process.env.SENTRY_DSN,
+      ...(EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : {}),
     },
     plugins: [
       [
