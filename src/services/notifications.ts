@@ -72,7 +72,7 @@ export async function registerForPushNotifications(role: string = 'driver'): Pro
 
         // Пытаемся получить Expo Push Token (только для dev builds)
         if (Constants.appOwnership === 'expo') {
-            console.log("[Notifications] Expo Go detected: bypassing remote push (SDK 53 limit). Local notifications work.");
+            console.warn("[Notifications] Expo Go detected: bypassing remote push (SDK 53 limit). Local notifications work.");
             await registerAndStoreToken(role);
             return null;
         }

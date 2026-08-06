@@ -10,12 +10,14 @@
     "submit:android": "eas submit --platform android --profile production",
     "deploy": "npm run build:android && npm run submit:android",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/ --max-warnings 0",
-    "lint:fix": "eslint src/ --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
@@ -23,9 +25,10 @@
     "axios": "^1.7.9",
     "expo": "~54.0.0",
     "expo-blur": "~15.0.8",
+    "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.8",
-    "expo-haptics": "~15.0.8",
     "expo-file-system": "~19.0.0",
+    "expo-haptics": "~15.0.8",
     "expo-image-manipulator": "~14.0.0",
     "expo-image-picker": "~17.0.10",
     "expo-location": "~19.0.0",
@@ -46,11 +49,17 @@
   "devDependencies": {
     "@types/react": "~19.1.0",
     "dotenv": "^17.3.1",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^57.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6",
     "typescript": "~5.9.2"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
-      "eslint --fix --max-warnings 0",
+      "eslint --fix",
       "prettier --write"
     ],
     "*.{json,md,yml,yaml}": [

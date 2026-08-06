@@ -1,9 +1,10 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone
 
 from app.database import get_db
-from app.models import Device, IncidentReport, IncidentConfirmation
+from app.models import Device, IncidentConfirmation, IncidentReport
 from app.schemas import DeviceLocationUpdate
 from app.services.auth import get_current_device
 
@@ -21,7 +22,7 @@ def update_device_location(
         raise HTTPException(status_code=403, detail="Cannot update another device")
     current.latitude = data.latitude
     current.longitude = data.longitude
-    current.last_seen = datetime.now(timezone.utc)
+    current.last_seen = datetime.now(UTC)
     db.commit()
     return {"status": "ok"}
 

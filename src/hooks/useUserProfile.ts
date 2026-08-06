@@ -7,7 +7,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile, UserRole } from '../constants/livestock';
+import { UserProfile } from '../constants/livestock';
 import { STORAGE } from '../constants/storage';
 
 /**

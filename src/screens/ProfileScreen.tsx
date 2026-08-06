@@ -21,7 +21,7 @@ import { useAppDialog } from '../components/AppDialog';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useSettings } from '../hooks/useSettings';
-import { ROUTES, LIVESTOCK_META, UserRole } from '../constants/livestock';
+import { ROUTES, UserRole } from '../constants/livestock';
 import { useIncidents } from '../hooks/useIncidents';
 import { Config } from '../config';
 import { getDeviceId } from '../services/deviceId';
@@ -82,7 +82,7 @@ export default function ProfileScreen() {
     const { profile, loaded, updateProfile } = useUserProfile();
     const { settings, update: updateSettings } = useSettings();
     const { incidents, isOnline } = useIncidents('active');
-    const { log: notifLog, markAllRead, clearLog: clearNotifLog, unreadCount } = useNotificationLog();
+    const { log: notifLog, markAllRead, unreadCount } = useNotificationLog();
     const [editModal, setEditModal] = useState(false);
     const [notifModal, setNotifModal] = useState(false);
     const [editName, setEditName] = useState('');

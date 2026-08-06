@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
+import { Colors, Spacing, Radius } from '../constants/colors';
 import { INCIDENT_TYPES_LIST } from '../constants/incidents';
 import { GeoPoint } from '../hooks/useLocation';
 import * as FileSystem from 'expo-file-system';

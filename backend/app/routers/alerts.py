@@ -1,10 +1,10 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from typing import List
-from datetime import datetime, timezone
 
 from app.database import get_db
-from app.models import Alert, Herd, GeoZone, Device
+from app.models import Alert, Device
 from app.schemas import AlertOut
 from app.services.auth import get_current_device
 
@@ -21,20 +21,20 @@ def _enrich_alert(alert: Alert) -> AlertOut:
     return data
 
 
-@router.get("/active", response_model=List[AlertOut])
+@router.get("/active", response_model=list[AlertOut])
 def get_active_alerts(db: Session = Depends(get_db)):
     """Все активные предупреждения"""
     alerts = (
         db.query(Alert)
         .options(joinedload(Alert.herd), joinedload(Alert.geozone))
-        .filter(Alert.is_active == True)
+        .filter(Alert.is_active.is_(True))
         .order_by(Alert.created_at.desc())
         .all()
     )
     return [_enrich_alert(a) for a in alerts]
 
 
-@router.get("/history", response_model=List[AlertOut])
+@router.get("/history", response_model=list[AlertOut])
 def get_alert_history(limit: int = 50, db: Session = Depends(get_db)):
     """История всех предупреждений"""
     alerts = (
@@ -53,6 +53,6 @@ def resolve_alert(alert_id: int, db: Session = Depends(get_db), current: Device 
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
     alert.is_active = False
-    alert.resolved_at = datetime.now(timezone.utc)
+    alert.resolved_at = datetime.now(UTC)
     db.commit()
     return {"status": "resolved", "alert_id": alert_id}

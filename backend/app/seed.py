@@ -3,8 +3,10 @@ Database seeder — creates initial Kazakhstan road geozones.
 No PostGIS required — uses bounding boxes + centerpoint.
 """
 import logging
+
 from sqlalchemy.orm import Session
-from app.database import engine, Base, SessionLocal
+
+from app.database import Base, SessionLocal, engine
 from app.models import GeoZone
 
 logger = logging.getLogger(__name__)

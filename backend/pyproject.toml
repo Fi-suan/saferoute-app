@@ -15,6 +15,11 @@ select = ["E", "W", "F", "I", "UP", "B", "C4"]
 ignore = [
     "E501",  # line too long — handled by formatter
     "B008",  # FastAPI Depends() in default args — intentional
+    # UP042 предлагает заменить (str, Enum) на enum.StrEnum. Отложено осознанно:
+    # у StrEnum другое поведение str(member), а значения этих перечислений лежат
+    # в БД через sqlalchemy Enum. Менять — отдельной задачей с миграцией, не в
+    # рамках наведения порядка в линтере.
+    "UP042",
 ]
 
 [tool.ruff.lint.per-file-ignores]

@@ -3,22 +3,24 @@ Incidents Router — создание, просмотр, подтвержден�
 """
 import json
 import logging
+import re
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import func
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timezone
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.config import settings
+from app.database import get_db
+from app.models import Device, IncidentConfirmation, IncidentReport, IncidentType, as_utc
+from app.services.auth import get_current_device
+from app.services.geofencing import haversine_km
 
 logger = logging.getLogger(__name__)
-
-from app.database import get_db
-from app.config import settings
-from app.models import IncidentReport, IncidentConfirmation, IncidentType, Device
-from app.services.geofencing import haversine_km
-from app.services.auth import get_current_device
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -29,17 +31,14 @@ router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
 CONFIRMATIONS_TO_RESOLVE = 3
 
 
-from pydantic import BaseModel, Field, field_validator
-
-
 class IncidentCreate(BaseModel):
     incident_type: str = "animal"
-    description: Optional[str] = Field(None, max_length=2000)
+    description: str | None = Field(None, max_length=2000)
     severity: int = Field(3, ge=1, le=5)
     latitude: float
     longitude: float
-    photo_base64: Optional[str] = None
-    reporter_device_id: Optional[str] = None
+    photo_base64: str | None = None
+    reporter_device_id: str | None = None
 
     @field_validator("latitude")
     @classmethod
@@ -57,12 +56,11 @@ class IncidentCreate(BaseModel):
 
     @field_validator("photo_base64")
     @classmethod
-    def validate_photo_size(cls, v: Optional[str]) -> Optional[str]:
+    def validate_photo_size(cls, v: str | None) -> str | None:
         if not v:
             return v
         if len(v) > 2_000_000:  # ~1.5MB decoded
             raise ValueError("photo_base64 too large (max ~1.5MB)")
-        import re
         if not re.fullmatch(r'[A-Za-z0-9+/=\s]+', v):
             raise ValueError("photo_base64 contains invalid characters")
         return v
@@ -161,7 +159,7 @@ def _ai_fallback(user_severity: int, reason_kk: str) -> dict:
 
 
 async def verify_photo_with_ai(
-    photo_base64: Optional[str],
+    photo_base64: str | None,
     incident_type: str,
     user_severity: int = 3,
 ) -> dict:
@@ -291,14 +289,14 @@ async def create_incident(
 @router.get("/active")
 def get_active_incidents(db: Session = Depends(get_db)):
     incidents = db.query(IncidentReport).filter(
-        IncidentReport.is_active == True
+        IncidentReport.is_active.is_(True)
     ).order_by(IncidentReport.created_at.desc()).all()
     return [_to_dict(i) for i in incidents]
 
 
 @router.get("/nearby")
 def get_nearby_incidents(lat: float, lon: float, radius_km: float = 3.0, db: Session = Depends(get_db)):
-    incidents = db.query(IncidentReport).filter(IncidentReport.is_active == True).all()
+    incidents = db.query(IncidentReport).filter(IncidentReport.is_active.is_(True)).all()
     nearby = []
     for inc in incidents:
         dist = haversine_km(lat, lon, inc.latitude, inc.longitude)
@@ -344,7 +342,7 @@ def confirm_incident(
         db.flush()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Already confirmed")
+        raise HTTPException(status_code=400, detail="Already confirmed") from None
 
     # Atomic counter increment
     db.query(IncidentReport).filter(IncidentReport.id == incident_id).update(
@@ -367,7 +365,7 @@ def confirm_incident(
         )
         if resolved_votes >= CONFIRMATIONS_TO_RESOLVE:
             incident.is_active = False
-            incident.resolved_at = datetime.now(timezone.utc)
+            incident.resolved_at = datetime.now(UTC)
 
     db.commit()
     return {
@@ -385,6 +383,12 @@ def get_incident(incident_id: int, db: Session = Depends(get_db)):
     return _to_dict(incident)
 
 
+def _iso(dt: datetime | None) -> str | None:
+    """ISO-строка со смещением или None."""
+    aware = as_utc(dt)
+    return aware.isoformat() if aware else None
+
+
 def _to_dict(inc: IncidentReport) -> dict:
     return {
         "id": inc.id,
@@ -400,6 +404,8 @@ def _to_dict(inc: IncidentReport) -> dict:
         "ai_severity_suggestion": inc.ai_severity_suggestion,
         "confirmations_count": inc.confirmations_count,
         "is_active": inc.is_active,
-        "created_at": inc.created_at.isoformat() if inc.created_at else None,
-        "resolved_at": inc.resolved_at.isoformat() if inc.resolved_at else None,
+        # as_utc — чтобы контракт «время всегда со смещением» держался и на SQLite,
+        # который таймзоны не хранит и вернул бы naive.
+        "created_at": _iso(inc.created_at),
+        "resolved_at": _iso(inc.resolved_at),
     }

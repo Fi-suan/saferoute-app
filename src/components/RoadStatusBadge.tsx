@@ -10,7 +10,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Radius } from '../constants/colors';
+import { Colors, Radius } from '../constants/colors';
 import type { RoadStatus } from '../hooks/useRoute';
 import { useT } from '../i18n';
 

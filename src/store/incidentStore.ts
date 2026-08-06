@@ -18,7 +18,7 @@
  */
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import { isAxiosError } from 'axios';
 import api from '../services/api';
 import { Config } from '../config';
 import { STORAGE } from '../constants/storage';
@@ -71,14 +71,14 @@ const get = useIncidentStore.getState;
  * дорегистрироваться после холодного старта бэкенда (см. services/registration).
  */
 function isRetriable(err: unknown): boolean {
-    if (!axios.isAxiosError(err)) return false;
+    if (!isAxiosError(err)) return false;
     if (!err.response) return true; // таймаут / нет сети
     const s = err.response.status;
     return s === 401 || s === 408 || s === 429 || s >= 500;
 }
 
 function describeError(err: unknown): string {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
         const detail = (err.response?.data as { detail?: unknown } | undefined)?.detail;
         if (typeof detail === 'string') return detail;
         if (err.response) return `Сервер қатесі (${err.response.status})`;

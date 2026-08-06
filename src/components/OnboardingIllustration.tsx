@@ -6,8 +6,8 @@
  */
 import React from 'react';
 import Svg, {
-    Circle, Line, Path, Rect, G,
-    Defs, LinearGradient, Stop, Polygon,
+    Circle, Line, Path,
+    Defs, LinearGradient, Stop,
 } from 'react-native-svg';
 import { Colors } from '../constants/colors';
 
@@ -19,7 +19,6 @@ interface Props {
 
 export default function OnboardingIllustration({ type, size = 100, color = Colors.brand.primary }: Props) {
     const s = size;
-    const c = s / 2;
     const sw = size * 0.025; // stroke width
 
     switch (type) {

@@ -1,14 +1,14 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session, joinedload
-from typing import List
+from sqlalchemy.orm import Session
 
 from app.database import get_db
-from datetime import datetime, timezone
-from app.models import Herd, HerdLocation, Device, Role, Alert
-from app.schemas import HerdCreate, HerdOut, HerdLocationOut, LocationPoint
+from app.models import Alert, Device, Herd, HerdLocation, Role
+from app.schemas import HerdCreate, HerdLocationOut, HerdOut, LocationPoint
+from app.services.auth import get_current_device
 from app.services.geofencing import process_location_update
 from app.services.notifications import notify_nearby_drivers
-from app.services.auth import get_current_device
 
 router = APIRouter(prefix="/herds", tags=["herds"])
 
@@ -33,11 +33,11 @@ def _build_herd_out(herd: Herd, db: Session) -> HerdOut:
     )
 
 
-@router.get("/", response_model=List[HerdOut])
+@router.get("/", response_model=list[HerdOut])
 def list_herds(db: Session = Depends(get_db)):
     """Список всех активных стад с текущей позицией"""
     from sqlalchemy import func
-    herds = db.query(Herd).filter(Herd.is_active == True).all()
+    herds = db.query(Herd).filter(Herd.is_active.is_(True)).all()
     if not herds:
         return []
 
@@ -135,17 +135,17 @@ def deactivate_herd(herd_id: int, db: Session = Depends(get_db), current: Device
     herd.is_active = False
 
     # Resolve any active alerts for this herd — they no longer make sense.
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     resolved = db.query(Alert).filter(
         Alert.herd_id == herd_id,
-        Alert.is_active == True,
+        Alert.is_active.is_(True),
     ).update({"is_active": False, "resolved_at": now})
 
     db.commit()
     return {"status": "ok", "herd_id": herd_id, "alerts_resolved": resolved}
 
 
-@router.get("/{herd_id}/track", response_model=List[HerdLocationOut])
+@router.get("/{herd_id}/track", response_model=list[HerdLocationOut])
 def get_herd_track(herd_id: int, limit: int = 100, db: Session = Depends(get_db)):
     locs = (
         db.query(HerdLocation)
@@ -154,4 +154,4 @@ def get_herd_track(herd_id: int, limit: int = 100, db: Session = Depends(get_db)
         .limit(limit)
         .all()
     )
-    return [HerdLocationOut.model_validate(l) for l in locs]
+    return [HerdLocationOut.model_validate(loc_row) for loc_row in locs]

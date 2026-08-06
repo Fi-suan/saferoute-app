@@ -66,7 +66,7 @@ export default function IncidentDetailScreen() {
 
         try {
             await Share.share({ message: shareText, title: 'SafeRoute инцидент' });
-        } catch (e) {
+        } catch {
             showDialog({
                 title: 'Қате',
                 message: 'Бөлісу мүмкін болмады',

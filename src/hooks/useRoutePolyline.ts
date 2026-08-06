@@ -10,7 +10,6 @@
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchDirections } from '../services/directions';
-import { Config } from '../config';
 
 export interface LatLng { latitude: number; longitude: number; }
 

@@ -2,7 +2,9 @@
 Notification Service — stub (push notifications not yet configured).
 """
 import logging
+
 from sqlalchemy.orm import Session
+
 from app.models import Alert
 
 logger = logging.getLogger(__name__)

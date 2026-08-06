@@ -34,7 +34,7 @@ const LEVEL_ORDER: Record<AlertLevel, number> = {
     critical: 4,
 };
 
-export const useAlertStore = create<AlertStore>((set, get) => ({
+export const useAlertStore = create<AlertStore>((set) => ({
     herds: [],
     setHerds: (herds) => set({ herds }),
     updateHerdPosition: (herdId, lat, lon) =>

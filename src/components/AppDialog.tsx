@@ -11,7 +11,7 @@
  */
 import React, { useState, useCallback } from 'react';
 import {
-    Modal, View, Text, StyleSheet, TouchableOpacity, Animated,
+    Modal, View, Text, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius } from '../constants/colors';

@@ -3,18 +3,18 @@ SafeRoute / Sapa Jol — FastAPI Application
 """
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from fastapi import FastAPI, Depends, Request, Query, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import engine, Base, SessionLocal, get_db
-from app.routers import herds, alerts, geozones, devices, incidents, auth
+from app.database import Base, SessionLocal, engine, get_db
+from app.routers import alerts, auth, devices, geozones, herds, incidents
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -81,8 +81,9 @@ async def proxy_directions(
     if not settings.GOOGLE_MAPS_API_KEY:
         raise HTTPException(status_code=503, detail="Google Maps API key not configured")
 
-    import httpx
     from urllib.parse import urlencode
+
+    import httpx
     params = urlencode({
         "origin": f"{origin_lat},{origin_lon}",
         "destination": f"{dest_lat},{dest_lon}",
@@ -94,10 +95,10 @@ async def proxy_directions(
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(url)
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Directions upstream timeout")
-    except httpx.HTTPError:
-        raise HTTPException(status_code=502, detail="Directions upstream error")
+    except httpx.TimeoutException as e:
+        raise HTTPException(status_code=504, detail="Directions upstream timeout") from e
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail="Directions upstream error") from e
 
     if resp.status_code != 200:
         logger.warning("Directions upstream returned %s", resp.status_code)
@@ -124,7 +125,7 @@ def health(db: Session = Depends(get_db)):
     except Exception:
         db_ok = False
     status = "ok" if db_ok else "degraded"
-    return {"status": status, "db": db_ok, "app": settings.APP_NAME, "time": datetime.now(timezone.utc).isoformat()}
+    return {"status": status, "db": db_ok, "app": settings.APP_NAME, "time": datetime.now(UTC).isoformat()}
 
 
 @app.get("/")

@@ -1,14 +1,15 @@
 """
 Auth Router — device registration and token management
 """
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy.orm import Session
-from datetime import datetime, timezone
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Device, Role
+from app.models import Device, Role, as_utc
 from app.schemas import DeviceRegister
 from app.services.auth import create_device_token, get_current_device
 
@@ -27,7 +28,7 @@ def register_device(request: Request, data: DeviceRegister, db: Session = Depend
         device.phone_number = data.phone_number or device.phone_number
         device.latitude = data.latitude
         device.longitude = data.longitude
-        device.last_seen = datetime.now(timezone.utc)
+        device.last_seen = datetime.now(UTC)
     else:
         role = Role.OWNER if data.role == "owner" else Role.DRIVER
         device = Device(
@@ -58,5 +59,5 @@ def get_profile(device: Device = Depends(get_current_device)):
         "device_id": device.device_id,
         "role": device.role.value,
         "phone_number": device.phone_number,
-        "last_seen": device.last_seen.isoformat() if device.last_seen else None,
+        "last_seen": as_utc(device.last_seen).isoformat() if device.last_seen else None,
     }

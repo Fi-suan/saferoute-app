@@ -20,7 +20,7 @@ import MapScreen from '../screens/MapScreen';
 import AlertsScreen from '../screens/AlertsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ErrorBoundary from '../components/ErrorBoundary';
-import { Colors, Radius } from '../constants/colors';
+import { Colors } from '../constants/colors';
 import { useT } from '../i18n';
 import { reportError } from '../services/sentry';
 import type { TranslationKey } from '../i18n/translations';
@@ -28,8 +28,13 @@ import type { TranslationKey } from '../i18n/translations';
 const Tab = createBottomTabNavigator();
 
 // Wrap each screen so a crash isolates to that tab.
-const withBoundary = (Screen: React.ComponentType<any>) => (props: any) =>
-    <ErrorBoundary onError={reportError}><Screen {...props} /></ErrorBoundary>;
+const withBoundary = (Screen: React.ComponentType<any>) => {
+    const Wrapped = (props: any) => (
+        <ErrorBoundary onError={reportError}><Screen {...props} /></ErrorBoundary>
+    );
+    Wrapped.displayName = `WithBoundary(${Screen.displayName ?? Screen.name ?? 'Screen'})`;
+    return Wrapped;
+};
 
 const MapScreenSafe = withBoundary(MapScreen);
 const AlertsScreenSafe = withBoundary(AlertsScreen);

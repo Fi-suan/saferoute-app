@@ -1,12 +1,11 @@
 """
 Auth service — JWT-based device authentication
 """
-import jwt
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
+import jwt
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -19,13 +18,13 @@ security = HTTPBearer(auto_error=False)
 def create_device_token(device_id: str) -> str:
     payload = {
         "sub": device_id,
-        "iat": datetime.now(timezone.utc),
-        "exp": datetime.now(timezone.utc) + timedelta(days=settings.JWT_EXPIRE_DAYS),
+        "iat": datetime.now(UTC),
+        "exp": datetime.now(UTC) + timedelta(days=settings.JWT_EXPIRE_DAYS),
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
-def decode_token(token: str) -> Optional[str]:
+def decode_token(token: str) -> str | None:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
         return payload.get("sub")
@@ -34,7 +33,7 @@ def decode_token(token: str) -> Optional[str]:
 
 
 def get_current_device(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db),
 ) -> Device:
     if not credentials:
@@ -58,9 +57,9 @@ def get_current_device(
 
 
 def get_optional_device(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db),
-) -> Optional[Device]:
+) -> Device | None:
     """Same as get_current_device but returns None instead of raising."""
     if not credentials:
         return None

@@ -4,21 +4,21 @@ Alembic environment — wires migrations to the live SQLAlchemy metadata.
 Reads DATABASE_URL from app.config (env var or .env), so a single
 DATABASE_URL configures both runtime and migrations.
 """
-from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config, pool
-from alembic import context
-
 # Make `app` importable when running `alembic` from the backend/ folder.
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from logging.config import fileConfig
 
-from app.config import settings  # noqa: E402
-from app.database import Base, _build_engine_url  # noqa: E402
+from sqlalchemy import engine_from_config, pool
+
+from alembic import context
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import models so Base.metadata is populated.
 from app import models  # noqa: F401, E402
+from app.config import settings  # noqa: E402
+from app.database import Base, _build_engine_url  # noqa: E402
 
 config = context.config
 

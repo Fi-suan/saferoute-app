@@ -3,11 +3,11 @@ Geofencing Engine — pure Python, no PostGIS required.
 Uses Haversine formula for distance calculations.
 """
 import math
-from typing import Optional, Tuple, List
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
-from app.models import Herd, HerdLocation, GeoZone, Alert, AlertLevel, as_utc
-from app.config import settings
+
+from app.models import Alert, AlertLevel, GeoZone, Herd, HerdLocation, as_utc
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -41,7 +41,7 @@ def determine_alert_level(distance_km: float, speed_kmh: float) -> AlertLevel:
         return AlertLevel.LOW
 
 
-def build_alert_messages(herd: Herd, distance_km: float, eta_minutes: Optional[float], geozone: GeoZone) -> Tuple[str, str]:
+def build_alert_messages(herd: Herd, distance_km: float, eta_minutes: float | None, geozone: GeoZone) -> tuple[str, str]:
     names_ru = {"saiga": "сайгаков", "horse": "лошадей", "camel": "верблюдов", "other": "животных"}
     names_kk = {"saiga": "сайғақтар", "horse": "жылқылар", "camel": "түйелер", "other": "жануарлар"}
     animal_ru = names_ru.get(herd.animal_type.value, "животных")
@@ -53,12 +53,12 @@ def build_alert_messages(herd: Herd, distance_km: float, eta_minutes: Optional[f
     return msg_ru, msg_kk
 
 
-def check_herd_in_geozones(db: Session, latitude: float, longitude: float) -> List[dict]:
+def check_herd_in_geozones(db: Session, latitude: float, longitude: float) -> list[dict]:
     """
     Pure Python bounding box check — no PostGIS needed.
     Returns zones with distance to road centerline.
     """
-    zones = db.query(GeoZone).filter(GeoZone.is_active == True).all()
+    zones = db.query(GeoZone).filter(GeoZone.is_active.is_(True)).all()
     results = []
     for zone in zones:
         # Check if point is within bounding box (extended by buffer)
@@ -96,14 +96,14 @@ def get_movement_vector(db: Session, herd_id: int, current_lat: float, current_l
     dist = haversine_km(prev.latitude, prev.longitude, current_lat, current_lon)
     # as_utc обязателен: на SQLite время из БД приходит naive, и вычитание
     # из aware datetime.now() падало бы с TypeError на втором обновлении позиции.
-    time_hours = (datetime.now(timezone.utc) - as_utc(prev.timestamp)).total_seconds() / 3600.0
+    time_hours = (datetime.now(UTC) - as_utc(prev.timestamp)).total_seconds() / 3600.0
     speed = (dist / time_hours) if time_hours > 0.001 else 0.0
     return bearing, min(speed, 100.0), prev
 
 
 def process_location_update(
     db: Session, herd: Herd, latitude: float, longitude: float, speed_kmh: float = 0.0
-) -> Optional[Alert]:
+) -> Alert | None:
     bearing, computed_speed, prev_loc = get_movement_vector(db, herd.id, latitude, longitude)
     effective_speed = speed_kmh if speed_kmh > 0 else computed_speed
     zones = check_herd_in_geozones(db, latitude, longitude)
@@ -117,7 +117,7 @@ def process_location_update(
         existing = db.query(Alert).filter(
             Alert.herd_id == herd.id,
             Alert.geozone_id == zone_data["id"],
-            Alert.is_active == True,
+            Alert.is_active.is_(True),
         ).first()
         if existing:
             existing.distance_to_road_km = dist

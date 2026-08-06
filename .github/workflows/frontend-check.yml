@@ -9,13 +9,14 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig.json'
+      - 'eslint.config.js'
       - '.github/workflows/frontend-check.yml'
   push:
     branches: [master, main]
 
 jobs:
-  typecheck:
-    name: TypeScript typecheck
+  check:
+    name: Typecheck + lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +33,7 @@ jobs:
       - name: TypeScript compile (no emit)
         run: npx tsc --noEmit
 
-      # Linting will be enabled once eslint config is in place.
-      # - name: ESLint
-      #   run: npx eslint src/ --max-warnings 0
+      # Падает на ошибках. Предупреждения видны в логе, но сборку не валят:
+      # см. комментарий в eslint.config.js про правила React Compiler.
+      - name: ESLint
+        run: npm run lint

@@ -1,8 +1,7 @@
-from pydantic_settings import BaseSettings
-from typing import Optional, List
 import logging
-import os
 import secrets
+
+from pydantic_settings import BaseSettings
 
 _logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ class Settings(BaseSettings):
     JWT_EXPIRE_DAYS: int = 365
 
     # Google Maps (for backend proxy)
-    GOOGLE_MAPS_API_KEY: Optional[str] = None
+    GOOGLE_MAPS_API_KEY: str | None = None
 
     # CORS — comma-separated allowed origins
     CORS_ORIGINS: str = "https://saferoute.kz,https://admin.saferoute.kz"
@@ -41,7 +40,7 @@ class Settings(BaseSettings):
 
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
     class Config:

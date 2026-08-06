@@ -1,25 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException
+
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import text
-from typing import List
-import json
 
 from app.database import get_db
 from app.models import GeoZone
-from app.schemas import GeoZoneOut, GeoZoneGeoJSON
+from app.schemas import GeoZoneOut
 
 router = APIRouter(prefix="/geozones", tags=["geozones"])
 
 
-@router.get("/", response_model=List[GeoZoneOut])
+@router.get("/", response_model=list[GeoZoneOut])
 def list_geozones(db: Session = Depends(get_db)):
-    zones = db.query(GeoZone).filter(GeoZone.is_active == True).all()
+    zones = db.query(GeoZone).filter(GeoZone.is_active.is_(True)).all()
     return [GeoZoneOut.model_validate(z) for z in zones]
 
 
 @router.get("/geojson")
 def get_geozones_geojson(db: Session = Depends(get_db)):
-    zones = db.query(GeoZone).filter(GeoZone.is_active == True).all()
+    zones = db.query(GeoZone).filter(GeoZone.is_active.is_(True)).all()
 
     features = []
     for zone in zones:
@@ -33,7 +31,7 @@ def get_geozones_geojson(db: Session = Depends(get_db)):
                 [zone.lon_min, zone.lat_min]
             ]]
         }
-        
+
         features.append({
             "type": "Feature",
             "properties": {

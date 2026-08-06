@@ -1,12 +1,25 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text, Enum, Index, UniqueConstraint
-from sqlalchemy.orm import relationship
-from datetime import datetime, timezone
-from app.database import Base
 import enum
+from datetime import UTC, datetime
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import relationship
+
+from app.database import Base
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def as_utc(dt: datetime | None) -> datetime | None:
@@ -21,7 +34,7 @@ def as_utc(dt: datetime | None) -> datetime | None:
     """
     if dt is None:
         return None
-    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+    return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
 
 
 class AlertLevel(str, enum.Enum):
