@@ -24,6 +24,7 @@ import { Config } from '../config';
 import { STORAGE } from '../constants/storage';
 import { Incident } from '../constants/incidents';
 import { getDeviceId } from '../services/deviceId';
+import { savePhoto, readPhoto, cleanupOrphans } from '../services/photoQueue';
 
 export interface SubmitReportParams {
     incident_type: string;
@@ -39,6 +40,11 @@ interface QueuedReport extends SubmitReportParams {
     queuedAt: string;
     /** id оптимистичной метки — чтобы снять её после успешной отправки */
     localId: number;
+    /**
+     * Имя файла с base64 в каталоге очереди. Само фото в AsyncStorage не
+     * пишется — см. services/photoQueue.
+     */
+    photo_file?: string;
 }
 
 interface IncidentState {
@@ -101,7 +107,7 @@ async function saveQueue(queue: QueuedReport[]): Promise<void> {
     } catch { /* ignore */ }
 }
 
-function toPayload(r: SubmitReportParams): Record<string, unknown> {
+function toPayload(r: SubmitReportParams, photoBase64?: string): Record<string, unknown> {
     // photo_uri и служебные поля очереди на сервер не отправляем.
     const payload: Record<string, unknown> = {
         incident_type: r.incident_type,
@@ -110,8 +116,18 @@ function toPayload(r: SubmitReportParams): Record<string, unknown> {
         latitude: r.latitude,
         longitude: r.longitude,
     };
-    if (r.photo_base64) payload.photo_base64 = r.photo_base64;
+    const base64 = photoBase64 ?? r.photo_base64;
+    if (base64) payload.photo_base64 = base64;
     return payload;
+}
+
+/** Достаёт фото очереди из файла, с откатом на legacy-записи с base64 внутри. */
+async function queuedPhotoBase64(report: QueuedReport): Promise<string | undefined> {
+    if (report.photo_file) {
+        return (await readPhoto(report.photo_file)) ?? undefined;
+    }
+    // Записи, попавшие в очередь до выноса фото в файлы.
+    return report.photo_base64;
 }
 
 let _flushing = false;
@@ -131,7 +147,8 @@ async function flushQueue(): Promise<void> {
         const settled: number[] = [];
         for (const report of queue) {
             try {
-                await api.post('/incidents/report', toPayload(report), { timeout: 8000 });
+                const photo = await queuedPhotoBase64(report);
+                await api.post('/incidents/report', toPayload(report, photo), { timeout: 8000 });
                 settled.push(report.localId);
             } catch (err) {
                 if (isRetriable(err)) {
@@ -145,6 +162,9 @@ async function flushQueue(): Promise<void> {
         }
 
         await saveQueue(failed);
+        // Файлы отправленных и отклонённых репортов больше не нужны; заодно
+        // подчищаем всё, на что очередь уже не ссылается.
+        cleanupOrphans(failed.map((r) => r.photo_file).filter((n): n is string => !!n));
         set((s) => ({
             pending: s.pending.filter((p) => !settled.includes(p.id)),
             pendingReportsCount: failed.length,
@@ -264,7 +284,22 @@ export async function submitReport(params: SubmitReportParams): Promise<SubmitRe
             return { ok: false, error: describeError(err) };
         }
         const queue = await loadQueue();
-        queue.push({ ...params, queuedAt: new Date().toISOString(), localId });
+        const entry: QueuedReport = {
+            ...params,
+            photo_base64: undefined,
+            queuedAt: new Date().toISOString(),
+            localId,
+        };
+        if (params.photo_base64) {
+            const name = await savePhoto(localId, params.photo_base64);
+            if (name) {
+                entry.photo_file = name;
+            } else {
+                // Файл не записался — репорт важнее экономии, оставляем как было.
+                entry.photo_base64 = params.photo_base64;
+            }
+        }
+        queue.push(entry);
         await saveQueue(queue);
         set({ pendingReportsCount: queue.length });
         return { ok: true, queued: true };
