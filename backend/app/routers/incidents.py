@@ -4,6 +4,7 @@ Incidents Router — создание, просмотр, подтвержден�
 import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
@@ -22,6 +23,10 @@ from app.services.auth import get_current_device
 limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
+
+# Сколько голосов «опасности больше нет» закрывают инцидент.
+# Должно совпадать с Config.CONFIRMATIONS_TO_RESOLVE на клиенте.
+CONFIRMATIONS_TO_RESOLVE = 3
 
 
 from pydantic import BaseModel, Field, field_validator
@@ -348,9 +353,21 @@ def confirm_incident(
     db.flush()
     db.refresh(incident)
 
-    if data.is_resolved and incident.confirmations_count >= 3:
-        incident.is_active = False
-        incident.resolved_at = datetime.now(timezone.utc)
+    # Закрывать инцидент можно только по голосам «опасности больше нет».
+    # Раньше сравнивался общий счётчик, поэтому три подтверждения «опасность
+    # есть» плюс одно «нет» закрывали живой инцидент.
+    if data.is_resolved:
+        resolved_votes = (
+            db.query(func.count(IncidentConfirmation.id))
+            .filter(
+                IncidentConfirmation.incident_id == incident_id,
+                IncidentConfirmation.is_resolved.is_(True),
+            )
+            .scalar()
+        )
+        if resolved_votes >= CONFIRMATIONS_TO_RESOLVE:
+            incident.is_active = False
+            incident.resolved_at = datetime.now(timezone.utc)
 
     db.commit()
     return {

@@ -271,20 +271,21 @@ export async function submitReport(params: SubmitReportParams): Promise<SubmitRe
     }
 }
 
-function applyConfirm(i: Incident, isResolved: boolean): Incident {
-    const count = i.confirmations_count + 1;
-    return {
-        ...i,
-        confirmations_count: count,
-        is_active: isResolved ? count < Config.CONFIRMATIONS_TO_RESOLVE : true,
-    };
+/**
+ * Оптимистично увеличиваем только счётчик. Закрытие инцидента не предсказываем:
+ * решение принимает сервер по числу голосов «опасности больше нет», а клиент
+ * видит лишь общее число подтверждений. Актуальное состояние подтянет
+ * refreshActive() сразу после запроса.
+ */
+function applyConfirm(i: Incident): Incident {
+    return { ...i, confirmations_count: i.confirmations_count + 1 };
 }
 
 export async function confirmIncident(id: number, isResolved: boolean): Promise<void> {
     const deviceId = await getDeviceId();
     set((s) => ({
-        active: s.active.map((i) => (i.id === id ? applyConfirm(i, isResolved) : i)),
-        feed: s.feed.map((i) => (i.id === id ? applyConfirm(i, isResolved) : i)),
+        active: s.active.map((i) => (i.id === id ? applyConfirm(i) : i)),
+        feed: s.feed.map((i) => (i.id === id ? applyConfirm(i) : i)),
     }));
     try {
         // device_id обязателен по схеме, но сервер берёт его из токена.

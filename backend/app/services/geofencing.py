@@ -6,7 +6,7 @@ import math
 from typing import Optional, Tuple, List
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from app.models import Herd, HerdLocation, GeoZone, Alert, AlertLevel
+from app.models import Herd, HerdLocation, GeoZone, Alert, AlertLevel, as_utc
 from app.config import settings
 
 
@@ -94,7 +94,9 @@ def get_movement_vector(db: Session, herd_id: int, current_lat: float, current_l
         return None, 0.0, None
     bearing = bearing_degrees(prev.latitude, prev.longitude, current_lat, current_lon)
     dist = haversine_km(prev.latitude, prev.longitude, current_lat, current_lon)
-    time_hours = (datetime.now(timezone.utc) - prev.timestamp).total_seconds() / 3600.0
+    # as_utc обязателен: на SQLite время из БД приходит naive, и вычитание
+    # из aware datetime.now() падало бы с TypeError на втором обновлении позиции.
+    time_hours = (datetime.now(timezone.utc) - as_utc(prev.timestamp)).total_seconds() / 3600.0
     speed = (dist / time_hours) if time_hours > 0.001 else 0.0
     return bearing, min(speed, 100.0), prev
 

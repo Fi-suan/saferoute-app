@@ -9,6 +9,21 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def as_utc(dt: datetime | None) -> datetime | None:
+    """
+    Приводит значение из БД к timezone-aware UTC.
+
+    Колонки объявлены как TIMESTAMPTZ, но SQLite (тесты, локальная разработка)
+    таймзоны не хранит и всегда отдаёт naive datetime. Вычитание naive из aware
+    бросает TypeError, поэтому любое чтение времени из БД перед арифметикой
+    прогоняем через эту функцию. Naive-значения трактуем как UTC — именно в UTC
+    их пишет utcnow().
+    """
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
+
 class AlertLevel(str, enum.Enum):
     LOW = "low"
     MEDIUM = "medium"
@@ -38,7 +53,7 @@ class Herd(Base):
     estimated_count = Column(Integer, default=1)
     owner_name = Column(String(200), nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=utcnow)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
 
     locations = relationship(
         "HerdLocation", back_populates="herd",
@@ -58,7 +73,7 @@ class HerdLocation(Base):
     longitude = Column(Float, nullable=False)
     speed_kmh = Column(Float, default=0.0)
     heading_degrees = Column(Float, nullable=True)
-    timestamp = Column(DateTime, default=utcnow, index=True)
+    timestamp = Column(DateTime(timezone=True), default=utcnow, index=True)
     source = Column(String(50), default="simulator")
 
     herd = relationship("Herd", back_populates="locations")
@@ -81,7 +96,7 @@ class GeoZone(Base):
     road_lat = Column(Float, nullable=False, default=0.0)
     road_lon = Column(Float, nullable=False, default=0.0)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=utcnow)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
 
     alerts = relationship("Alert", back_populates="geozone")
 
@@ -100,8 +115,8 @@ class Alert(Base):
     estimated_arrival_minutes = Column(Float, nullable=True)
     is_active = Column(Boolean, default=True)
     notified_count = Column(Integer, default=0)
-    created_at = Column(DateTime, default=utcnow, index=True)
-    resolved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, index=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
 
     herd = relationship("Herd", back_populates="alerts")
     geozone = relationship("GeoZone", back_populates="alerts")
@@ -118,7 +133,7 @@ class Device(Base):
     phone_number = Column(String(20), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    last_seen = Column(DateTime, default=utcnow)
+    last_seen = Column(DateTime(timezone=True), default=utcnow)
     is_active = Column(Boolean, default=True)
 
 
@@ -147,8 +162,8 @@ class IncidentReport(Base):
     reporter_device_id = Column(String(200), nullable=True, index=True)
     confirmations_count = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=utcnow, index=True)
-    resolved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, index=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
 
     confirmations = relationship("IncidentConfirmation", back_populates="incident")
 
@@ -164,6 +179,6 @@ class IncidentConfirmation(Base):
     incident_id = Column(Integer, ForeignKey("incident_reports.id"), nullable=False, index=True)
     device_id = Column(String(200), nullable=False, index=True)
     is_resolved = Column(Boolean, nullable=False)
-    created_at = Column(DateTime, default=utcnow)
+    created_at = Column(DateTime(timezone=True), default=utcnow)
 
     incident = relationship("IncidentReport", back_populates="confirmations")

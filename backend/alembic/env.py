@@ -15,7 +15,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.config import settings  # noqa: E402
-from app.database import Base  # noqa: E402
+from app.database import Base, _build_engine_url  # noqa: E402
 
 # Import models so Base.metadata is populated.
 from app import models  # noqa: F401, E402
@@ -23,7 +23,9 @@ from app import models  # noqa: F401, E402
 config = context.config
 
 # Inject runtime DB URL into Alembic config.
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Через _build_engine_url — иначе 'postgresql://' уедет на драйвер psycopg2,
+# которого в зависимостях нет (стоит psycopg v3), и миграции упадут на импорте.
+config.set_main_option("sqlalchemy.url", _build_engine_url(settings.DATABASE_URL))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

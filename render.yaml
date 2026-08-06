@@ -9,7 +9,9 @@ services:
     region: frankfurt
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # Миграции прогоняются перед стартом. Схему на чистой БД по-прежнему создаёт
+    # create_all в lifespan — Alembic здесь отвечает за изменения существующей.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         sync: false   # Neon PostgreSQL connection string — set in Render Dashboard
