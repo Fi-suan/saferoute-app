@@ -1,14 +1,17 @@
+import logging
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.models import Alert, Device, Herd, HerdLocation, Role
 from app.schemas import HerdCreate, HerdLocationOut, HerdOut, LocationPoint
 from app.services.auth import get_current_device
 from app.services.geofencing import process_location_update
 from app.services.notifications import notify_nearby_drivers
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/herds", tags=["herds"])
 
@@ -88,8 +91,30 @@ def create_herd(data: HerdCreate, db: Session = Depends(get_db), current: Device
     return _build_herd_out(herd, db)
 
 
+def _notify_task(alert_id: int, herd_lat: float, herd_lon: float) -> None:
+    """
+    Фоновая рассылка. Своя сессия: та, что обслуживала запрос, к этому моменту
+    уже закрыта зависимостью get_db.
+    """
+    db = SessionLocal()
+    try:
+        alert = db.query(Alert).filter(Alert.id == alert_id).first()
+        if alert:
+            notify_nearby_drivers(db, alert, herd_lat, herd_lon)
+    except Exception:
+        logger.exception("Фоновая рассылка по алерту %s не удалась", alert_id)
+    finally:
+        db.close()
+
+
 @router.post("/{herd_id}/location")
-def update_herd_location(herd_id: int, loc: LocationPoint, db: Session = Depends(get_db), current: Device = Depends(get_current_device)):
+def update_herd_location(
+    herd_id: int,
+    loc: LocationPoint,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current: Device = Depends(get_current_device),
+):
     """Принять новую GPS-координату от ошейника / симулятора"""
     if current.role != Role.OWNER:
         raise HTTPException(status_code=403, detail="Only livestock owners can update herd locations")
@@ -110,19 +135,25 @@ def update_herd_location(herd_id: int, loc: LocationPoint, db: Session = Depends
 
     # Location insert + alert creation in single transaction
     try:
-        alert = process_location_update(db, herd, loc.latitude, loc.longitude, loc.speed_kmh)
+        alert, alert_created = process_location_update(
+            db, herd, loc.latitude, loc.longitude, loc.speed_kmh
+        )
         db.commit()
     except Exception:
         db.rollback()
         raise
 
-    notified = notify_nearby_drivers(db, alert, loc.latitude, loc.longitude) if alert else 0
+    # Рассылка уходит в фон: ответ ошейнику не должен ждать похода в Expo.
+    # Только по новым алертам — см. process_location_update.
+    notifying = alert is not None and alert_created
+    if notifying:
+        background.add_task(_notify_task, alert.id, loc.latitude, loc.longitude)
 
     return {
         "status": "ok",
         "alert": alert.level.value if alert else None,
         "alert_id": alert.id if alert else None,
-        "drivers_notified": notified,
+        "notifying": notifying,
     }
 
 

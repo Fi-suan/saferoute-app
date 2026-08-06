@@ -173,12 +173,19 @@ def get_movement_vector(db: Session, herd_id: int, current_lat: float, current_l
 
 def process_location_update(
     db: Session, herd: Herd, latitude: float, longitude: float, speed_kmh: float = 0.0
-) -> Alert | None:
+) -> tuple[Alert | None, bool]:
+    """
+    @returns (алерт, создан_ли_он_сейчас)
+
+    Флаг нужен вызывающему коду: рассылать push можно только по новым алертам.
+    Позиция стада в ручном режиме приходит раз в 10 секунд, и уведомление на
+    каждое обновление означало бы спам одним и тем же водителям.
+    """
     bearing, computed_speed, prev_loc = get_movement_vector(db, herd.id, latitude, longitude)
     effective_speed = speed_kmh if speed_kmh > 0 else computed_speed
     zones = check_herd_in_geozones(db, latitude, longitude)
     if not zones:
-        return None
+        return None, False
 
     for zone_data in zones:
         dist = zone_data["distance_to_road_km"]
@@ -193,7 +200,7 @@ def process_location_update(
             existing.distance_to_road_km = dist
             existing.estimated_arrival_minutes = eta_minutes
             # No commit here — caller is responsible for committing the transaction
-            return existing
+            return existing, False
 
         geozone = db.query(GeoZone).filter(GeoZone.id == zone_data["id"]).first()
         level = determine_alert_level(dist, effective_speed)
@@ -208,6 +215,6 @@ def process_location_update(
         db.add(alert)
         db.flush()
         db.refresh(alert)
-        return alert
+        return alert, True
 
-    return None
+    return None, False
