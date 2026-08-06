@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
@@ -73,7 +74,21 @@ class GeoZoneOut(BaseModel):
     lon_max: float
     road_lat: float
     road_lon: float
+    # Осевая линия [[lat, lon], ...]. В БД лежит JSON-строкой, наружу отдаём
+    # массивом, чтобы клиент считал расстояние до линии, а не до одной точки.
+    road_geometry: list | None = None
     is_active: bool
+
+    @field_validator("road_geometry", mode="before")
+    @classmethod
+    def parse_geometry(cls, v):
+        if v is None or isinstance(v, list):
+            return v
+        try:
+            parsed = json.loads(v)
+        except (ValueError, TypeError):
+            return None
+        return parsed if isinstance(parsed, list) else None
 
     class Config:
         from_attributes = True

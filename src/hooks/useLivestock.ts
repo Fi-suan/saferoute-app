@@ -10,19 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Livestock, LIVESTOCK_DANGER_DISTANCE_M } from '../constants/livestock';
 import { GeoPoint } from './useLocation';
 import api from '../services/api';
-
-/** Расстояние в км между двумя точками */
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+import { haversineKm, distanceToPolylineKm, LatLonPair } from '../utils/geo';
 
 const LIVESTOCK_STORAGE_KEY = 'saferoute:livestock:registered';
 
@@ -52,6 +40,8 @@ interface RoadZone {
     roadLat: number;
     roadLon: number;
     bufferKm: number;
+    /** Осевая линия дороги. Пусто — считаем до roadLat/roadLon, как раньше. */
+    geometry: LatLonPair[];
 }
 
 let _cachedRoads: RoadZone[] = [];
@@ -73,6 +63,7 @@ async function loadRoadZones(): Promise<RoadZone[]> {
                 roadLat: z.road_lat ?? 0,
                 roadLon: z.road_lon ?? 0,
                 bufferKm: z.buffer_km ?? 5,
+                geometry: Array.isArray(z.road_geometry) ? (z.road_geometry as LatLonPair[]) : [],
             }));
             _cachedRoadsAt = Date.now();
         }
@@ -81,14 +72,26 @@ async function loadRoadZones(): Promise<RoadZone[]> {
 }
 
 function isNearAnyRoadSync(lat: number, lon: number): { near: boolean; distM: number; routeId?: string } {
+    // Перебираем все подходящие зоны и берём ближайшую дорогу. Раньше
+    // возвращалась первая попавшаяся, а bounding box'ы пересекаются — почти
+    // все трассы начинаются в Астане, — поэтому выбор был по сути случайным.
+    let best: { distKm: number; road: RoadZone } | null = null;
+
     for (const road of _cachedRoads) {
-        if (lat >= road.latMin && lat <= road.latMax && lon >= road.lonMin && lon <= road.lonMax) {
-            const distKm = haversineKm(lat, lon, road.roadLat, road.roadLon);
-            const distM = Math.round(distKm * 1000);
-            return { near: distKm < road.bufferKm, distM, routeId: road.id };
-        }
+        if (lat < road.latMin || lat > road.latMax || lon < road.lonMin || lon > road.lonMax) continue;
+        // До осевой линии, а не до усреднённой точки коридора.
+        const distKm = road.geometry.length > 0
+            ? distanceToPolylineKm(lat, lon, road.geometry)
+            : haversineKm(lat, lon, road.roadLat, road.roadLon);
+        if (best === null || distKm < best.distKm) best = { distKm, road };
     }
-    return { near: false, distM: 9999 };
+
+    if (best === null) return { near: false, distM: 9999 };
+    return {
+        near: best.distKm < best.road.bufferKm,
+        distM: Math.round(best.distKm * 1000),
+        routeId: best.road.id,
+    };
 }
 
 function mapHerdToLivestock(herd: any): Livestock {

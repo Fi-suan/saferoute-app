@@ -9,17 +9,81 @@ from sqlalchemy.orm import Session
 
 from app.models import Alert, AlertLevel, GeoZone, Herd, HerdLocation, as_utc
 
+EARTH_RADIUS_KM = 6371.0
+
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Distance between two points on Earth (Haversine formula)"""
     if not (-90 <= lat1 <= 90 and -90 <= lat2 <= 90 and -180 <= lon1 <= 180 and -180 <= lon2 <= 180):
         return float('inf')
-    R = 6371.0
+    R = EARTH_RADIUS_KM
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
     a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _point_to_segment_km(
+    plat: float, plon: float,
+    alat: float, alon: float,
+    blat: float, blon: float,
+) -> float:
+    """
+    Расстояние от точки до отрезка дороги.
+
+    Отрезок проецируется в локальную плоскость с началом в самой точке
+    (равнопромежуточная проекция с поправкой на широту). На длинах в десятки
+    километров погрешность заметно меньше процента, а сферическая формула для
+    отрезка дала бы громоздкий код без выигрыша в точности на этих масштабах.
+    """
+    lat0 = math.radians(plat)
+    coslat = math.cos(lat0)
+
+    def to_xy(lat: float, lon: float) -> tuple[float, float]:
+        return (
+            math.radians(lon - plon) * coslat * EARTH_RADIUS_KM,
+            math.radians(lat - plat) * EARTH_RADIUS_KM,
+        )
+
+    ax, ay = to_xy(alat, alon)
+    bx, by = to_xy(blat, blon)
+
+    dx, dy = bx - ax, by - ay
+    seg_len_sq = dx * dx + dy * dy
+    if seg_len_sq == 0.0:  # вырожденный отрезок — просто точка
+        return math.hypot(ax, ay)
+
+    # Проекция точки (она в начале координат) на отрезок, зажатая в [0, 1]
+    t = -(ax * dx + ay * dy) / seg_len_sq
+    t = max(0.0, min(1.0, t))
+    return math.hypot(ax + t * dx, ay + t * dy)
+
+
+def distance_to_polyline_km(lat: float, lon: float, polyline: list) -> float:
+    """
+    Кратчайшее расстояние от точки до осевой линии дороги.
+
+    polyline — список [lat, lon]. Для линии из одной точки вырождается в
+    обычный haversine: так работают коридоры, для которых реальной геометрии
+    ещё нет (см. app/data/roads.json).
+    """
+    if not polyline:
+        return float("inf")
+
+    # Начинаем с точного сферического расстояния до вершин. Вершины лежат на
+    # линии, поэтому это гарантированная верхняя граница: без неё плоская
+    # проекция на удалении в десятки километров даёт результат чуть больше
+    # расстояния до ближайшей вершины (~0.1%), что математически невозможно.
+    best = min(haversine_km(lat, lon, p[0], p[1]) for p in polyline)
+
+    # Отрезки уточняют результат там, где перпендикуляр падает между вершинами.
+    # Вблизи дороги — а только это и важно для алертов — проекция точна.
+    for (alat, alon), (blat, blon) in zip(polyline, polyline[1:], strict=False):
+        d = _point_to_segment_km(lat, lon, alat, alon, blat, blon)
+        if d < best:
+            best = d
+    return best
 
 
 def bearing_degrees(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -68,8 +132,14 @@ def check_herd_in_geozones(db: Session, latitude: float, longitude: float) -> li
         )
         if not in_box:
             continue
-        # Distance to road centerline
-        dist_km = haversine_km(latitude, longitude, zone.road_lat, zone.road_lon)
+        # Расстояние до осевой линии. road_geometry — ломаная; если её нет,
+        # откатываемся на историческую единственную точку road_lat/road_lon.
+        geometry = zone.geometry_points()
+        dist_km = (
+            distance_to_polyline_km(latitude, longitude, geometry)
+            if geometry
+            else haversine_km(latitude, longitude, zone.road_lat, zone.road_lon)
+        )
         if dist_km <= zone.buffer_km * 1.5:
             results.append({
                 "id": zone.id,

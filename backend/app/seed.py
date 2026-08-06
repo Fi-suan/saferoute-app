@@ -1,9 +1,20 @@
 """
-Database seeder — creates initial Kazakhstan road geozones.
-No PostGIS required — uses bounding boxes + centerpoint.
-"""
-import logging
+Database seeder — геозоны трасс Казахстана.
 
+Геометрия лежит в app/data/roads.json. Bounding box больше не задаётся руками:
+он вычисляется из осевой линии плюс запас на buffer_km, поэтому не может
+разойтись с самой дорогой.
+
+Сид идемпотентный и обновляющий: зоны сопоставляются по slug, поэтому
+изменения геометрии доезжают до уже существующей базы, а не игнорируются,
+как раньше (сид просто выходил, если в таблице что-то было).
+"""
+import json
+import logging
+import math
+from pathlib import Path
+
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import Base, SessionLocal, engine
@@ -11,77 +22,93 @@ from app.models import GeoZone
 
 logger = logging.getLogger(__name__)
 
+ROADS_FILE = Path(__file__).parent / "data" / "roads.json"
 
-# Kazakhstan highways: (name, road_type, buffer_km, lat_min, lat_max, lon_min, lon_max, road_lat, road_lon)
-ROAD_ZONES = [
-    {
-        "name": "Трасса А-17 (Астана—Павлодар) зап. участок",
-        "road_type": "highway",
-        "buffer_km": 5.0,
-        "lat_min": 51.05, "lat_max": 51.35, "lon_min": 71.3, "lon_max": 72.5,
-        "road_lat": 51.18, "road_lon": 71.9,  # centerline midpoint
-    },
-    {
-        "name": "Трасса А-17 (Астана—Павлодар) вост. участок",
-        "road_type": "highway",
-        "buffer_km": 5.0,
-        "lat_min": 51.35, "lat_max": 52.0, "lon_min": 72.5, "lon_max": 75.0,
-        "road_lat": 51.7, "road_lon": 73.75,
-    },
-    {
-        "name": "Трасса А-17 (Павлодар—Семей)",
-        "road_type": "highway",
-        "buffer_km": 5.0,
-        "lat_min": 51.8, "lat_max": 52.5, "lon_min": 76.8, "lon_max": 80.5,
-        "road_lat": 52.1, "road_lon": 78.6,
-    },
-    {
-        "name": "Трасса А-1 (Алматы—Астана) степной участок",
-        "road_type": "highway",
-        "buffer_km": 5.0,
-        "lat_min": 49.5, "lat_max": 51.3, "lon_min": 68.0, "lon_max": 73.0,
-        "road_lat": 50.4, "road_lon": 70.5,
-    },
-    {
-        "name": "Трасса А-21 (Павлодар—Омск)",
-        "road_type": "highway",
-        "buffer_km": 5.0,
-        "lat_min": 51.9, "lat_max": 53.5, "lon_min": 76.5, "lon_max": 81.0,
-        "road_lat": 52.7, "road_lon": 78.75,
-    },
-]
+# Запас к bounding box сверх buffer_km, чтобы стадо, идущее к дороге,
+# попадало в предварительную проверку раньше, чем окажется вплотную.
+BBOX_MARGIN_KM = 20.0
 
 
-def seed_geozones(db: Session):
-    if db.query(GeoZone).count() > 0:
-        logger.info("Geozones already seeded, skipping.")
-        return
+def load_roads() -> list[dict]:
+    with ROADS_FILE.open(encoding="utf-8") as f:
+        return json.load(f)["roads"]
 
-    for r in ROAD_ZONES:
-        if r["lat_min"] >= r["lat_max"] or r["lon_min"] >= r["lon_max"]:
-            logger.error(f"Invalid bounding box for zone '{r['name']}': lat_min >= lat_max or lon_min >= lon_max")
+
+def bbox_from_geometry(geometry: list, margin_km: float) -> tuple[float, float, float, float]:
+    """
+    Прямоугольник вокруг осевой линии с запасом в километрах.
+
+    Градус широты всюду ~111 км; для долготы шаг делится на cos(широты),
+    иначе на широтах Казахстана запас по долготе вышел бы вдвое меньше нужного.
+    """
+    lats = [p[0] for p in geometry]
+    lons = [p[1] for p in geometry]
+    d_lat = margin_km / 111.0
+    mid_lat = (min(lats) + max(lats)) / 2
+    d_lon = margin_km / (111.0 * max(math.cos(math.radians(mid_lat)), 0.01))
+    return (
+        min(lats) - d_lat,
+        max(lats) + d_lat,
+        min(lons) - d_lon,
+        max(lons) + d_lon,
+    )
+
+
+def midpoint(geometry: list) -> tuple[float, float]:
+    """Средняя точка линии — для обратной совместимости с road_lat/road_lon."""
+    return tuple(geometry[len(geometry) // 2])
+
+
+def seed_geozones(db: Session) -> None:
+    roads = load_roads()
+    seen_slugs = []
+
+    for road in roads:
+        geometry = road["geometry"]
+        if not geometry:
+            logger.error("Зона '%s' без геометрии — пропущена", road["slug"])
             continue
-        zone = GeoZone(
-            name=r["name"],
-            road_type=r["road_type"],
-            buffer_km=r["buffer_km"],
-            lat_min=r["lat_min"],
-            lat_max=r["lat_max"],
-            lon_min=r["lon_min"],
-            lon_max=r["lon_max"],
-            road_lat=r["road_lat"],
-            road_lon=r["road_lon"],
-            is_active=True,
+
+        lat_min, lat_max, lon_min, lon_max = bbox_from_geometry(
+            geometry, road["buffer_km"] + BBOX_MARGIN_KM
         )
-        db.add(zone)
+        road_lat, road_lon = midpoint(geometry)
+        seen_slugs.append(road["slug"])
+
+        zone = db.query(GeoZone).filter(GeoZone.slug == road["slug"]).first()
+        if zone is None:
+            zone = GeoZone(slug=road["slug"])
+            db.add(zone)
+
+        zone.name = road["name"]
+        zone.road_type = road["road_type"]
+        zone.buffer_km = road["buffer_km"]
+        zone.road_geometry = json.dumps(geometry)
+        zone.road_lat = road_lat
+        zone.road_lon = road_lon
+        zone.lat_min, zone.lat_max = lat_min, lat_max
+        zone.lon_min, zone.lon_max = lon_min, lon_max
+        zone.is_active = True
+
+    # Зоны из старых версий данных: не удаляем (на них могут ссылаться алерты),
+    # а гасим, чтобы не участвовали в проверках. Условие на NULL обязательно —
+    # у зон, засеянных до появления slug, он пустой, а `NULL NOT IN (...)`
+    # в SQL не истинно, и такие строки остались бы активными.
+    stale = (
+        db.query(GeoZone)
+        .filter(
+            GeoZone.is_active.is_(True),
+            or_(GeoZone.slug.is_(None), GeoZone.slug.notin_(seen_slugs)),
+        )
+        .update({"is_active": False}, synchronize_session=False)
+    )
 
     try:
         db.commit()
-        count = db.query(GeoZone).count()
-        logger.info(f"Seeded {count} geozones successfully")
+        logger.info("Геозоны засеяны: %d активных, %d погашено", len(seen_slugs), stale)
     except Exception as e:
         db.rollback()
-        logger.error(f"Failed to seed geozones: {e}")
+        logger.error("Не удалось засеять геозоны: %s", e)
 
 
 def init_db():

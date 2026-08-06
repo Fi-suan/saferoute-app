@@ -36,6 +36,7 @@ def get_geozones_geojson(db: Session = Depends(get_db)):
             "type": "Feature",
             "properties": {
                 "id": zone.id,
+                "slug": zone.slug,
                 "name": zone.name,
                 "road_type": zone.road_type,
                 "buffer_km": zone.buffer_km,
@@ -43,5 +44,26 @@ def get_geozones_geojson(db: Session = Depends(get_db)):
             },
             "geometry": polygon_geojson,
         })
+
+        # Сама осевая линия. Сейчас фронт держит геометрию трасс у себя
+        # (useRoutePolyline.STATIC_WAYPOINTS) — отдельным от бэкенда списком.
+        # Отдаём её здесь, чтобы источник правды остался один.
+        points = zone.geometry_points()
+        if len(points) > 1:
+            features.append({
+                "type": "Feature",
+                "properties": {
+                    "id": zone.id,
+                    "slug": zone.slug,
+                    "name": zone.name,
+                    "road_type": zone.road_type,
+                    "layer": "road_centerline",
+                },
+                "geometry": {
+                    "type": "LineString",
+                    # GeoJSON — [lon, lat], в модели хранится [lat, lon].
+                    "coordinates": [[p[1], p[0]] for p in points],
+                },
+            })
 
     return {"type": "FeatureCollection", "features": features}

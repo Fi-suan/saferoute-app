@@ -1,4 +1,5 @@
 import enum
+import json
 from datetime import UTC, datetime
 
 from sqlalchemy import (
@@ -105,13 +106,28 @@ class GeoZone(Base):
     lat_max = Column(Float, nullable=False, default=0.0)
     lon_min = Column(Float, nullable=False, default=0.0)
     lon_max = Column(Float, nullable=False, default=0.0)
-    # Road centerline midpoint (replaces PostGIS linestring)
+    # Осевая линия дороги: JSON-массив [[lat, lon], ...].
+    # Одна точка road_lat/road_lon оставлена для обратной совместимости и как
+    # запасной вариант для зон, у которых геометрии ещё нет.
+    road_geometry = Column(Text, nullable=True)
     road_lat = Column(Float, nullable=False, default=0.0)
     road_lon = Column(Float, nullable=False, default=0.0)
+    # Стабильный ключ для пересева: имена меняются, привязываться к ним нельзя.
+    slug = Column(String(100), unique=True, nullable=True, index=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=utcnow)
 
     alerts = relationship("Alert", back_populates="geozone")
+
+    def geometry_points(self) -> list:
+        """Осевая линия как список [lat, lon]. Пустой список, если геометрии нет."""
+        if not self.road_geometry:
+            return []
+        try:
+            points = json.loads(self.road_geometry)
+        except (ValueError, TypeError):
+            return []
+        return points if isinstance(points, list) else []
 
 
 class Alert(Base):
