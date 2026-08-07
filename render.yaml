@@ -21,6 +21,18 @@ services:
         sync: false   # set in Render Dashboard
       - key: OPENAI_API_KEY
         sync: false   # set in Render Dashboard
+      - key: S3_BUCKET
+        sync: false   # хранилище фото — см. docs/photo-storage.md
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_PUBLIC_BASE_URL
+        sync: false
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: S3_REGION
+        value: "auto"
       - key: DEBUG
         value: "false"
       - key: BUFFER_ZONE_KM

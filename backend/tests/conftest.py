@@ -20,6 +20,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.database import Base, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.routers import auth as auth_router  # noqa: E402
+from app.routers import incidents as incidents_router  # noqa: E402
 
 
 @pytest.fixture()
@@ -30,14 +31,16 @@ def client():
     Контекстный менеджер обязателен: без него FastAPI не выполняет lifespan,
     а значит не создаёт таблицы и не засевает геозоны.
 
-    Лимитер регистрации (5/мин на IP) выключен — в тестах все запросы приходят
-    с одного адреса и упирались бы в него.
+    Лимитеры выключены — в тестах все запросы приходят с одного адреса и
+    упирались бы в них (регистрация 5/мин, репорты 10/мин).
     """
     Base.metadata.drop_all(bind=engine)
     auth_router.limiter.enabled = False
+    incidents_router.limiter.enabled = False
     with TestClient(app) as c:
         yield c
     auth_router.limiter.enabled = True
+    incidents_router.limiter.enabled = True
 
 
 @pytest.fixture()

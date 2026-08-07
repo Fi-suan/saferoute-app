@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Device, IncidentConfirmation, IncidentReport
 from app.schemas import DeviceLocationUpdate
+from app.services import storage
 from app.services.auth import get_current_device
 
 router = APIRouter(prefix="/devices", tags=["devices"])
@@ -42,6 +43,15 @@ def delete_device_data(
         IncidentConfirmation.device_id == device_id
     ).delete()
 
+    # Фото инцидентов лежат в объектном хранилище — их надо убрать до того,
+    # как исчезнут строки, иначе id потеряются и файлы останутся навсегда.
+    incident_ids = [
+        row[0] for row in db.query(IncidentReport.id).filter(
+            IncidentReport.reporter_device_id == device_id
+        ).all()
+    ]
+    photos_deleted = storage.delete_incident_photos(incident_ids)
+
     # Delete incident reports
     reports_deleted = db.query(IncidentReport).filter(
         IncidentReport.reporter_device_id == device_id
@@ -57,6 +67,7 @@ def delete_device_data(
         "deleted": {
             "confirmations": confirmations_deleted,
             "reports": reports_deleted,
+            "photos": photos_deleted,
             "device": device_deleted,
         },
     }

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models import Device, IncidentConfirmation, IncidentReport, IncidentType, as_utc
+from app.services import storage
 from app.services.auth import get_current_device
 from app.services.geofencing import haversine_km
 
@@ -150,6 +151,10 @@ AI_RESPONSE_SCHEMA = {
 
 def _ai_fallback(user_severity: int, reason_kk: str) -> dict:
     return {
+        # checked=False — модель не отработала (нет ключа, ошибка, нет фото).
+        # Отличать это от «модель посмотрела и отвергла» нужно, чтобы решать,
+        # сохранять ли фото: без ключа OpenAI verified всегда false.
+        "checked": False,
         "verified": False,
         "confidence": 0.0,
         "severity_suggestion": user_severity,
@@ -226,6 +231,7 @@ async def verify_photo_with_ai(
             severity = max(1, min(5, int(parsed["severity_suggestion"])))
 
             return {
+                "checked": True,
                 "verified": bool(parsed["verified"]),
                 "confidence": confidence,
                 "severity_suggestion": severity,
@@ -283,6 +289,17 @@ async def create_incident(
     db.add(incident)
     db.commit()
     db.refresh(incident)
+
+    # Фото сохраняем, если модель его не отвергла. Когда проверка не
+    # выполнялась (нет ключа OpenAI) — сохраняем: решать будет сообщество.
+    ai_rejected = ai_result["checked"] and not ai_result["verified"]
+    if data.photo_base64 and not ai_rejected:
+        photo_url = storage.upload_incident_photo(incident.id, data.photo_base64)
+        if photo_url:
+            incident.photo_url = photo_url
+            db.commit()
+            db.refresh(incident)
+
     return _to_dict(incident)
 
 
