@@ -27,7 +27,9 @@ interface UseLivestockReturn {
     dangerZoneAlert: boolean;
     activateManualMode: (type: Livestock['type'], count: number, name: string) => Promise<void>;
     deactivateManualMode: () => Promise<void>;
-    registerLivestock: (data: Omit<Livestock, 'id' | 'ownerId' | 'lastUpdated' | 'isNearRoad' | 'distanceToRoadM'>) => Promise<void>;
+    registerLivestock: (
+        data: Omit<Livestock, 'id' | 'ownerId' | 'lastUpdated' | 'isNearRoad' | 'distanceToRoadM'>,
+    ) => Promise<void>;
     refreshLivestock: () => Promise<void>;
 }
 
@@ -67,22 +69,29 @@ async function loadRoadZones(): Promise<RoadZone[]> {
             }));
             _cachedRoadsAt = Date.now();
         }
-    } catch { /* keep stale cache — will retry next refresh */ }
+    } catch {
+        /* keep stale cache — will retry next refresh */
+    }
     return _cachedRoads;
 }
 
-function isNearAnyRoadSync(lat: number, lon: number): { near: boolean; distM: number; routeId?: string } {
+function isNearAnyRoadSync(
+    lat: number,
+    lon: number,
+): { near: boolean; distM: number; routeId?: string } {
     // Перебираем все подходящие зоны и берём ближайшую дорогу. Раньше
     // возвращалась первая попавшаяся, а bounding box'ы пересекаются — почти
     // все трассы начинаются в Астане, — поэтому выбор был по сути случайным.
     let best: { distKm: number; road: RoadZone } | null = null;
 
     for (const road of _cachedRoads) {
-        if (lat < road.latMin || lat > road.latMax || lon < road.lonMin || lon > road.lonMax) continue;
+        if (lat < road.latMin || lat > road.latMax || lon < road.lonMin || lon > road.lonMax)
+            continue;
         // До осевой линии, а не до усреднённой точки коридора.
-        const distKm = road.geometry.length > 0
-            ? distanceToPolylineKm(lat, lon, road.geometry)
-            : haversineKm(lat, lon, road.roadLat, road.roadLon);
+        const distKm =
+            road.geometry.length > 0
+                ? distanceToPolylineKm(lat, lon, road.geometry)
+                : haversineKm(lat, lon, road.roadLat, road.roadLon);
         if (best === null || distKm < best.distKm) best = { distKm, road };
     }
 
@@ -122,7 +131,9 @@ async function fetchLivestockFromServer(): Promise<Livestock[]> {
         if (Array.isArray(res.data) && res.data.length > 0) {
             return res.data.map(mapHerdToLivestock);
         }
-    } catch { /* offline */ }
+    } catch {
+        /* offline */
+    }
     return [];
 }
 
@@ -136,7 +147,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
     const lastLocationSentRef = useRef<number>(0);
 
     useEffect(() => {
-        AsyncStorage.getItem(LIVESTOCK_STORAGE_KEY).then(raw => {
+        AsyncStorage.getItem(LIVESTOCK_STORAGE_KEY).then((raw) => {
             if (raw) setMyLivestock(JSON.parse(raw));
         });
     }, []);
@@ -153,54 +164,57 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
         return () => clearInterval(interval);
     }, [refreshLivestock]);
 
-    const activateManualMode = useCallback(async (
-        type: Livestock['type'],
-        count: number,
-        name: string,
-    ) => {
-        if (!userLocation) return;
-        const road = isNearAnyRoadSync(userLocation.lat, userLocation.lon);
-        const entry: Livestock = {
-            id: `manual-${Date.now()}`,
-            ownerId,
-            ownerName: 'Мен',
-            ownerPhone: '',
-            type,
-            count,
-            name,
-            latitude: userLocation.lat,
-            longitude: userLocation.lon,
-            lastUpdated: new Date().toISOString(),
-            isNearRoad: road.near,
-            distanceToRoadM: road.distM,
-            routeId: road.routeId,
-            trackingMode: 'phone',
-        };
-        setManualEntry(entry);
-        setIsManualMode(true);
-        setLivestock(prev => [entry, ...prev]);
-
-        // Create herd on backend so other users see it
-        try {
-            const res = await api.post('/herds/', {
+    const activateManualMode = useCallback(
+        async (type: Livestock['type'], count: number, name: string) => {
+            if (!userLocation) return;
+            const road = isNearAnyRoadSync(userLocation.lat, userLocation.lon);
+            const entry: Livestock = {
+                id: `manual-${Date.now()}`,
+                ownerId,
+                ownerName: 'Мен',
+                ownerPhone: '',
+                type,
+                count,
                 name,
-                animal_type: type,
-                estimated_count: count,
-                owner_name: 'manual',
-            });
-            const herdId = res.data?.id;
-            if (herdId) {
-                backendHerdIdRef.current = herdId;
-                // Send initial location
-                await api.post(`/herds/${herdId}/location`, {
-                    latitude: userLocation.lat,
-                    longitude: userLocation.lon,
-                    speed_kmh: 0,
-                    source: 'manual',
-                }).catch(() => {});
+                latitude: userLocation.lat,
+                longitude: userLocation.lon,
+                lastUpdated: new Date().toISOString(),
+                isNearRoad: road.near,
+                distanceToRoadM: road.distM,
+                routeId: road.routeId,
+                trackingMode: 'phone',
+            };
+            setManualEntry(entry);
+            setIsManualMode(true);
+            setLivestock((prev) => [entry, ...prev]);
+
+            // Create herd on backend so other users see it
+            try {
+                const res = await api.post('/herds/', {
+                    name,
+                    animal_type: type,
+                    estimated_count: count,
+                    owner_name: 'manual',
+                });
+                const herdId = res.data?.id;
+                if (herdId) {
+                    backendHerdIdRef.current = herdId;
+                    // Send initial location
+                    await api
+                        .post(`/herds/${herdId}/location`, {
+                            latitude: userLocation.lat,
+                            longitude: userLocation.lon,
+                            speed_kmh: 0,
+                            source: 'manual',
+                        })
+                        .catch(() => {});
+                }
+            } catch {
+                /* offline — will sync on next refresh */
             }
-        } catch { /* offline — will sync on next refresh */ }
-    }, [userLocation, ownerId]);
+        },
+        [userLocation, ownerId],
+    );
 
     // Update position on backend while in manual mode (throttled to every 10s)
     useEffect(() => {
@@ -215,7 +229,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
             distanceToRoadM: road.distM,
         };
         setManualEntry(updated);
-        setLivestock(prev => prev.map(l => l.id === updated.id ? updated : l));
+        setLivestock((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
 
         // Sync to backend every 10 seconds
         const now = Date.now();
@@ -233,7 +247,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
     const deactivateManualMode = useCallback(async () => {
         setIsManualMode(false);
         if (manualEntry) {
-            setLivestock(prev => prev.filter(l => l.id !== manualEntry.id));
+            setLivestock((prev) => prev.filter((l) => l.id !== manualEntry.id));
         }
         setManualEntry(null);
 
@@ -241,38 +255,48 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
         if (backendHerdIdRef.current) {
             try {
                 await api.patch(`/herds/${backendHerdIdRef.current}/deactivate`);
-            } catch { /* ignore */ }
+            } catch {
+                /* ignore */
+            }
             backendHerdIdRef.current = null;
         }
     }, [manualEntry]);
 
-    const registerLivestock = useCallback(async (
-        data: Omit<Livestock, 'id' | 'ownerId' | 'lastUpdated' | 'isNearRoad' | 'distanceToRoadM'>,
-    ) => {
-        const road = isNearAnyRoadSync(data.latitude, data.longitude);
-        const entry: Livestock = {
-            ...data,
-            id: `reg-${Date.now()}`,
-            ownerId,
-            lastUpdated: new Date().toISOString(),
-            isNearRoad: road.near,
-            distanceToRoadM: road.distM,
-            routeId: road.routeId,
-        };
-        const updated = [...myLivestock, entry];
-        setMyLivestock(updated);
-        await AsyncStorage.setItem(LIVESTOCK_STORAGE_KEY, JSON.stringify(updated));
-    }, [myLivestock, ownerId]);
+    const registerLivestock = useCallback(
+        async (
+            data: Omit<
+                Livestock,
+                'id' | 'ownerId' | 'lastUpdated' | 'isNearRoad' | 'distanceToRoadM'
+            >,
+        ) => {
+            const road = isNearAnyRoadSync(data.latitude, data.longitude);
+            const entry: Livestock = {
+                ...data,
+                id: `reg-${Date.now()}`,
+                ownerId,
+                lastUpdated: new Date().toISOString(),
+                isNearRoad: road.near,
+                distanceToRoadM: road.distM,
+                routeId: road.routeId,
+            };
+            const updated = [...myLivestock, entry];
+            setMyLivestock(updated);
+            await AsyncStorage.setItem(LIVESTOCK_STORAGE_KEY, JSON.stringify(updated));
+        },
+        [myLivestock, ownerId],
+    );
 
     const dangerousLivestock = livestock.filter(
-        l => l.isNearRoad && l.distanceToRoadM < LIVESTOCK_DANGER_DISTANCE_M
+        (l) => l.isNearRoad && l.distanceToRoadM < LIVESTOCK_DANGER_DISTANCE_M,
     );
 
     /** Danger Zone: 3+ групп скота в радиусе 500м от пользователя */
     const dangerZoneAlert = useMemo(() => {
         if (!userLocation) return false;
-        const nearby = livestock.filter(l =>
-            haversineKm(userLocation.lat, userLocation.lon, l.latitude, l.longitude) <= DANGER_ZONE_RADIUS_KM
+        const nearby = livestock.filter(
+            (l) =>
+                haversineKm(userLocation.lat, userLocation.lon, l.latitude, l.longitude) <=
+                DANGER_ZONE_RADIUS_KM,
         );
         return nearby.length >= DANGER_ZONE_MIN_HERDS;
     }, [livestock, userLocation]);

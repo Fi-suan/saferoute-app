@@ -53,8 +53,12 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
     useEffect(() => {
         let cancelled = false;
         const load = tab === 'all' ? refreshFeed() : refreshActive();
-        load.finally(() => { if (!cancelled) setLoading(false); });
-        return () => { cancelled = true; };
+        load.finally(() => {
+            if (!cancelled) setLoading(false);
+        });
+        return () => {
+            cancelled = true;
+        };
     }, [tab]);
 
     const refresh = useCallback(async () => {
@@ -64,9 +68,10 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
     }, [tab]);
 
     const incidents = useMemo(
-        () => (tab === 'active'
-            ? [...pending, ...active.filter((i) => i.is_active)]
-            : [...pending, ...feed]),
+        () =>
+            tab === 'active'
+                ? [...pending, ...active.filter((i) => i.is_active)]
+                : [...pending, ...feed],
         [tab, pending, active, feed],
     );
 

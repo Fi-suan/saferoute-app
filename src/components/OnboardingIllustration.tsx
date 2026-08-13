@@ -5,10 +5,7 @@
  * Renders using react-native-svg (already installed).
  */
 import React from 'react';
-import Svg, {
-    Circle, Line, Path,
-    Defs, LinearGradient, Stop,
-} from 'react-native-svg';
+import Svg, { Circle, Line, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Colors } from '../constants/colors';
 
 interface Props {
@@ -17,7 +14,11 @@ interface Props {
     color?: string;
 }
 
-export default function OnboardingIllustration({ type, size = 100, color = Colors.brand.primary }: Props) {
+export default function OnboardingIllustration({
+    type,
+    size = 100,
+    color = Colors.brand.primary,
+}: Props) {
     const s = size;
     const sw = size * 0.025; // stroke width
 
@@ -78,8 +79,26 @@ export default function OnboardingIllustration({ type, size = 100, color = Color
                     {/* Center dot */}
                     <Circle cx={50} cy={38} r={4} fill={color} />
                     {/* Radius rings */}
-                    <Circle cx={50} cy={38} r={22} fill="none" stroke={color} strokeWidth={sw * 0.5} opacity={0.25} strokeDasharray="3 4" />
-                    <Circle cx={50} cy={38} r={32} fill="none" stroke={color} strokeWidth={sw * 0.5} opacity={0.15} strokeDasharray="3 5" />
+                    <Circle
+                        cx={50}
+                        cy={38}
+                        r={22}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={sw * 0.5}
+                        opacity={0.25}
+                        strokeDasharray="3 4"
+                    />
+                    <Circle
+                        cx={50}
+                        cy={38}
+                        r={32}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={sw * 0.5}
+                        opacity={0.15}
+                        strokeDasharray="3 5"
+                    />
                 </Svg>
             );
 
@@ -103,10 +122,26 @@ export default function OnboardingIllustration({ type, size = 100, color = Color
                         strokeLinecap="round"
                     />
                     {/* Stem at top */}
-                    <Line x1={50} y1={8} x2={50} y2={14} stroke={color} strokeWidth={sw * 1.5} strokeLinecap="round" />
+                    <Line
+                        x1={50}
+                        y1={8}
+                        x2={50}
+                        y2={14}
+                        stroke={color}
+                        strokeWidth={sw * 1.5}
+                        strokeLinecap="round"
+                    />
                     {/* Alert dot */}
                     <Circle cx={72} cy={26} r={7} fill={Colors.alert.critical} />
-                    <Line x1={72} y1={23} x2={72} y2={28} stroke="white" strokeWidth={2.5} strokeLinecap="round" />
+                    <Line
+                        x1={72}
+                        y1={23}
+                        x2={72}
+                        y2={28}
+                        stroke="white"
+                        strokeWidth={2.5}
+                        strokeLinecap="round"
+                    />
                     <Circle cx={72} cy={31} r={1.5} fill="white" />
                 </Svg>
             );
@@ -116,24 +151,98 @@ export default function OnboardingIllustration({ type, size = 100, color = Color
                 <Svg width={s} height={s} viewBox="0 0 100 100">
                     {/* Three connected nodes */}
                     {/* Center node */}
-                    <Circle cx={50} cy={50} r={9} fill={color + '20'} stroke={color} strokeWidth={sw * 1.2} />
+                    <Circle
+                        cx={50}
+                        cy={50}
+                        r={9}
+                        fill={color + '20'}
+                        stroke={color}
+                        strokeWidth={sw * 1.2}
+                    />
                     <Circle cx={50} cy={50} r={3} fill={color} />
                     {/* Top-left node */}
-                    <Circle cx={22} cy={28} r={7} fill={color + '15'} stroke={color} strokeWidth={sw} opacity={0.7} />
+                    <Circle
+                        cx={22}
+                        cy={28}
+                        r={7}
+                        fill={color + '15'}
+                        stroke={color}
+                        strokeWidth={sw}
+                        opacity={0.7}
+                    />
                     <Circle cx={22} cy={28} r={2.5} fill={color} opacity={0.7} />
                     {/* Top-right node */}
-                    <Circle cx={78} cy={28} r={7} fill={color + '15'} stroke={color} strokeWidth={sw} opacity={0.7} />
+                    <Circle
+                        cx={78}
+                        cy={28}
+                        r={7}
+                        fill={color + '15'}
+                        stroke={color}
+                        strokeWidth={sw}
+                        opacity={0.7}
+                    />
                     <Circle cx={78} cy={28} r={2.5} fill={color} opacity={0.7} />
                     {/* Bottom node */}
-                    <Circle cx={50} cy={78} r={7} fill={color + '15'} stroke={color} strokeWidth={sw} opacity={0.7} />
+                    <Circle
+                        cx={50}
+                        cy={78}
+                        r={7}
+                        fill={color + '15'}
+                        stroke={color}
+                        strokeWidth={sw}
+                        opacity={0.7}
+                    />
                     <Circle cx={50} cy={78} r={2.5} fill={color} opacity={0.7} />
                     {/* Connecting lines */}
-                    <Line x1={50} y1={41} x2={28} y2={33} stroke={color} strokeWidth={sw * 0.8} strokeLinecap="round" opacity={0.4} />
-                    <Line x1={50} y1={41} x2={72} y2={33} stroke={color} strokeWidth={sw * 0.8} strokeLinecap="round" opacity={0.4} />
-                    <Line x1={50} y1={59} x2={50} y2={71} stroke={color} strokeWidth={sw * 0.8} strokeLinecap="round" opacity={0.4} />
+                    <Line
+                        x1={50}
+                        y1={41}
+                        x2={28}
+                        y2={33}
+                        stroke={color}
+                        strokeWidth={sw * 0.8}
+                        strokeLinecap="round"
+                        opacity={0.4}
+                    />
+                    <Line
+                        x1={50}
+                        y1={41}
+                        x2={72}
+                        y2={33}
+                        stroke={color}
+                        strokeWidth={sw * 0.8}
+                        strokeLinecap="round"
+                        opacity={0.4}
+                    />
+                    <Line
+                        x1={50}
+                        y1={59}
+                        x2={50}
+                        y2={71}
+                        stroke={color}
+                        strokeWidth={sw * 0.8}
+                        strokeLinecap="round"
+                        opacity={0.4}
+                    />
                     {/* Pulse rings on center */}
-                    <Circle cx={50} cy={50} r={18} fill="none" stroke={color} strokeWidth={sw * 0.4} opacity={0.2} />
-                    <Circle cx={50} cy={50} r={28} fill="none" stroke={color} strokeWidth={sw * 0.3} opacity={0.1} />
+                    <Circle
+                        cx={50}
+                        cy={50}
+                        r={18}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={sw * 0.4}
+                        opacity={0.2}
+                    />
+                    <Circle
+                        cx={50}
+                        cy={50}
+                        r={28}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={sw * 0.3}
+                        opacity={0.1}
+                    />
                 </Svg>
             );
 
@@ -141,7 +250,14 @@ export default function OnboardingIllustration({ type, size = 100, color = Color
             return (
                 <Svg width={s} height={s} viewBox="0 0 100 100">
                     {/* Head */}
-                    <Circle cx={50} cy={36} r={18} fill="none" stroke={color} strokeWidth={sw * 1.5} />
+                    <Circle
+                        cx={50}
+                        cy={36}
+                        r={18}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth={sw * 1.5}
+                    />
                     {/* Body / shoulders */}
                     <Path
                         d="M16 88 C16 68 30 58 50 58 C70 58 84 68 84 88"
@@ -151,7 +267,14 @@ export default function OnboardingIllustration({ type, size = 100, color = Color
                         strokeLinecap="round"
                     />
                     {/* Tick / verify badge */}
-                    <Circle cx={72} cy={28} r={10} fill={Colors.bg.secondary} stroke={color} strokeWidth={sw * 1.2} />
+                    <Circle
+                        cx={72}
+                        cy={28}
+                        r={10}
+                        fill={Colors.bg.secondary}
+                        stroke={color}
+                        strokeWidth={sw * 1.2}
+                    />
                     <Path
                         d="M67 28 L70 31 L77 24"
                         fill="none"

@@ -56,8 +56,8 @@ export default function ProximityBanner({ incident, onDismiss, onViewDetail }: P
                     {incident.incident_type === 'crash'
                         ? 'ЖКО'
                         : incident.incident_type === 'animal'
-                            ? 'Жануарлар жолда'
-                            : 'Қауіпті аймақ'}
+                          ? 'Жануарлар жолда'
+                          : 'Қауіпті аймақ'}
                     {incident.description ? ` — ${incident.description}` : ''}
                 </Text>
             </View>
@@ -91,7 +91,9 @@ const styles = StyleSheet.create({
     },
     accentBar: {
         position: 'absolute',
-        left: 0, top: 0, bottom: 0,
+        left: 0,
+        top: 0,
+        bottom: 0,
         width: 4,
         borderTopLeftRadius: Radius.lg,
         borderBottomLeftRadius: Radius.lg,
@@ -99,9 +101,11 @@ const styles = StyleSheet.create({
     title: { fontSize: 14, fontWeight: '700', color: Colors.alert.critical },
     desc: { fontSize: 12, color: Colors.text.secondary, marginTop: 2 },
     detailBtn: {
-        paddingHorizontal: 10, paddingVertical: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
         backgroundColor: Colors.brand.glow,
-        borderRadius: Radius.md, marginRight: 6,
+        borderRadius: Radius.md,
+        marginRight: 6,
     },
     detailBtnText: { fontSize: 11, fontWeight: '700', color: Colors.brand.primary },
     closeBtn: { padding: 2 },

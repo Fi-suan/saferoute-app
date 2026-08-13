@@ -21,13 +21,36 @@ interface Props {
     onToggleRoute: () => void;
 }
 
-const STATUS_STYLE: Record<RoadStatus, { color: string; bg: string; icon: string; key: 'road_open' | 'road_caution' | 'road_closed' }> = {
-    open:    { color: Colors.brand.primary,   bg: Colors.brand.primary   + '20', icon: 'checkmark-circle', key: 'road_open' },
-    caution: { color: Colors.alert.high,      bg: Colors.alert.high      + '20', icon: 'warning',          key: 'road_caution' },
-    closed:  { color: Colors.alert.critical,  bg: Colors.alert.critical  + '20', icon: 'close-circle',     key: 'road_closed' },
+const STATUS_STYLE: Record<
+    RoadStatus,
+    { color: string; bg: string; icon: string; key: 'road_open' | 'road_caution' | 'road_closed' }
+> = {
+    open: {
+        color: Colors.brand.primary,
+        bg: Colors.brand.primary + '20',
+        icon: 'checkmark-circle',
+        key: 'road_open',
+    },
+    caution: {
+        color: Colors.alert.high,
+        bg: Colors.alert.high + '20',
+        icon: 'warning',
+        key: 'road_caution',
+    },
+    closed: {
+        color: Colors.alert.critical,
+        bg: Colors.alert.critical + '20',
+        icon: 'close-circle',
+        key: 'road_closed',
+    },
 };
 
-export default function RoadStatusBadge({ status, routeName = 'A-17', isRouteMode, onToggleRoute }: Props) {
+export default function RoadStatusBadge({
+    status,
+    routeName = 'A-17',
+    isRouteMode,
+    onToggleRoute,
+}: Props) {
     const t = useT();
     const cfg = STATUS_STYLE[status];
 
@@ -61,18 +84,25 @@ export default function RoadStatusBadge({ status, routeName = 'A-17', isRouteMod
 const styles = StyleSheet.create({
     wrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     routeBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
-        paddingHorizontal: 10, paddingVertical: 5,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
         borderRadius: Radius.full,
         backgroundColor: Colors.bg.secondary,
-        borderWidth: 1, borderColor: Colors.border,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     routeBtnActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
     routeBtnText: { fontSize: 12, fontWeight: '700', color: Colors.text.secondary },
     routeBtnTextActive: { color: Colors.bg.primary },
     badge: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
-        paddingHorizontal: 10, paddingVertical: 5,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
         borderRadius: Radius.full,
     },
     badgeText: { fontSize: 12, fontWeight: '700' },

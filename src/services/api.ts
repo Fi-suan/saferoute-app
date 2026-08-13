@@ -70,17 +70,17 @@ export interface GeoZone {
 }
 
 // ── Herds ──────────────────────────────────────────────────────────────────────
-export const getHerds = () => api.get<Herd[]>('/herds').then(r => r.data);
+export const getHerds = () => api.get<Herd[]>('/herds').then((r) => r.data);
 export const getHerdTrack = (id: number, limit = 50) =>
-    api.get<HerdLocation[]>(`/herds/${id}/track?limit=${limit}`).then(r => r.data);
+    api.get<HerdLocation[]>(`/herds/${id}/track?limit=${limit}`).then((r) => r.data);
 
 // ── Alerts ─────────────────────────────────────────────────────────────────────
-export const getActiveAlerts = () => api.get<Alert[]>('/alerts/active').then(r => r.data);
+export const getActiveAlerts = () => api.get<Alert[]>('/alerts/active').then((r) => r.data);
 export const getAlertHistory = (limit = 50) =>
-    api.get<Alert[]>(`/alerts/history?limit=${limit}`).then(r => r.data);
+    api.get<Alert[]>(`/alerts/history?limit=${limit}`).then((r) => r.data);
 
 // ── GeoZones ───────────────────────────────────────────────────────────────────
-export const getGeozonesGeoJSON = () => api.get('/geozones/geojson').then(r => r.data);
+export const getGeozonesGeoJSON = () => api.get('/geozones/geojson').then((r) => r.data);
 
 // ── Devices ────────────────────────────────────────────────────────────────────
 export const registerDevice = (data: {
@@ -90,13 +90,13 @@ export const registerDevice = (data: {
     phone_number?: string;
     latitude?: number;
     longitude?: number;
-}) => api.post('/auth/register', data).then(r => r.data);
+}) => api.post('/auth/register', data).then((r) => r.data);
 
 export const updateDeviceLocation = (device_id: string, latitude: number, longitude: number) =>
-    api.post('/devices/location', { device_id, latitude, longitude }).then(r => r.data);
+    api.post('/devices/location', { device_id, latitude, longitude }).then((r) => r.data);
 
 // ── User Data Deletion (GDPR) ─────────────────────────────────────────────────
 export const deleteUserData = (device_id: string) =>
-    api.delete(`/devices/${device_id}/data`).then(r => r.data);
+    api.delete(`/devices/${device_id}/data`).then((r) => r.data);
 
 export default api;

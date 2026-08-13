@@ -20,8 +20,8 @@ export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: numb
     const a =
         Math.sin(dLat / 2) ** 2 +
         Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) ** 2;
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) ** 2;
     return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -36,14 +36,17 @@ export function haversineM(lat1: number, lon1: number, lat2: number, lon2: numbe
  * на масштабах дороги погрешность заметно меньше процента.
  */
 function pointToSegmentKm(
-    pLat: number, pLon: number,
-    aLat: number, aLon: number,
-    bLat: number, bLon: number,
+    pLat: number,
+    pLon: number,
+    aLat: number,
+    aLon: number,
+    bLat: number,
+    bLon: number,
 ): number {
     const cosLat = Math.cos((pLat * Math.PI) / 180);
     const toXY = (lat: number, lon: number): [number, number] => [
-        ((lon - pLon) * Math.PI / 180) * cosLat * EARTH_RADIUS_KM,
-        ((lat - pLat) * Math.PI / 180) * EARTH_RADIUS_KM,
+        (((lon - pLon) * Math.PI) / 180) * cosLat * EARTH_RADIUS_KM,
+        (((lat - pLat) * Math.PI) / 180) * EARTH_RADIUS_KM,
     ];
 
     const [ax, ay] = toXY(aLat, aLon);
@@ -74,7 +77,14 @@ export function distanceToPolylineKm(lat: number, lon: number, polyline: LatLonP
         if (d < best) best = d;
     }
     for (let i = 0; i < polyline.length - 1; i += 1) {
-        const d = pointToSegmentKm(lat, lon, polyline[i][0], polyline[i][1], polyline[i + 1][0], polyline[i + 1][1]);
+        const d = pointToSegmentKm(
+            lat,
+            lon,
+            polyline[i][0],
+            polyline[i][1],
+            polyline[i + 1][0],
+            polyline[i + 1][1],
+        );
         if (d < best) best = d;
     }
     return best;

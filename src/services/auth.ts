@@ -12,7 +12,9 @@ const TOKEN_KEY = 'saferoute:auth:token';
 export async function storeAuthToken(token: string): Promise<void> {
     try {
         await SecureStore.setItemAsync(TOKEN_KEY, token);
-    } catch { /* SecureStore unavailable */ }
+    } catch {
+        /* SecureStore unavailable */
+    }
 }
 
 /** Get stored auth token for API requests */
@@ -28,5 +30,7 @@ export async function getAuthToken(): Promise<string | null> {
 export async function backendLogout(): Promise<void> {
     try {
         await SecureStore.deleteItemAsync(TOKEN_KEY);
-    } catch { /* ignore */ }
+    } catch {
+        /* ignore */
+    }
 }

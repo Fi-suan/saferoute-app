@@ -98,13 +98,17 @@ async function loadQueue(): Promise<QueuedReport[]> {
     try {
         const raw = await AsyncStorage.getItem(STORAGE.REPORT_QUEUE);
         return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
+    } catch {
+        return [];
+    }
 }
 
 async function saveQueue(queue: QueuedReport[]): Promise<void> {
     try {
         await AsyncStorage.setItem(STORAGE.REPORT_QUEUE, JSON.stringify(queue));
-    } catch { /* ignore */ }
+    } catch {
+        /* ignore */
+    }
 }
 
 function toPayload(r: SubmitReportParams, photoBase64?: string): Record<string, unknown> {
@@ -155,7 +159,10 @@ async function flushQueue(): Promise<void> {
                     failed.push(report);
                 } else {
                     // Сервер отверг репорт — держать его в очереди бессмысленно.
-                    console.warn('[incidents] репорт отклонён сервером, убран из очереди:', describeError(err));
+                    console.warn(
+                        '[incidents] репорт отклонён сервером, убран из очереди:',
+                        describeError(err),
+                    );
                     settled.push(report.localId);
                 }
             }
@@ -230,7 +237,9 @@ export function acquireActivePolling(): () => void {
     _pollSubscribers += 1;
     if (_pollSubscribers === 1) {
         refreshActive();
-        _pollTimer = setInterval(() => { refreshActive(); }, Config.INCIDENTS_POLL_INTERVAL_MS);
+        _pollTimer = setInterval(() => {
+            refreshActive();
+        }, Config.INCIDENTS_POLL_INTERVAL_MS);
     }
     return () => {
         _pollSubscribers = Math.max(0, _pollSubscribers - 1);
@@ -270,7 +279,9 @@ export async function submitReport(params: SubmitReportParams): Promise<SubmitRe
     set((s) => ({ pending: [optimistic, ...s.pending] }));
 
     try {
-        const res = await api.post<Incident>('/incidents/report', toPayload(params), { timeout: 8000 });
+        const res = await api.post<Incident>('/incidents/report', toPayload(params), {
+            timeout: 8000,
+        });
         set((s) => ({
             pending: s.pending.filter((p) => p.id !== localId),
             active: [res.data, ...s.active.filter((i) => i.id !== res.data.id)],
@@ -330,10 +341,14 @@ export async function confirmIncident(id: number, isResolved: boolean): Promise<
             { timeout: 4000 },
         );
         await refreshActive();
-    } catch { /* стор уже обновлён оптимистично */ }
+    } catch {
+        /* стор уже обновлён оптимистично */
+    }
 }
 
 // Счётчик неотправленных репортов виден сразу после запуска.
 loadQueue()
     .then((q) => set({ pendingReportsCount: q.length }))
-    .catch(() => { /* ignore */ });
+    .catch(() => {
+        /* ignore */
+    });

@@ -35,7 +35,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
     componentDidCatch(error: Error, info: React.ErrorInfo): void {
         // Console для разработки, hook для прод-логгера
-         
+
         console.error('[ErrorBoundary]', error, info.componentStack);
         this.props.onError?.(error, info);
     }
@@ -51,9 +51,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
                     <Ionicons name="warning" size={32} color={Colors.alert.critical} />
                 </View>
                 <Text style={styles.title}>{this.props.title ?? 'Қате орын алды'}</Text>
-                <Text style={styles.message}>
-                    {this.state.error.message || 'Белгісіз қате'}
-                </Text>
+                <Text style={styles.message}>{this.state.error.message || 'Белгісіз қате'}</Text>
                 <TouchableOpacity style={styles.button} onPress={this.reset}>
                     <Ionicons name="refresh" size={18} color={Colors.bg.primary} />
                     <Text style={styles.buttonText}>{this.props.retryLabel ?? 'Қайталау'}</Text>

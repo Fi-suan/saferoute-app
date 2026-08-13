@@ -11,11 +11,11 @@ const KEY = 'saferoute:notification:log';
 const MAX = 50;
 
 export interface NotifEntry {
-    id: string;          // uuid-like: timestamp + incidentId
+    id: string; // uuid-like: timestamp + incidentId
     title: string;
     body: string;
     incidentId: number;
-    timestamp: number;   // Date.now()
+    timestamp: number; // Date.now()
     read: boolean;
 }
 
@@ -31,9 +31,13 @@ export function useNotificationLog(): UseNotificationLogReturn {
     const [log, setLog] = useState<NotifEntry[]>([]);
 
     useEffect(() => {
-        AsyncStorage.getItem(KEY).then(raw => {
+        AsyncStorage.getItem(KEY).then((raw) => {
             if (raw) {
-                try { setLog(JSON.parse(raw)); } catch { /* ignore */ }
+                try {
+                    setLog(JSON.parse(raw));
+                } catch {
+                    /* ignore */
+                }
             }
         });
     }, []);
@@ -53,7 +57,7 @@ export function useNotificationLog(): UseNotificationLogReturn {
         // Compute next state based on the latest log via functional update,
         // then persist outside the reducer so the write happens exactly once.
         let next: NotifEntry[] = [];
-        setLog(prev => {
+        setLog((prev) => {
             next = [entry, ...prev].slice(0, MAX);
             return next;
         });
@@ -65,7 +69,7 @@ export function useNotificationLog(): UseNotificationLogReturn {
     }, []);
 
     const markAllRead = useCallback(async () => {
-        const updated = log.map(e => ({ ...e, read: true }));
+        const updated = log.map((e) => ({ ...e, read: true }));
         await persist(updated);
     }, [log, persist]);
 
@@ -73,7 +77,7 @@ export function useNotificationLog(): UseNotificationLogReturn {
         await persist([]);
     }, [persist]);
 
-    const unreadCount = log.filter(e => !e.read).length;
+    const unreadCount = log.filter((e) => !e.read).length;
 
     return { log, addEntry, markAllRead, clearLog, unreadCount };
 }

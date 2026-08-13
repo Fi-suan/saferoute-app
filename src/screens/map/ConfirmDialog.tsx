@@ -17,7 +17,12 @@ interface ConfirmDialogProps {
     onClose: () => void;
 }
 
-export default function ConfirmDialog({ incident, onConfirm, onViewDetail, onClose }: ConfirmDialogProps) {
+export default function ConfirmDialog({
+    incident,
+    onConfirm,
+    onViewDetail,
+    onClose,
+}: ConfirmDialogProps) {
     const t = useT();
 
     return (
@@ -26,7 +31,8 @@ export default function ConfirmDialog({ incident, onConfirm, onViewDetail, onClo
                 <View style={styles.card}>
                     <LottieView
                         source={require('../../assets/lottie/confirm_question.json')}
-                        autoPlay loop
+                        autoPlay
+                        loop
                         style={{ width: 90, height: 90 }}
                     />
                     <Text style={styles.title}>{t('confirm_title')}</Text>
@@ -49,7 +55,9 @@ export default function ConfirmDialog({ incident, onConfirm, onViewDetail, onClo
                             onPress={() => onConfirm(false)}
                         >
                             <Ionicons name="close" size={18} color={Colors.white} />
-                            <Text style={[styles.btnText, { color: Colors.white }]}>{t('confirm_no')}</Text>
+                            <Text style={[styles.btnText, { color: Colors.white }]}>
+                                {t('confirm_no')}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                     <TouchableOpacity style={styles.detail} onPress={onViewDetail}>
@@ -62,19 +70,38 @@ export default function ConfirmDialog({ incident, onConfirm, onViewDetail, onClo
 }
 
 const styles = StyleSheet.create({
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center' },
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     card: {
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.xl,
-        padding: Spacing.xl, alignItems: 'center', width: 320,
-        borderWidth: 1, borderColor: Colors.border,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.xl,
+        padding: Spacing.xl,
+        alignItems: 'center',
+        width: 320,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     title: { fontSize: 20, fontWeight: '700', color: Colors.text.primary, marginTop: 12 },
     desc: { fontSize: 14, color: Colors.text.secondary, textAlign: 'center', marginTop: 8 },
-    incidentType: { fontSize: 13, color: Colors.text.muted, marginTop: 4, marginBottom: Spacing.lg },
+    incidentType: {
+        fontSize: 13,
+        color: Colors.text.muted,
+        marginTop: 4,
+        marginBottom: Spacing.lg,
+    },
     buttons: { flexDirection: 'row', gap: 12, width: '100%' },
     btn: {
-        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        gap: 6, paddingVertical: 14, borderRadius: Radius.lg,
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 14,
+        borderRadius: Radius.lg,
     },
     btnText: { fontSize: 15, fontWeight: '700', color: Colors.bg.primary },
     detail: { marginTop: Spacing.sm },

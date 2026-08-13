@@ -15,8 +15,14 @@
  */
 import React from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Linking, Image, Share,
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    Linking,
+    Image,
+    Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,7 +52,9 @@ const EMERGENCY_CONTACTS = [
 export default function IncidentDetailScreen() {
     const navigation = useNavigation<NavProp>();
     const route = useNavRoute();
-    const { incident } = (route.params as { incident: RootStackParamList['IncidentDetail']['incident'] });
+    const { incident } = route.params as {
+        incident: RootStackParamList['IncidentDetail']['incident'];
+    };
     const { showDialog, DialogComponent } = useAppDialog();
 
     const meta = getIncidentMeta(incident.incident_type);
@@ -83,7 +91,7 @@ export default function IncidentDetailScreen() {
             <View style={styles.navBar}>
                 <TouchableOpacity
                     style={styles.backBtn}
-                    onPress={() => navigation.canGoBack() ? navigation.goBack() : null}
+                    onPress={() => (navigation.canGoBack() ? navigation.goBack() : null)}
                 >
                     <Ionicons name="arrow-back" size={20} color={Colors.text.primary} />
                 </TouchableOpacity>
@@ -109,12 +117,19 @@ export default function IncidentDetailScreen() {
 
                 {/* Hero */}
                 <View style={styles.hero}>
-                    <View style={[styles.heroIcon, { backgroundColor: meta.color + '20', borderColor: meta.color + '40' }]}>
+                    <View
+                        style={[
+                            styles.heroIcon,
+                            { backgroundColor: meta.color + '20', borderColor: meta.color + '40' },
+                        ]}
+                    >
                         <Ionicons name={meta.icon as any} size={40} color={meta.color} />
                     </View>
                     <View style={styles.heroInfo}>
                         <Text style={styles.heroType}>{meta.label}</Text>
-                        <View style={[styles.severityBadge, { backgroundColor: sevCfg.color + '20' }]}>
+                        <View
+                            style={[styles.severityBadge, { backgroundColor: sevCfg.color + '20' }]}
+                        >
                             <View style={[styles.severityDot, { backgroundColor: sevCfg.color }]} />
                             <Text style={[styles.severityText, { color: sevCfg.color }]}>
                                 {sevCfg.label}
@@ -122,7 +137,10 @@ export default function IncidentDetailScreen() {
                         </View>
                         <Text style={styles.heroDate}>
                             {new Date(incident.created_at).toLocaleString('kk-KZ', {
-                                day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+                                day: 'numeric',
+                                month: 'long',
+                                hour: '2-digit',
+                                minute: '2-digit',
                             })}
                         </Text>
                     </View>
@@ -163,9 +181,20 @@ export default function IncidentDetailScreen() {
                             <Ionicons
                                 name={incident.ai_verified ? 'checkmark-circle' : 'time'}
                                 size={18}
-                                color={incident.ai_verified ? Colors.brand.primary : Colors.text.muted}
+                                color={
+                                    incident.ai_verified ? Colors.brand.primary : Colors.text.muted
+                                }
                             />
-                            <Text style={[styles.aiBannerStatus, { color: incident.ai_verified ? Colors.brand.primary : Colors.text.muted }]}>
+                            <Text
+                                style={[
+                                    styles.aiBannerStatus,
+                                    {
+                                        color: incident.ai_verified
+                                            ? Colors.brand.primary
+                                            : Colors.text.muted,
+                                    },
+                                ]}
+                            >
                                 {incident.ai_verified ? 'Расталды' : 'Тексеруде...'}
                             </Text>
                             {incident.ai_confidence !== undefined && (
@@ -177,23 +206,34 @@ export default function IncidentDetailScreen() {
                         {/* 🎨 ANIMATION_SLOT: ai_confidence_bar — анимированный прогресс */}
                         {incident.ai_confidence !== undefined && (
                             <View style={styles.aiBar}>
-                                <View style={[styles.aiBarFill, { width: `${incident.ai_confidence * 100}%` as any }]} />
+                                <View
+                                    style={[
+                                        styles.aiBarFill,
+                                        { width: `${incident.ai_confidence * 100}%` as any },
+                                    ]}
+                                />
                             </View>
                         )}
                         {incident.ai_analysis && (
                             <Text style={styles.aiAnalysisText}>{incident.ai_analysis}</Text>
                         )}
-                        {incident.ai_severity_suggestion !== undefined && incident.ai_severity_suggestion !== incident.severity && (
-                            <View style={styles.aiSeverityRow}>
-                                <Ionicons name="analytics" size={14} color={Colors.text.secondary} />
-                                <Text style={styles.aiSeverityText}>
-                                    AI қауiптiлiк бағасы: {incident.ai_severity_suggestion}/5
-                                </Text>
-                            </View>
-                        )}
+                        {incident.ai_severity_suggestion !== undefined &&
+                            incident.ai_severity_suggestion !== incident.severity && (
+                                <View style={styles.aiSeverityRow}>
+                                    <Ionicons
+                                        name="analytics"
+                                        size={14}
+                                        color={Colors.text.secondary}
+                                    />
+                                    <Text style={styles.aiSeverityText}>
+                                        AI қауiптiлiк бағасы: {incident.ai_severity_suggestion}/5
+                                    </Text>
+                                </View>
+                            )}
                         {!incident.ai_verified && !incident.ai_analysis && (
                             <Text style={styles.aiAnalysisText}>
-                                AI сараптамасы кезегiнде. Қауымдастық растауы болғаннан кейiн жарияланады.
+                                AI сараптамасы кезегiнде. Қауымдастық растауы болғаннан кейiн
+                                жарияланады.
                             </Text>
                         )}
                     </View>
@@ -209,13 +249,24 @@ export default function IncidentDetailScreen() {
                     <View style={styles.statCard}>
                         <Ionicons name="time" size={20} color={Colors.alert.high} />
                         <Text style={styles.statValue}>
-                            {Math.round((Date.now() - new Date(incident.created_at).getTime()) / 60000)} мин
+                            {Math.round(
+                                (Date.now() - new Date(incident.created_at).getTime()) / 60000,
+                            )}{' '}
+                            мин
                         </Text>
                         <Text style={styles.statLabel}>Бұрын</Text>
                     </View>
                     <View style={styles.statCard}>
-                        <Ionicons name="shield" size={20} color={incident.is_active ? Colors.alert.critical : Colors.brand.primary} />
-                        <Text style={styles.statValue}>{incident.is_active ? 'Белсенді' : 'Шешілді'}</Text>
+                        <Ionicons
+                            name="shield"
+                            size={20}
+                            color={
+                                incident.is_active ? Colors.alert.critical : Colors.brand.primary
+                            }
+                        />
+                        <Text style={styles.statValue}>
+                            {incident.is_active ? 'Белсенді' : 'Шешілді'}
+                        </Text>
                         <Text style={styles.statLabel}>Күй</Text>
                     </View>
                 </View>
@@ -228,7 +279,11 @@ export default function IncidentDetailScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.actionBtn}
-                        onPress={() => Linking.openURL(`https://maps.google.com/?q=${incident.latitude},${incident.longitude}`)}
+                        onPress={() =>
+                            Linking.openURL(
+                                `https://maps.google.com/?q=${incident.latitude},${incident.longitude}`,
+                            )
+                        }
                     >
                         <Ionicons name="map" size={18} color={Colors.brand.primary} />
                         <Text style={styles.actionBtnText}>Картада</Text>
@@ -245,14 +300,26 @@ export default function IncidentDetailScreen() {
                                 style={[styles.emergencyBtn, { borderColor: c.color + '40' }]}
                                 onPress={() => Linking.openURL(`tel:${c.number}`)}
                             >
-                                <View style={[styles.emergencyIcon, { backgroundColor: c.color + '20' }]}>
+                                <View
+                                    style={[
+                                        styles.emergencyIcon,
+                                        { backgroundColor: c.color + '20' },
+                                    ]}
+                                >
                                     <Ionicons name={c.icon as any} size={18} color={c.color} />
                                 </View>
                                 <View>
                                     <Text style={styles.emergencyLabel}>{c.label}</Text>
-                                    <Text style={[styles.emergencyNumber, { color: c.color }]}>{c.number}</Text>
+                                    <Text style={[styles.emergencyNumber, { color: c.color }]}>
+                                        {c.number}
+                                    </Text>
                                 </View>
-                                <Ionicons name="call-outline" size={16} color={c.color} style={{ marginLeft: 'auto' }} />
+                                <Ionicons
+                                    name="call-outline"
+                                    size={16}
+                                    color={c.color}
+                                    style={{ marginLeft: 'auto' }}
+                                />
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -268,125 +335,204 @@ export default function IncidentDetailScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.bg.primary },
     navBar: {
-        flexDirection: 'row', alignItems: 'center',
-        paddingHorizontal: Spacing.md, paddingVertical: 12,
-        borderBottomWidth: 1, borderBottomColor: Colors.border,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.md,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
     },
     backBtn: {
-        width: 36, height: 36, borderRadius: Radius.full,
-        alignItems: 'center', justifyContent: 'center',
-        backgroundColor: Colors.bg.secondary, marginRight: Spacing.sm,
-        borderWidth: 1, borderColor: Colors.border,
+        width: 36,
+        height: 36,
+        borderRadius: Radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.bg.secondary,
+        marginRight: Spacing.sm,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     shareBtn: {
-        width: 36, height: 36, borderRadius: Radius.full,
-        alignItems: 'center', justifyContent: 'center',
-        backgroundColor: Colors.brand.glow, marginLeft: 'auto',
+        width: 36,
+        height: 36,
+        borderRadius: Radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.brand.glow,
+        marginLeft: 'auto',
     },
     navTitle: { fontSize: 17, fontWeight: '700', color: Colors.text.primary, flex: 1 },
     scroll: { padding: Spacing.md },
 
     // Фича 1: Фото
     photo: {
-        width: '100%', height: 220,
-        borderRadius: Radius.lg, marginBottom: 4,
+        width: '100%',
+        height: 220,
+        borderRadius: Radius.lg,
+        marginBottom: 4,
     },
     photoBadge: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        paddingHorizontal: 10, paddingVertical: 4,
-        borderRadius: Radius.full, alignSelf: 'flex-start', marginBottom: Spacing.md,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: Radius.full,
+        alignSelf: 'flex-start',
+        marginBottom: Spacing.md,
     },
     photoBadgeText: { fontSize: 11, color: Colors.white, fontWeight: '600' },
 
     hero: {
-        flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.md,
         backgroundColor: Colors.bg.secondary,
-        borderRadius: Radius.lg, padding: Spacing.md,
-        marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border,
+        borderRadius: Radius.lg,
+        padding: Spacing.md,
+        marginBottom: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
         ...Shadow.card,
     },
     heroIcon: {
-        width: 72, height: 72, borderRadius: Radius.lg,
-        alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+        width: 72,
+        height: 72,
+        borderRadius: Radius.lg,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
     },
     heroInfo: { flex: 1 },
     heroType: { fontSize: 20, fontWeight: '800', color: Colors.text.primary },
     heroDate: { fontSize: 12, color: Colors.text.muted, marginTop: 4 },
     severityBadge: {
-        flexDirection: 'row', alignItems: 'center', gap: 5,
-        paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full,
-        alignSelf: 'flex-start', marginTop: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: Radius.full,
+        alignSelf: 'flex-start',
+        marginTop: 6,
     },
     severityDot: { width: 6, height: 6, borderRadius: 3 },
     severityText: { fontSize: 12, fontWeight: '700' },
 
     section: { marginBottom: Spacing.md },
     sectionLabel: {
-        fontSize: 10, fontWeight: '800', color: Colors.text.muted,
-        letterSpacing: 1.2, marginBottom: 8, textTransform: 'uppercase',
+        fontSize: 10,
+        fontWeight: '800',
+        color: Colors.text.muted,
+        letterSpacing: 1.2,
+        marginBottom: 8,
+        textTransform: 'uppercase',
     },
     descText: {
-        fontSize: 15, color: Colors.text.secondary, lineHeight: 22,
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.md,
-        padding: Spacing.md, borderWidth: 1, borderColor: Colors.border,
+        fontSize: 15,
+        color: Colors.text.secondary,
+        lineHeight: 22,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.md,
+        padding: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
 
     coordRow: {
-        flexDirection: 'row', alignItems: 'center', gap: 8,
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.md,
-        padding: Spacing.md, borderWidth: 1, borderColor: Colors.border,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.md,
+        padding: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     coordText: { flex: 1, fontSize: 14, color: Colors.text.secondary, fontFamily: 'monospace' },
 
     aiBanner: {
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.lg,
-        padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: 8,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.lg,
+        padding: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        gap: 8,
     },
     aiBannerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     aiBannerStatus: { flex: 1, fontSize: 14, fontWeight: '600' },
     aiConfidence: { fontSize: 13, color: Colors.text.muted, fontWeight: '700' },
     aiBar: {
-        height: 4, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden',
+        height: 4,
+        backgroundColor: Colors.border,
+        borderRadius: 2,
+        overflow: 'hidden',
     },
     aiBarFill: {
-        height: '100%', backgroundColor: Colors.brand.primary, borderRadius: 2,
+        height: '100%',
+        backgroundColor: Colors.brand.primary,
+        borderRadius: 2,
     },
     aiAnalysisText: { fontSize: 13, color: Colors.text.muted, lineHeight: 18 },
     aiSeverityRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
     aiSeverityText: { fontSize: 12, color: Colors.text.secondary },
 
     statsRow: {
-        flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md,
+        flexDirection: 'row',
+        gap: Spacing.sm,
+        marginBottom: Spacing.md,
     },
     statCard: {
-        flex: 1, alignItems: 'center', gap: 4,
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.lg,
-        padding: Spacing.md, borderWidth: 1, borderColor: Colors.border,
+        flex: 1,
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.lg,
+        padding: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     statValue: { fontSize: 14, fontWeight: '800', color: Colors.text.primary },
     statLabel: { fontSize: 10, color: Colors.text.muted, textTransform: 'uppercase' },
 
     // Фича 5: Action buttons (Share + Map)
     actionRow: {
-        flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md,
+        flexDirection: 'row',
+        gap: Spacing.sm,
+        marginBottom: Spacing.md,
     },
     actionBtn: {
-        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-        backgroundColor: Colors.brand.glow, borderRadius: Radius.lg,
-        paddingVertical: 14, borderWidth: 1, borderColor: Colors.brand.primary + '40',
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: Colors.brand.glow,
+        borderRadius: Radius.lg,
+        paddingVertical: 14,
+        borderWidth: 1,
+        borderColor: Colors.brand.primary + '40',
     },
     actionBtnText: { fontSize: 14, fontWeight: '700', color: Colors.brand.primary },
 
     emergencyList: { gap: Spacing.sm },
     emergencyBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.lg,
-        padding: Spacing.md, borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.md,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.lg,
+        padding: Spacing.md,
+        borderWidth: 1,
     },
     emergencyIcon: {
-        width: 40, height: 40, borderRadius: Radius.md,
-        alignItems: 'center', justifyContent: 'center',
+        width: 40,
+        height: 40,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     emergencyLabel: { fontSize: 13, color: Colors.text.secondary, fontWeight: '600' },
     emergencyNumber: { fontSize: 18, fontWeight: '800' },

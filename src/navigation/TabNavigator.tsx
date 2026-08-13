@@ -30,7 +30,9 @@ const Tab = createBottomTabNavigator();
 // Wrap each screen so a crash isolates to that tab.
 const withBoundary = (Screen: React.ComponentType<any>) => {
     const Wrapped = (props: any) => (
-        <ErrorBoundary onError={reportError}><Screen {...props} /></ErrorBoundary>
+        <ErrorBoundary onError={reportError}>
+            <Screen {...props} />
+        </ErrorBoundary>
     );
     Wrapped.displayName = `WithBoundary(${Screen.displayName ?? Screen.name ?? 'Screen'})`;
     return Wrapped;

@@ -66,7 +66,9 @@ function scheduleRetry(input: RegistrationInput, attempt: number): void {
                 stopRegistrationRetry();
                 return;
             }
-        } catch { /* бэкенд ещё не поднялся */ }
+        } catch {
+            /* бэкенд ещё не поднялся */
+        }
         scheduleRetry(input, attempt + 1);
     }, delay);
 }
@@ -84,7 +86,9 @@ export async function ensureRegistered(input: RegistrationInput): Promise<boolea
 
     try {
         if (await registerNow(input)) return true;
-    } catch { /* бэкенд недоступен — уходим в ретраи */ }
+    } catch {
+        /* бэкенд недоступен — уходим в ретраи */
+    }
 
     if (!_retryRunning) {
         _retryRunning = true;

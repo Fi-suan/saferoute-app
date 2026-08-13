@@ -56,9 +56,10 @@ export function initSentry(): void {
 export function reportError(error: Error, info?: ErrorInfo): void {
     const Sentry = getSentry();
     if (!Sentry) return;
-    Sentry.Native.captureException(error, info
-        ? { contexts: { react: { componentStack: info.componentStack } } }
-        : undefined);
+    Sentry.Native.captureException(
+        error,
+        info ? { contexts: { react: { componentStack: info.componentStack } } } : undefined,
+    );
 }
 
 export function setUserContext(user: { deviceId: string; role?: string }): void {

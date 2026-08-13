@@ -59,15 +59,23 @@ export default function OwnerPanel({
                             </View>
                             <Text style={styles.subtitle}>{t('owner_active_subtitle')}</Text>
                             <View style={styles.activeCard}>
-                                <Text style={styles.activeEmoji}>{LIVESTOCK_META[selectedType].emoji}</Text>
+                                <Text style={styles.activeEmoji}>
+                                    {LIVESTOCK_META[selectedType].emoji}
+                                </Text>
                                 <View>
-                                    <Text style={styles.activeType}>{livestockLabel(selectedType)}</Text>
-                                    <Text style={styles.activeCount}>{livestockCount} {t('heads_unit')}</Text>
+                                    <Text style={styles.activeType}>
+                                        {livestockLabel(selectedType)}
+                                    </Text>
+                                    <Text style={styles.activeCount}>
+                                        {livestockCount} {t('heads_unit')}
+                                    </Text>
                                 </View>
                             </View>
                             <TouchableOpacity style={styles.deactivateBtn} onPress={onDeactivate}>
                                 <Ionicons name="stop-circle" size={20} color={Colors.white} />
-                                <Text style={styles.deactivateBtnText}>{t('owner_deactivate')}</Text>
+                                <Text style={styles.deactivateBtnText}>
+                                    {t('owner_deactivate')}
+                                </Text>
                             </TouchableOpacity>
                         </>
                     ) : (
@@ -77,14 +85,27 @@ export default function OwnerPanel({
 
                             <Text style={styles.sectionLabel}>{t('owner_type_label')}</Text>
                             <View style={styles.typeGrid}>
-                                {LIVESTOCK_TYPES.map(type => (
+                                {LIVESTOCK_TYPES.map((type) => (
                                     <TouchableOpacity
                                         key={type}
-                                        style={[styles.typeChip, selectedType === type && styles.typeChipActive]}
-                                        onPress={() => { Haptics.selectionAsync(); onSelectType(type); }}
+                                        style={[
+                                            styles.typeChip,
+                                            selectedType === type && styles.typeChipActive,
+                                        ]}
+                                        onPress={() => {
+                                            Haptics.selectionAsync();
+                                            onSelectType(type);
+                                        }}
                                     >
-                                        <Text style={styles.typeChipEmoji}>{LIVESTOCK_META[type].emoji}</Text>
-                                        <Text style={[styles.typeChipLabel, selectedType === type && styles.typeChipLabelActive]}>
+                                        <Text style={styles.typeChipEmoji}>
+                                            {LIVESTOCK_META[type].emoji}
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.typeChipLabel,
+                                                selectedType === type && styles.typeChipLabelActive,
+                                            ]}
+                                        >
                                             {livestockLabel(type)}
                                         </Text>
                                     </TouchableOpacity>
@@ -95,28 +116,39 @@ export default function OwnerPanel({
                             <View style={styles.stepper}>
                                 <TouchableOpacity
                                     style={styles.stepperBtn}
-                                    onPress={() => { Haptics.selectionAsync(); onChangeCount(Math.max(1, livestockCount - 5)); }}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        onChangeCount(Math.max(1, livestockCount - 5));
+                                    }}
                                 >
                                     <Ionicons name="remove" size={20} color={Colors.text.primary} />
                                 </TouchableOpacity>
                                 <Text style={styles.stepperValue}>{livestockCount}</Text>
                                 <TouchableOpacity
                                     style={styles.stepperBtn}
-                                    onPress={() => { Haptics.selectionAsync(); onChangeCount(livestockCount + 5); }}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        onChangeCount(livestockCount + 5);
+                                    }}
                                 >
                                     <Ionicons name="add" size={20} color={Colors.text.primary} />
                                 </TouchableOpacity>
                             </View>
 
                             <TouchableOpacity
-                                style={[styles.activateBtn, !hasLocation && styles.activateBtnDisabled]}
+                                style={[
+                                    styles.activateBtn,
+                                    !hasLocation && styles.activateBtnDisabled,
+                                ]}
                                 onPress={onActivate}
                                 disabled={!hasLocation}
                             >
                                 <Ionicons name="radio" size={20} color={Colors.bg.primary} />
                                 <Text style={styles.activateBtnText}>{t('owner_activate')}</Text>
                             </TouchableOpacity>
-                            {!hasLocation && <Text style={styles.noLocation}>{t('owner_no_gps')}</Text>}
+                            {!hasLocation && (
+                                <Text style={styles.noLocation}>{t('owner_no_gps')}</Text>
+                            )}
                         </>
                     )}
                 </View>
@@ -130,38 +162,81 @@ const styles = StyleSheet.create({
     backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
     panel: {
         backgroundColor: Colors.bg.secondary,
-        borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
-        paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: 40,
-        borderWidth: 1, borderColor: Colors.border,
+        borderTopLeftRadius: Radius.xl,
+        borderTopRightRadius: Radius.xl,
+        paddingHorizontal: Spacing.lg,
+        paddingTop: Spacing.sm,
+        paddingBottom: 40,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     handle: {
-        width: 36, height: 4, borderRadius: 2,
-        backgroundColor: Colors.border, alignSelf: 'center', marginBottom: Spacing.lg,
+        width: 36,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: Colors.border,
+        alignSelf: 'center',
+        marginBottom: Spacing.lg,
     },
     title: { fontSize: 20, fontWeight: '800', color: Colors.text.primary, marginBottom: 6 },
-    subtitle: { fontSize: 13, color: Colors.text.secondary, lineHeight: 18, marginBottom: Spacing.lg },
-    sectionLabel: { fontSize: 12, fontWeight: '700', color: Colors.text.muted, letterSpacing: 0.8, marginBottom: 10, textTransform: 'uppercase' },
+    subtitle: {
+        fontSize: 13,
+        color: Colors.text.secondary,
+        lineHeight: 18,
+        marginBottom: Spacing.lg,
+    },
+    sectionLabel: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.text.muted,
+        letterSpacing: 0.8,
+        marginBottom: 10,
+        textTransform: 'uppercase',
+    },
     typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Spacing.lg },
     typeChip: {
-        alignItems: 'center', paddingVertical: 10, paddingHorizontal: 14,
-        borderRadius: Radius.md, backgroundColor: Colors.bg.tertiary,
-        borderWidth: 1.5, borderColor: Colors.border, minWidth: 70,
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: Radius.md,
+        backgroundColor: Colors.bg.tertiary,
+        borderWidth: 1.5,
+        borderColor: Colors.border,
+        minWidth: 70,
     },
-    typeChipActive: { borderColor: Colors.brand.primary, backgroundColor: Colors.brand.primary + '18' },
+    typeChipActive: {
+        borderColor: Colors.brand.primary,
+        backgroundColor: Colors.brand.primary + '18',
+    },
     typeChipEmoji: { fontSize: 22, marginBottom: 3 },
     typeChipLabel: { fontSize: 11, fontWeight: '600', color: Colors.text.secondary },
     typeChipLabelActive: { color: Colors.brand.primary },
     stepper: {
-        flexDirection: 'row', alignItems: 'center',
-        backgroundColor: Colors.bg.tertiary, borderRadius: Radius.md,
-        borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.lg,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.bg.tertiary,
+        borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        marginBottom: Spacing.lg,
         alignSelf: 'flex-start',
     },
     stepperBtn: { paddingHorizontal: 20, paddingVertical: 12 },
-    stepperValue: { fontSize: 22, fontWeight: '800', color: Colors.text.primary, minWidth: 60, textAlign: 'center' },
+    stepperValue: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: Colors.text.primary,
+        minWidth: 60,
+        textAlign: 'center',
+    },
     activateBtn: {
-        backgroundColor: Colors.brand.primary, borderRadius: Radius.lg,
-        paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+        backgroundColor: Colors.brand.primary,
+        borderRadius: Radius.lg,
+        paddingVertical: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
     },
     activateBtnDisabled: { opacity: 0.4 },
     activateBtnText: { fontSize: 16, fontWeight: '700', color: Colors.bg.primary },
@@ -169,17 +244,27 @@ const styles = StyleSheet.create({
     activeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
     activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.brand.primary },
     activeCard: {
-        flexDirection: 'row', alignItems: 'center', gap: 16,
-        backgroundColor: Colors.bg.tertiary, borderRadius: Radius.lg,
-        padding: Spacing.md, marginVertical: Spacing.lg,
-        borderWidth: 1, borderColor: Colors.brand.primary + '40',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+        backgroundColor: Colors.bg.tertiary,
+        borderRadius: Radius.lg,
+        padding: Spacing.md,
+        marginVertical: Spacing.lg,
+        borderWidth: 1,
+        borderColor: Colors.brand.primary + '40',
     },
     activeEmoji: { fontSize: 40 },
     activeType: { fontSize: 16, fontWeight: '700', color: Colors.text.primary },
     activeCount: { fontSize: 13, color: Colors.text.secondary, marginTop: 2 },
     deactivateBtn: {
-        backgroundColor: Colors.alert.critical, borderRadius: Radius.lg,
-        paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+        backgroundColor: Colors.alert.critical,
+        borderRadius: Radius.lg,
+        paddingVertical: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
     },
     deactivateBtnText: { fontSize: 16, fontWeight: '700', color: Colors.white },
 });

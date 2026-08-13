@@ -15,7 +15,9 @@ const _listeners = new Set<Listener>();
 export const AppResetEvent = {
     subscribe: (fn: Listener) => {
         _listeners.add(fn);
-        return () => { _listeners.delete(fn); };
+        return () => {
+            _listeners.delete(fn);
+        };
     },
     trigger: async () => {
         // Гасим фоновые повторы регистрации — иначе после логаута они
@@ -23,13 +25,17 @@ export const AppResetEvent = {
         try {
             const { stopRegistrationRetry } = await import('./registration');
             stopRegistrationRetry();
-        } catch { /* ignore */ }
+        } catch {
+            /* ignore */
+        }
 
         // Clear auth token
         try {
             const { backendLogout } = await import('./auth');
             await backendLogout();
-        } catch { /* ignore */ }
+        } catch {
+            /* ignore */
+        }
 
         // Clear local storage
         await AsyncStorage.multiRemove([
@@ -39,6 +45,6 @@ export const AppResetEvent = {
             STORAGE.ROUTE_MODE,
             STORAGE.REPORT_QUEUE,
         ]);
-        _listeners.forEach(fn => fn());
+        _listeners.forEach((fn) => fn());
     },
 };

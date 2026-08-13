@@ -49,23 +49,29 @@ export function useUserProfile(): UseUserProfileReturn {
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        AsyncStorage.getItem(STORAGE.USER_PROFILE).then(raw => {
+        AsyncStorage.getItem(STORAGE.USER_PROFILE).then((raw) => {
             if (raw) {
-                try { setProfile(JSON.parse(raw)); } catch { /* use default */ }
+                try {
+                    setProfile(JSON.parse(raw));
+                } catch {
+                    /* use default */
+                }
             }
             setLoaded(true);
         });
     }, []);
 
-    const updateProfile = useCallback(async (patch: Partial<UserProfile>) => {
-        // Recompute initials only if the name changed; otherwise keep them.
-        const initials = patch.name !== undefined
-            ? deriveInitials(patch.name)
-            : profile.avatarInitials;
-        const updated = { ...profile, ...patch, avatarInitials: initials };
-        setProfile(updated);
-        await AsyncStorage.setItem(STORAGE.USER_PROFILE, JSON.stringify(updated));
-    }, [profile]);
+    const updateProfile = useCallback(
+        async (patch: Partial<UserProfile>) => {
+            // Recompute initials only if the name changed; otherwise keep them.
+            const initials =
+                patch.name !== undefined ? deriveInitials(patch.name) : profile.avatarInitials;
+            const updated = { ...profile, ...patch, avatarInitials: initials };
+            setProfile(updated);
+            await AsyncStorage.setItem(STORAGE.USER_PROFILE, JSON.stringify(updated));
+        },
+        [profile],
+    );
 
     const incrementReports = useCallback(async () => {
         await updateProfile({ totalReports: profile.totalReports + 1 });

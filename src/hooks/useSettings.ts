@@ -42,30 +42,32 @@ export function useSettings() {
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        loadSettings().then(s => {
+        loadSettings().then((s) => {
             setSettings(s);
             setLoaded(true);
         });
     }, []);
 
-    const update = useCallback(async (patch: Partial<AppSettings>) => {
-        const prev = settings;
-        const next = { ...settings, ...patch };
-        setSettings(next); // optimistic
-        const pairs: [string, string][] = [];
-        if (patch.soundEnabled !== undefined)
-            pairs.push([STORAGE.SOUND_ENABLED, String(patch.soundEnabled)]);
-        if (patch.vibrationEnabled !== undefined)
-            pairs.push([STORAGE.VIBRATION_ENABLED, String(patch.vibrationEnabled)]);
-        if (patch.language !== undefined)
-            pairs.push([STORAGE.LANGUAGE, patch.language]);
-        try {
-            await AsyncStorage.multiSet(pairs);
-        } catch (err) {
-            console.warn('[useSettings] persist failed, reverting:', err);
-            setSettings(prev);
-        }
-    }, [settings]);
+    const update = useCallback(
+        async (patch: Partial<AppSettings>) => {
+            const prev = settings;
+            const next = { ...settings, ...patch };
+            setSettings(next); // optimistic
+            const pairs: [string, string][] = [];
+            if (patch.soundEnabled !== undefined)
+                pairs.push([STORAGE.SOUND_ENABLED, String(patch.soundEnabled)]);
+            if (patch.vibrationEnabled !== undefined)
+                pairs.push([STORAGE.VIBRATION_ENABLED, String(patch.vibrationEnabled)]);
+            if (patch.language !== undefined) pairs.push([STORAGE.LANGUAGE, patch.language]);
+            try {
+                await AsyncStorage.multiSet(pairs);
+            } catch (err) {
+                console.warn('[useSettings] persist failed, reverting:', err);
+                setSettings(prev);
+            }
+        },
+        [settings],
+    );
 
     return { settings, update, loaded };
 }

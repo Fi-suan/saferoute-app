@@ -30,12 +30,7 @@ export default function GlassCard({
         <BlurView
             intensity={intensity}
             tint={tint}
-            style={[
-                styles.card,
-                !noBorder && styles.border,
-                !noShadow && Shadow.card,
-                style,
-            ]}
+            style={[styles.card, !noBorder && styles.border, !noShadow && Shadow.card, style]}
         >
             {/* Inner fill layer for glass color */}
             <View style={styles.fill}>{children}</View>

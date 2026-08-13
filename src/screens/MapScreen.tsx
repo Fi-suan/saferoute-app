@@ -5,9 +5,7 @@
  * Вся UI-разметка вынесена в src/screens/map/* (sub-components).
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-    View, Text, StyleSheet, TouchableOpacity, Vibration,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Vibration } from 'react-native';
 import MapView, { Polyline, Camera } from 'react-native-maps';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,7 +56,6 @@ type NavProp = CompositeNavigationProp<
     NativeStackNavigationProp<RootStackParamList>
 >;
 
-
 export default function MapScreen() {
     const navigation = useNavigation<NavProp>();
     const mapRef = useRef<MapView>(null);
@@ -87,25 +84,25 @@ export default function MapScreen() {
             addNotifEntry({ title, body, incidentId });
         });
 
-    const { isRouteMode, toggleRouteMode, routeIncidents, roadStatus } = useRoute(incidents, activeRouteId);
+    const { isRouteMode, toggleRouteMode, routeIncidents, roadStatus } = useRoute(
+        incidents,
+        activeRouteId,
+    );
     const cachedPolyline = useRoutePolyline(activeRouteId);
 
-    const {
-        livestock,
-        activateManualMode,
-        deactivateManualMode,
-        isManualMode,
-        dangerZoneAlert,
-    } = useLivestock(location);
+    const { livestock, activateManualMode, deactivateManualMode, isManualMode, dangerZoneAlert } =
+        useLivestock(location);
 
     // ── Effects ───────────────────────────────────────────────────────────────
 
     // Read selected route on tab focus
-    useFocusEffect(useCallback(() => {
-        AsyncStorage.getItem(STORAGE.ACTIVE_ROUTE).then(id => {
-            if (id && ROUTE_WAYPOINTS[id]) setActiveRouteId(id);
-        });
-    }, []));
+    useFocusEffect(
+        useCallback(() => {
+            AsyncStorage.getItem(STORAGE.ACTIVE_ROUTE).then((id) => {
+                if (id && ROUTE_WAYPOINTS[id]) setActiveRouteId(id);
+            });
+        }, []),
+    );
 
     // Push notification on proximity (respects soundEnabled)
     useEffect(() => {
@@ -151,7 +148,7 @@ export default function MapScreen() {
         const distM = haversineM(location.lat, location.lon, step.end.latitude, step.end.longitude);
         if (distM < 80) {
             if (navStepIdx < navResult.steps.length - 1) {
-                setNavStepIdx(i => i + 1);
+                setNavStepIdx((i) => i + 1);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } else {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -171,12 +168,15 @@ export default function MapScreen() {
     // Camera follows location with tilt and heading during navigation
     useEffect(() => {
         if (!navResult || !location) return;
-        mapRef.current?.animateCamera({
-            center: { latitude: location.lat, longitude: location.lon },
-            zoom: 16,
-            pitch: 45,
-            heading: location.heading ?? 0,
-        } as Camera, { duration: 600 });
+        mapRef.current?.animateCamera(
+            {
+                center: { latitude: location.lat, longitude: location.lon },
+                zoom: 16,
+                pitch: 45,
+                heading: location.heading ?? 0,
+            } as Camera,
+            { duration: 600 },
+        );
     }, [location?.lat, location?.lon, location?.heading, !!navResult]);
 
     // ── Handlers ──────────────────────────────────────────────────────────────
@@ -193,13 +193,14 @@ export default function MapScreen() {
         setConfirmDialog(null);
         dismissConfirmCandidate();
         await confirmIncident(incident.id, isResolved);
-        if (isResolved) showDialog({
-            title: t('confirm_thanks'),
-            message: t('confirm_thanks_msg'),
-            icon: 'checkmark-circle',
-            iconColor: Colors.brand.primary,
-            buttons: [{ text: t('understand'), style: 'default' }],
-        });
+        if (isResolved)
+            showDialog({
+                title: t('confirm_thanks'),
+                message: t('confirm_thanks_msg'),
+                icon: 'checkmark-circle',
+                iconColor: Colors.brand.primary,
+                buttons: [{ text: t('understand'), style: 'default' }],
+            });
     };
 
     const handleConfirmDialogDetail = () => {
@@ -268,7 +269,12 @@ export default function MapScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         if (!location) return;
         mapRef.current?.animateToRegion(
-            { latitude: location.lat, longitude: location.lon, latitudeDelta: 0.05, longitudeDelta: 0.05 },
+            {
+                latitude: location.lat,
+                longitude: location.lon,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            },
             500,
         );
     };
@@ -326,13 +332,18 @@ export default function MapScreen() {
 
     // ── Derived ──────────────────────────────────────────────────────────────
 
-    const displayedIncidents = isRouteMode ? routeIncidents : incidents.filter(i => i.is_active);
+    const displayedIncidents = isRouteMode ? routeIncidents : incidents.filter((i) => i.is_active);
     const showIncidents = filter === 'all' || filter === 'incidents';
     const showLivestock = filter === 'all' || filter === 'livestock';
     const routeCoords = navResult ? navResult.polyline : cachedPolyline;
 
     const initialRegion = location
-        ? { latitude: location.lat, longitude: location.lon, latitudeDelta: 0.05, longitudeDelta: 0.05 }
+        ? {
+              latitude: location.lat,
+              longitude: location.lon,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+          }
         : { latitude: 51.96, longitude: 74.2, latitudeDelta: 2.5, longitudeDelta: 4 };
 
     // ── Render ────────────────────────────────────────────────────────────────
@@ -342,7 +353,8 @@ export default function MapScreen() {
             <View style={styles.loadingWrap}>
                 <LottieView
                     source={require('../assets/lottie/loading.json')}
-                    autoPlay loop
+                    autoPlay
+                    loop
                     style={{ width: 120, height: 120 }}
                 />
                 <Text style={styles.loadingText}>{t('loading_location')}</Text>
@@ -412,7 +424,10 @@ export default function MapScreen() {
                 <TouchableOpacity style={styles.mapBtn} onPress={handleNorthReset}>
                     <Ionicons name="compass-outline" size={20} color={Colors.text.secondary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.mapBtn, styles.mapBtnPrimary]} onPress={handleLocateMe}>
+                <TouchableOpacity
+                    style={[styles.mapBtn, styles.mapBtnPrimary]}
+                    onPress={handleLocateMe}
+                >
                     <Ionicons name="locate" size={20} color={Colors.brand.primary} />
                 </TouchableOpacity>
             </View>
@@ -426,7 +441,8 @@ export default function MapScreen() {
             >
                 <LottieView
                     source={require('../assets/lottie/alert_pulse.json')}
-                    autoPlay loop
+                    autoPlay
+                    loop
                     style={{ position: 'absolute', width: 150, height: 150 }}
                 />
                 <Ionicons
@@ -448,7 +464,10 @@ export default function MapScreen() {
                 incident={confirmDialog}
                 onConfirm={handleConfirm}
                 onViewDetail={handleConfirmDialogDetail}
-                onClose={() => { setConfirmDialog(null); dismissConfirmCandidate(); }}
+                onClose={() => {
+                    setConfirmDialog(null);
+                    dismissConfirmCandidate();
+                }}
             />
 
             <ReportModal
@@ -480,26 +499,42 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.bg.primary },
     map: { flex: 1 },
     loadingWrap: {
-        flex: 1, alignItems: 'center', justifyContent: 'center',
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: Colors.bg.primary,
     },
     loadingText: { color: Colors.text.secondary, marginTop: 12, fontSize: 14 },
 
     rightBtns: {
-        position: 'absolute', bottom: 180, right: Spacing.md,
+        position: 'absolute',
+        bottom: 180,
+        right: Spacing.md,
         gap: 8,
     },
     mapBtn: {
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.full,
-        width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
-        borderWidth: 1, borderColor: Colors.border, ...Shadow.card,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.full,
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: Colors.border,
+        ...Shadow.card,
     },
     mapBtnPrimary: { borderColor: Colors.brand.primary + '60' },
 
     fab: {
-        position: 'absolute', bottom: 100, right: Spacing.md,
-        backgroundColor: Colors.brand.primary, borderRadius: Radius.full,
-        width: 64, height: 64, alignItems: 'center', justifyContent: 'center',
+        position: 'absolute',
+        bottom: 100,
+        right: Spacing.md,
+        backgroundColor: Colors.brand.primary,
+        borderRadius: Radius.full,
+        width: 64,
+        height: 64,
+        alignItems: 'center',
+        justifyContent: 'center',
         ...Shadow.glow,
     },
     fabManual: { borderWidth: 2, borderColor: Colors.brand.glowStrong },

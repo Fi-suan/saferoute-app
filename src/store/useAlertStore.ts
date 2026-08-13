@@ -42,14 +42,14 @@ export const useAlertStore = create<AlertStore>((set) => ({
             herds: state.herds.map((h) =>
                 h.id === herdId && h.current_location
                     ? {
-                        ...h,
-                        current_location: {
-                            ...h.current_location,
-                            latitude: lat,
-                            longitude: lon,
-                        },
-                    }
-                    : h
+                          ...h,
+                          current_location: {
+                              ...h.current_location,
+                              latitude: lat,
+                              longitude: lon,
+                          },
+                      }
+                    : h,
             ),
         })),
 

@@ -15,7 +15,12 @@ interface SkeletonProps {
     style?: ViewStyle;
 }
 
-export function Skeleton({ width = '100%', height = 16, radius = Radius.sm, style }: SkeletonProps) {
+export function Skeleton({
+    width = '100%',
+    height = 16,
+    radius = Radius.sm,
+    style,
+}: SkeletonProps) {
     const opacity = useRef(new Animated.Value(0.5)).current;
 
     useEffect(() => {

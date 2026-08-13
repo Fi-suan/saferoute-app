@@ -9,8 +9,15 @@
  */
 import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, Modal,
-    TextInput, ScrollView, ActivityIndicator, Image,
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    Modal,
+    TextInput,
+    ScrollView,
+    ActivityIndicator,
+    Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -113,7 +120,10 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
                         {
                             text: 'Фотосыз жіберу',
                             style: 'default',
-                            onPress: () => { setPhotoUri(null); doSubmit(null); },
+                            onPress: () => {
+                                setPhotoUri(null);
+                                doSubmit(null);
+                            },
                         },
                         { text: 'Болдырмау', style: 'cancel' },
                     ],
@@ -178,18 +188,27 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
                             {INCIDENT_TYPES_LIST.map((t) => (
                                 <TouchableOpacity
                                     key={t.key}
-                                    style={[styles.typeChip, reportType === t.key && styles.typeChipActive]}
+                                    style={[
+                                        styles.typeChip,
+                                        reportType === t.key && styles.typeChipActive,
+                                    ]}
                                     onPress={() => setReportType(t.key)}
                                 >
                                     <Ionicons
                                         name={t.icon as any}
                                         size={16}
-                                        color={reportType === t.key ? Colors.bg.primary : Colors.text.secondary}
+                                        color={
+                                            reportType === t.key
+                                                ? Colors.bg.primary
+                                                : Colors.text.secondary
+                                        }
                                     />
-                                    <Text style={[
-                                        styles.typeChipText,
-                                        reportType === t.key && styles.typeChipTextActive,
-                                    ]}>
+                                    <Text
+                                        style={[
+                                            styles.typeChipText,
+                                            reportType === t.key && styles.typeChipTextActive,
+                                        ]}
+                                    >
                                         {t.label}
                                     </Text>
                                 </TouchableOpacity>
@@ -199,31 +218,40 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
                         {/* Тяжесть */}
                         <Text style={styles.label}>Қауіп деңгейі</Text>
                         <View style={styles.severityRow}>
-                            {([
-                                { n: 1, label: 'Төмен', color: Colors.alert.medium },
-                                { n: 2, label: 'Орташа', color: Colors.alert.medium },
-                                { n: 3, label: 'Жоғары', color: Colors.alert.high },
-                                { n: 4, label: 'Қауіпті', color: Colors.alert.critical },
-                                { n: 5, label: 'Сыни', color: Colors.alert.critical },
-                            ] as const).map(({ n, label, color }) => (
+                            {(
+                                [
+                                    { n: 1, label: 'Төмен', color: Colors.alert.medium },
+                                    { n: 2, label: 'Орташа', color: Colors.alert.medium },
+                                    { n: 3, label: 'Жоғары', color: Colors.alert.high },
+                                    { n: 4, label: 'Қауіпті', color: Colors.alert.critical },
+                                    { n: 5, label: 'Сыни', color: Colors.alert.critical },
+                                ] as const
+                            ).map(({ n, label, color }) => (
                                 <TouchableOpacity
                                     key={n}
                                     style={[
                                         styles.severityBtn,
-                                        severity === n && { backgroundColor: color, borderColor: color },
+                                        severity === n && {
+                                            backgroundColor: color,
+                                            borderColor: color,
+                                        },
                                     ]}
                                     onPress={() => setSeverity(n)}
                                 >
-                                    <Text style={[
-                                        styles.severityBtnText,
-                                        severity === n && { color: Colors.white },
-                                    ]}>
+                                    <Text
+                                        style={[
+                                            styles.severityBtnText,
+                                            severity === n && { color: Colors.white },
+                                        ]}
+                                    >
                                         {n}
                                     </Text>
-                                    <Text style={[
-                                        styles.severityLabel,
-                                        severity === n && { color: Colors.white },
-                                    ]}>
+                                    <Text
+                                        style={[
+                                            styles.severityLabel,
+                                            severity === n && { color: Colors.white },
+                                        ]}
+                                    >
                                         {label}
                                     </Text>
                                 </TouchableOpacity>
@@ -280,7 +308,11 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
                                 <ActivityIndicator color={Colors.bg.primary} />
                             ) : (
                                 <>
-                                    <Ionicons name="shield-checkmark" size={18} color={Colors.bg.primary} />
+                                    <Ionicons
+                                        name="shield-checkmark"
+                                        size={18}
+                                        color={Colors.bg.primary}
+                                    />
                                     <Text style={styles.submitBtnText}>
                                         Белгі қою{photoUri ? ' (AI + фото)' : ' (AI тексереді)'}
                                     </Text>
@@ -311,57 +343,99 @@ const styles = StyleSheet.create({
         maxHeight: '90%',
     },
     header: {
-        flexDirection: 'row', alignItems: 'center',
-        justifyContent: 'space-between', marginBottom: Spacing.lg,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: Spacing.lg,
     },
     title: { fontSize: 20, fontWeight: '700', color: Colors.text.primary },
     label: {
-        fontSize: 11, fontWeight: '700', color: Colors.text.muted,
-        marginBottom: 8, marginTop: 12,
-        textTransform: 'uppercase', letterSpacing: 0.5,
+        fontSize: 11,
+        fontWeight: '700',
+        color: Colors.text.muted,
+        marginBottom: 8,
+        marginTop: 12,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     typeChip: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        paddingVertical: 10, paddingHorizontal: 14,
-        borderRadius: Radius.lg, backgroundColor: Colors.bg.tertiary,
-        borderWidth: 1, borderColor: Colors.border,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: Radius.lg,
+        backgroundColor: Colors.bg.tertiary,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     typeChipActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
     typeChipText: { fontSize: 13, fontWeight: '600', color: Colors.text.secondary },
     typeChipTextActive: { color: Colors.bg.primary },
     severityRow: { flexDirection: 'row', gap: 8 },
     severityBtn: {
-        flex: 1, height: 52, borderRadius: Radius.md,
-        alignItems: 'center', justifyContent: 'center',
-        backgroundColor: Colors.bg.tertiary, borderWidth: 1, borderColor: Colors.border,
+        flex: 1,
+        height: 52,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.bg.tertiary,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     severityBtnText: { fontSize: 16, fontWeight: '700', color: Colors.text.secondary },
     severityLabel: { fontSize: 9, fontWeight: '600', color: Colors.text.muted, marginTop: 1 },
     textInput: {
-        backgroundColor: Colors.bg.tertiary, borderRadius: Radius.md, padding: Spacing.md,
-        color: Colors.text.primary, fontSize: 14, minHeight: 60, textAlignVertical: 'top',
-        borderWidth: 1, borderColor: Colors.border,
+        backgroundColor: Colors.bg.tertiary,
+        borderRadius: Radius.md,
+        padding: Spacing.md,
+        color: Colors.text.primary,
+        fontSize: 14,
+        minHeight: 60,
+        textAlignVertical: 'top',
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     photoBtn: {
-        borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border,
-        borderStyle: 'dashed', backgroundColor: Colors.bg.tertiary,
-        alignItems: 'center', justifyContent: 'center',
-        height: 80, gap: 6, flexDirection: 'row',
+        borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderStyle: 'dashed',
+        backgroundColor: Colors.bg.tertiary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 80,
+        gap: 6,
+        flexDirection: 'row',
     },
     photoBtnText: { fontSize: 14, color: Colors.text.muted },
     photoPreview: { width: '100%', height: 80, borderRadius: Radius.md },
     removePhoto: { fontSize: 12, color: Colors.alert.critical, textAlign: 'center', marginTop: 6 },
     locationRow: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        marginTop: 12, paddingVertical: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 12,
+        paddingVertical: 8,
     },
     locationText: { fontSize: 12, color: Colors.text.muted },
     submitBtn: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-        backgroundColor: Colors.brand.primary, borderRadius: Radius.lg,
-        paddingVertical: 16, marginTop: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: Colors.brand.primary,
+        borderRadius: Radius.lg,
+        paddingVertical: 16,
+        marginTop: 12,
     },
     submitBtnText: { fontSize: 16, fontWeight: '700', color: Colors.bg.primary },
-    aiNote: { fontSize: 11, color: Colors.text.muted, textAlign: 'center', marginTop: 8, marginBottom: 8 },
+    aiNote: {
+        fontSize: 11,
+        color: Colors.text.muted,
+        textAlign: 'center',
+        marginTop: 8,
+        marginBottom: 8,
+    },
 });

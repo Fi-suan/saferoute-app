@@ -68,7 +68,11 @@ export function useLocation(
                 accuracy: Location.Accuracy.High,
             });
             if (!cancelled) {
-                setLocation({ lat: loc.coords.latitude, lon: loc.coords.longitude, heading: loc.coords.heading ?? null });
+                setLocation({
+                    lat: loc.coords.latitude,
+                    lon: loc.coords.longitude,
+                    heading: loc.coords.heading ?? null,
+                });
                 setLoading(false);
             }
 
@@ -89,8 +93,8 @@ export function useLocation(
                         const now = Date.now();
                         if (now - lastSentRef.current > 30_000) {
                             lastSentRef.current = now;
-                            getDeviceId().then(id =>
-                                updateDeviceLocation(id, lat, lon).catch(() => {})
+                            getDeviceId().then((id) =>
+                                updateDeviceLocation(id, lat, lon).catch(() => {}),
                             );
                         }
                     }
@@ -143,9 +147,12 @@ export function useLocation(
     const dismissConfirmCandidate = useCallback(() => setConfirmCandidate(null), []);
 
     // Cleanup auto-dismiss timer on unmount
-    useEffect(() => () => {
-        if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-    }, []);
+    useEffect(
+        () => () => {
+            if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+        },
+        [],
+    );
 
     return {
         location,

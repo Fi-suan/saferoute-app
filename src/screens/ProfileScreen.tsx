@@ -11,8 +11,14 @@
  */
 import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    TextInput, Modal, Switch,
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    TextInput,
+    Modal,
+    Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,13 +46,19 @@ const ROLE_ICON: Record<UserRole, { icon: string; color: string }> = {
 const KZ_PHONE_RE = /^(\+7|8)\d{10}$/;
 const isValidPhone = (p: string) => KZ_PHONE_RE.test(p.replace(/\s/g, ''));
 
-
-
 /** Nothing Phone стиль: числа в monospace, геометрические карточки */
 function StatCard({
-    value, label, icon, color, onPress,
+    value,
+    label,
+    icon,
+    color,
+    onPress,
 }: {
-    value: string | number; label: string; icon: string; color?: string; onPress?: () => void;
+    value: string | number;
+    label: string;
+    icon: string;
+    color?: string;
+    onPress?: () => void;
 }) {
     return (
         <TouchableOpacity
@@ -54,7 +66,12 @@ function StatCard({
             onPress={onPress}
             activeOpacity={onPress ? 0.7 : 1}
         >
-            <View style={[styles.statIcon, { backgroundColor: (color ?? Colors.brand.primary) + '18' }]}>
+            <View
+                style={[
+                    styles.statIcon,
+                    { backgroundColor: (color ?? Colors.brand.primary) + '18' },
+                ]}
+            >
                 <Ionicons name={icon as any} size={16} color={color ?? Colors.brand.primary} />
             </View>
             {/* 🎨 ANIMATION_SLOT: stats_count_up */}
@@ -94,13 +111,13 @@ export default function ProfileScreen() {
 
     // Загружаем сохранённый маршрут
     React.useEffect(() => {
-        AsyncStorage.getItem(STORAGE.ACTIVE_ROUTE).then(id => {
+        AsyncStorage.getItem(STORAGE.ACTIVE_ROUTE).then((id) => {
             if (id) setActiveRouteId(id);
         });
     }, []);
 
-    const activeRoute = ROUTES.find(r => r.id === activeRouteId) ?? ROUTES[0];
-    const activeIncidents = incidents.filter(i => i.is_active).length;
+    const activeRoute = ROUTES.find((r) => r.id === activeRouteId) ?? ROUTES[0];
+    const activeIncidents = incidents.filter((i) => i.is_active).length;
 
     const openEdit = () => {
         setEditName(profile.name);
@@ -151,7 +168,7 @@ export default function ProfileScreen() {
     const handleShowDeviceId = async () => {
         const id = await getDeviceId();
         setDeviceId(id);
-        setShowDeviceId(v => !v);
+        setShowDeviceId((v) => !v);
     };
 
     if (!loaded) return null;
@@ -163,7 +180,6 @@ export default function ProfileScreen() {
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
                 {/* ── HEADER: Avatar + Name + Bell ─────────────────── */}
                 <View style={styles.header}>
                     <TouchableOpacity style={styles.avatarWrap} onPress={openEdit}>
@@ -178,7 +194,9 @@ export default function ProfileScreen() {
 
                     <View style={styles.headerMid}>
                         <Text style={styles.greeting}>{t('profile_greeting')}</Text>
-                        <Text style={styles.userName} numberOfLines={1}>{profile.name}</Text>
+                        <Text style={styles.userName} numberOfLines={1}>
+                            {profile.name}
+                        </Text>
                         {profile.phone ? (
                             <Text style={styles.userPhone}>{profile.phone}</Text>
                         ) : (
@@ -189,12 +207,27 @@ export default function ProfileScreen() {
                     </View>
 
                     <View style={styles.headerRight}>
-                        <View style={[styles.onlineDot, { backgroundColor: isOnline ? Colors.brand.primary : Colors.alert.medium }]} />
+                        <View
+                            style={[
+                                styles.onlineDot,
+                                {
+                                    backgroundColor: isOnline
+                                        ? Colors.brand.primary
+                                        : Colors.alert.medium,
+                                },
+                            ]}
+                        />
                         <TouchableOpacity onPress={() => setNotifModal(true)}>
-                            <Ionicons name="notifications-outline" size={22} color={Colors.text.secondary} />
+                            <Ionicons
+                                name="notifications-outline"
+                                size={22}
+                                color={Colors.text.secondary}
+                            />
                             {unreadCount > 0 && (
                                 <View style={styles.bellBadge}>
-                                    <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                                    <Text style={styles.bellBadgeText}>
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </Text>
                                 </View>
                             )}
                         </TouchableOpacity>
@@ -207,7 +240,9 @@ export default function ProfileScreen() {
                         <Ionicons name={roleIcon.icon as any} size={14} color={roleIcon.color} />
                     </View>
                     <View>
-                        <Text style={[styles.roleLabel, { color: roleIcon.color }]}>{roleLabel}</Text>
+                        <Text style={[styles.roleLabel, { color: roleIcon.color }]}>
+                            {roleLabel}
+                        </Text>
                         <Text style={styles.roleDesc}>{roleDesc}</Text>
                     </View>
                     <View style={[styles.roleLockIcon, { marginLeft: 'auto' }]}>
@@ -222,20 +257,28 @@ export default function ProfileScreen() {
                             <Text style={styles.routeCardLabel}>{t('profile_active_route')}</Text>
                             <Text style={styles.routeCardName}>{activeRoute.name}</Text>
                         </View>
-                        <View style={[styles.routeChip, { backgroundColor: Colors.brand.primary + '20' }]}>
+                        <View
+                            style={[
+                                styles.routeChip,
+                                { backgroundColor: Colors.brand.primary + '20' },
+                            ]}
+                        >
                             <Text style={styles.routeChipText}>{activeRoute.shortCode}</Text>
                         </View>
                     </View>
 
                     {/* Progress dots (Nothing-style) */}
                     <View style={styles.routeProgress}>
-                        {[0, 1, 2, 3, 4].map(i => (
+                        {[0, 1, 2, 3, 4].map((i) => (
                             <View
                                 key={i}
                                 style={[
                                     styles.progressDot,
                                     i < 2 && { backgroundColor: Colors.brand.primary },
-                                    i === 2 && { backgroundColor: Colors.brand.primary, transform: [{ scale: 1.5 }] },
+                                    i === 2 && {
+                                        backgroundColor: Colors.brand.primary,
+                                        transform: [{ scale: 1.5 }],
+                                    },
                                 ]}
                             />
                         ))}
@@ -298,17 +341,27 @@ export default function ProfileScreen() {
                                     await AsyncStorage.setItem(STORAGE.ACTIVE_ROUTE, route.id);
                                 }}
                             >
-                                <View style={[
-                                    styles.routeRowDot,
-                                    activeRouteId === route.id && { backgroundColor: Colors.brand.primary },
-                                ]} />
+                                <View
+                                    style={[
+                                        styles.routeRowDot,
+                                        activeRouteId === route.id && {
+                                            backgroundColor: Colors.brand.primary,
+                                        },
+                                    ]}
+                                />
                                 <View style={styles.routeRowBody}>
                                     <Text style={styles.routeRowCode}>{route.shortCode}</Text>
-                                    <Text style={styles.routeRowName}>{route.from} → {route.to}</Text>
+                                    <Text style={styles.routeRowName}>
+                                        {route.from} → {route.to}
+                                    </Text>
                                 </View>
                                 <Text style={styles.routeRowKm}>{route.lengthKm} км</Text>
                                 {activeRouteId === route.id && (
-                                    <Ionicons name="checkmark-circle" size={18} color={Colors.brand.primary} />
+                                    <Ionicons
+                                        name="checkmark-circle"
+                                        size={18}
+                                        color={Colors.brand.primary}
+                                    />
                                 )}
                             </TouchableOpacity>
                             {idx < ROUTES.length - 1 && <View style={styles.rowDivider} />}
@@ -317,33 +370,48 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* ── МАЛ ИЕСІ СЕКЦИЯ ──────────────────────────────── */}
-                {(profile.role === 'livestock_owner') && (
+                {profile.role === 'livestock_owner' && (
                     <>
                         <SectionHeader title={t('livestock_section')} />
                         <View style={styles.card}>
                             <TouchableOpacity
                                 style={styles.settingsRow}
-                                onPress={() => showDialog({
-                                    title: t('livestock_register'),
-                                    message: t('livestock_tracker_info'),
-                                    icon: 'paw',
-                                    iconColor: Colors.alert.high,
-                                    buttons: [{ text: t('understand'), style: 'default' }]
-                                })}
+                                onPress={() =>
+                                    showDialog({
+                                        title: t('livestock_register'),
+                                        message: t('livestock_tracker_info'),
+                                        icon: 'paw',
+                                        iconColor: Colors.alert.high,
+                                        buttons: [{ text: t('understand'), style: 'default' }],
+                                    })
+                                }
                             >
-                                <View style={[styles.rowIcon, { backgroundColor: Colors.alert.high + '18' }]}>
+                                <View
+                                    style={[
+                                        styles.rowIcon,
+                                        { backgroundColor: Colors.alert.high + '18' },
+                                    ]}
+                                >
                                     <Ionicons name="paw" size={18} color={Colors.alert.high} />
                                 </View>
                                 <View style={styles.rowBody}>
                                     <Text style={styles.rowLabel}>{t('livestock_register')}</Text>
-                                    <Text style={styles.rowValue}>{t('livestock_register_desc')}</Text>
+                                    <Text style={styles.rowValue}>
+                                        {t('livestock_register_desc')}
+                                    </Text>
                                 </View>
-                                <Ionicons name="chevron-forward" size={18} color={Colors.text.muted} />
+                                <Ionicons
+                                    name="chevron-forward"
+                                    size={18}
+                                    color={Colors.text.muted}
+                                />
                             </TouchableOpacity>
                             <View style={styles.rowDivider} />
                             <View style={styles.trackerInfoBox}>
                                 <Ionicons name="radio" size={14} color={Colors.alert.info} />
-                                <Text style={styles.trackerInfoText}>{t('livestock_tracker_info')}</Text>
+                                <Text style={styles.trackerInfoText}>
+                                    {t('livestock_tracker_info')}
+                                </Text>
                             </View>
                         </View>
                     </>
@@ -353,7 +421,12 @@ export default function ProfileScreen() {
                 <SectionHeader title={t('profile_notifications_section')} />
                 <View style={styles.card}>
                     <View style={styles.settingsRow}>
-                        <View style={[styles.rowIcon, { backgroundColor: Colors.brand.primary + '18' }]}>
+                        <View
+                            style={[
+                                styles.rowIcon,
+                                { backgroundColor: Colors.brand.primary + '18' },
+                            ]}
+                        >
                             <Ionicons name="volume-high" size={18} color={Colors.brand.primary} />
                         </View>
                         <View style={styles.rowBody}>
@@ -361,14 +434,16 @@ export default function ProfileScreen() {
                         </View>
                         <Switch
                             value={settings.soundEnabled}
-                            onValueChange={v => updateSettings({ soundEnabled: v })}
+                            onValueChange={(v) => updateSettings({ soundEnabled: v })}
                             trackColor={{ false: Colors.bg.tertiary, true: Colors.brand.primary }}
                             thumbColor={Colors.white}
                         />
                     </View>
                     <View style={styles.rowDivider} />
                     <View style={styles.settingsRow}>
-                        <View style={[styles.rowIcon, { backgroundColor: Colors.alert.info + '18' }]}>
+                        <View
+                            style={[styles.rowIcon, { backgroundColor: Colors.alert.info + '18' }]}
+                        >
                             <Ionicons name="phone-portrait" size={18} color={Colors.alert.info} />
                         </View>
                         <View style={styles.rowBody}>
@@ -376,24 +451,38 @@ export default function ProfileScreen() {
                         </View>
                         <Switch
                             value={settings.vibrationEnabled}
-                            onValueChange={v => updateSettings({ vibrationEnabled: v })}
+                            onValueChange={(v) => updateSettings({ vibrationEnabled: v })}
                             trackColor={{ false: Colors.bg.tertiary, true: Colors.brand.primary }}
                             thumbColor={Colors.white}
                         />
                     </View>
                     <View style={styles.rowDivider} />
                     <View style={styles.settingsRow}>
-                        <View style={[styles.rowIcon, { backgroundColor: Colors.brand.primary + '18' }]}>
+                        <View
+                            style={[
+                                styles.rowIcon,
+                                { backgroundColor: Colors.brand.primary + '18' },
+                            ]}
+                        >
                             <Ionicons name="language" size={18} color={Colors.brand.primary} />
                         </View>
                         <View style={styles.rowBody}>
-                            <Text style={styles.rowLabel}>{settings.language === 'kk' ? 'Қазақша' : 'Русский'}</Text>
+                            <Text style={styles.rowLabel}>
+                                {settings.language === 'kk' ? 'Қазақша' : 'Русский'}
+                            </Text>
                         </View>
                         <TouchableOpacity
                             style={styles.langToggle}
-                            onPress={() => { Haptics.selectionAsync(); updateSettings({ language: settings.language === 'kk' ? 'ru' : 'kk' }); }}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                updateSettings({
+                                    language: settings.language === 'kk' ? 'ru' : 'kk',
+                                });
+                            }}
                         >
-                            <Text style={styles.langToggleText}>{settings.language === 'kk' ? 'RU' : 'ҚАЗ'}</Text>
+                            <Text style={styles.langToggleText}>
+                                {settings.language === 'kk' ? 'RU' : 'ҚАЗ'}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -402,8 +491,17 @@ export default function ProfileScreen() {
                 <SectionHeader title={t('profile_about_section')} />
                 <View style={styles.card}>
                     <View style={styles.settingsRow}>
-                        <View style={[styles.rowIcon, { backgroundColor: Colors.brand.primary + '18' }]}>
-                            <Ionicons name="shield-checkmark" size={18} color={Colors.brand.primary} />
+                        <View
+                            style={[
+                                styles.rowIcon,
+                                { backgroundColor: Colors.brand.primary + '18' },
+                            ]}
+                        >
+                            <Ionicons
+                                name="shield-checkmark"
+                                size={18}
+                                color={Colors.brand.primary}
+                            />
                         </View>
                         <View style={styles.rowBody}>
                             <Text style={styles.rowLabel}>SafeRoute · Sapa Jol</Text>
@@ -412,8 +510,14 @@ export default function ProfileScreen() {
                     </View>
                     <View style={styles.rowDivider} />
                     <TouchableOpacity style={styles.settingsRow} onPress={handleShowDeviceId}>
-                        <View style={[styles.rowIcon, { backgroundColor: Colors.text.muted + '18' }]}>
-                            <Ionicons name="hardware-chip-outline" size={18} color={Colors.text.muted} />
+                        <View
+                            style={[styles.rowIcon, { backgroundColor: Colors.text.muted + '18' }]}
+                        >
+                            <Ionicons
+                                name="hardware-chip-outline"
+                                size={18}
+                                color={Colors.text.muted}
+                            />
                         </View>
                         <View style={styles.rowBody}>
                             <Text style={styles.rowLabel}>Device ID</Text>
@@ -423,52 +527,80 @@ export default function ProfileScreen() {
                         </View>
                     </TouchableOpacity>
                     <View style={styles.rowDivider} />
-                    <TouchableOpacity style={styles.settingsRow} onPress={() => {
-                        showDialog({
-                            title: 'Деректерді жою',
-                            message: 'Барлық деректеріңіз (хабарламалар, инциденттер, құрылғы) біржола жойылады. Жалғастырасыз ба?',
-                            icon: 'trash',
-                            iconColor: Colors.alert.critical,
-                            buttons: [
-                                {
-                                    text: 'Жою',
-                                    style: 'destructive',
-                                    onPress: async () => {
-                                        try {
-                                            const id = await getDeviceId();
-                                            await deleteUserData(id);
-                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                            await AppResetEvent.trigger();
-                                        } catch {
-                                            showDialog({
-                                                title: 'Қате',
-                                                message: 'Деректерді жою мүмкін болмады',
-                                                icon: 'close-circle',
-                                                iconColor: Colors.alert.critical,
-                                                buttons: [{ text: 'Жабу', style: 'cancel' }],
-                                            });
-                                        }
+                    <TouchableOpacity
+                        style={styles.settingsRow}
+                        onPress={() => {
+                            showDialog({
+                                title: 'Деректерді жою',
+                                message:
+                                    'Барлық деректеріңіз (хабарламалар, инциденттер, құрылғы) біржола жойылады. Жалғастырасыз ба?',
+                                icon: 'trash',
+                                iconColor: Colors.alert.critical,
+                                buttons: [
+                                    {
+                                        text: 'Жою',
+                                        style: 'destructive',
+                                        onPress: async () => {
+                                            try {
+                                                const id = await getDeviceId();
+                                                await deleteUserData(id);
+                                                Haptics.notificationAsync(
+                                                    Haptics.NotificationFeedbackType.Success,
+                                                );
+                                                await AppResetEvent.trigger();
+                                            } catch {
+                                                showDialog({
+                                                    title: 'Қате',
+                                                    message: 'Деректерді жою мүмкін болмады',
+                                                    icon: 'close-circle',
+                                                    iconColor: Colors.alert.critical,
+                                                    buttons: [{ text: 'Жабу', style: 'cancel' }],
+                                                });
+                                            }
+                                        },
                                     },
-                                },
-                                { text: 'Бас тарту', style: 'cancel' },
-                            ],
-                        });
-                    }}>
-                        <View style={[styles.rowIcon, { backgroundColor: Colors.alert.critical + '18' }]}>
-                            <Ionicons name="trash-outline" size={18} color={Colors.alert.critical} />
+                                    { text: 'Бас тарту', style: 'cancel' },
+                                ],
+                            });
+                        }}
+                    >
+                        <View
+                            style={[
+                                styles.rowIcon,
+                                { backgroundColor: Colors.alert.critical + '18' },
+                            ]}
+                        >
+                            <Ionicons
+                                name="trash-outline"
+                                size={18}
+                                color={Colors.alert.critical}
+                            />
                         </View>
                         <View style={styles.rowBody}>
-                            <Text style={[styles.rowLabel, { color: Colors.alert.critical }]}>Деректерімді жою</Text>
+                            <Text style={[styles.rowLabel, { color: Colors.alert.critical }]}>
+                                Деректерімді жою
+                            </Text>
                             <Text style={styles.rowValue}>GDPR — барлық деректер жойылады</Text>
                         </View>
                     </TouchableOpacity>
                     <View style={styles.rowDivider} />
                     <TouchableOpacity style={styles.settingsRow} onPress={handleLogout}>
-                        <View style={[styles.rowIcon, { backgroundColor: Colors.alert.critical + '18' }]}>
-                            <Ionicons name="log-out-outline" size={18} color={Colors.alert.critical} />
+                        <View
+                            style={[
+                                styles.rowIcon,
+                                { backgroundColor: Colors.alert.critical + '18' },
+                            ]}
+                        >
+                            <Ionicons
+                                name="log-out-outline"
+                                size={18}
+                                color={Colors.alert.critical}
+                            />
                         </View>
                         <View style={styles.rowBody}>
-                            <Text style={[styles.rowLabel, { color: Colors.alert.critical }]}>{t('profile_logout')}</Text>
+                            <Text style={[styles.rowLabel, { color: Colors.alert.critical }]}>
+                                {t('profile_logout')}
+                            </Text>
                             <Text style={styles.rowValue}>{t('profile_logout_desc')}</Text>
                         </View>
                     </TouchableOpacity>
@@ -513,7 +645,12 @@ export default function ProfileScreen() {
                         <View style={styles.notifModalHeader}>
                             <Text style={styles.notifModalTitle}>{t('notif_history')}</Text>
                             {notifLog.length > 0 && (
-                                <TouchableOpacity onPress={() => { markAllRead(); Haptics.selectionAsync(); }}>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        markAllRead();
+                                        Haptics.selectionAsync();
+                                    }}
+                                >
                                     <Text style={styles.logActionText}>{t('notif_mark_read')}</Text>
                                 </TouchableOpacity>
                             )}
@@ -521,22 +658,44 @@ export default function ProfileScreen() {
 
                         {notifLog.length === 0 ? (
                             <View style={styles.notifEmpty}>
-                                <Ionicons name="notifications-off-outline" size={40} color={Colors.text.muted} />
+                                <Ionicons
+                                    name="notifications-off-outline"
+                                    size={40}
+                                    color={Colors.text.muted}
+                                />
                                 <Text style={styles.notifEmptyText}>{t('notif_empty')}</Text>
                             </View>
                         ) : (
-                            <ScrollView style={styles.notifModalScroll} showsVerticalScrollIndicator={false}>
+                            <ScrollView
+                                style={styles.notifModalScroll}
+                                showsVerticalScrollIndicator={false}
+                            >
                                 {notifLog.slice(0, 30).map((entry, idx) => (
                                     <View key={entry.id}>
                                         {idx > 0 && <View style={styles.rowDivider} />}
-                                        <View style={[styles.notifRow, !entry.read && styles.notifRowUnread]}>
-                                            <View style={[styles.notifDot, !entry.read && styles.notifDotActive]} />
+                                        <View
+                                            style={[
+                                                styles.notifRow,
+                                                !entry.read && styles.notifRowUnread,
+                                            ]}
+                                        >
+                                            <View
+                                                style={[
+                                                    styles.notifDot,
+                                                    !entry.read && styles.notifDotActive,
+                                                ]}
+                                            />
                                             <View style={{ flex: 1 }}>
                                                 <Text style={styles.notifTitle}>{entry.title}</Text>
-                                                <Text style={styles.notifBody} numberOfLines={2}>{entry.body}</Text>
+                                                <Text style={styles.notifBody} numberOfLines={2}>
+                                                    {entry.body}
+                                                </Text>
                                             </View>
                                             <Text style={styles.notifTime}>
-                                                {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {new Date(entry.timestamp).toLocaleTimeString([], {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}
                                             </Text>
                                         </View>
                                     </View>
@@ -564,7 +723,10 @@ export default function ProfileScreen() {
                         <TextInput
                             style={styles.input}
                             value={editName}
-                            onChangeText={(v) => { setEditName(v); if (editError) setEditError(null); }}
+                            onChangeText={(v) => {
+                                setEditName(v);
+                                if (editError) setEditError(null);
+                            }}
                             placeholder="Аты-жөніңіз..."
                             placeholderTextColor={Colors.text.muted}
                             maxLength={40}
@@ -574,16 +736,17 @@ export default function ProfileScreen() {
                         <TextInput
                             style={styles.input}
                             value={editPhone}
-                            onChangeText={(v) => { setEditPhone(v); if (editError) setEditError(null); }}
+                            onChangeText={(v) => {
+                                setEditPhone(v);
+                                if (editError) setEditError(null);
+                            }}
                             placeholder="+7 700 000 0000"
                             placeholderTextColor={Colors.text.muted}
                             keyboardType="phone-pad"
                             maxLength={17}
                         />
 
-                        {editError && (
-                            <Text style={styles.modalErrorText}>{editError}</Text>
-                        )}
+                        {editError && <Text style={styles.modalErrorText}>{editError}</Text>}
 
                         <View style={styles.modalButtons}>
                             <TouchableOpacity
@@ -612,21 +775,41 @@ const styles = StyleSheet.create({
     scroll: { paddingHorizontal: Spacing.md, paddingTop: Spacing.md },
 
     // Header
-    header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.md,
+        marginBottom: Spacing.md,
+    },
     avatarWrap: { position: 'relative' },
     avatar: {
-        width: 56, height: 56, borderRadius: 28,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         backgroundColor: Colors.brand.primary + '25',
-        alignItems: 'center', justifyContent: 'center',
-        borderWidth: 2, borderColor: Colors.brand.primary + '40',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: Colors.brand.primary + '40',
     },
-    avatarText: { fontSize: 20, fontWeight: '800', color: Colors.brand.primary, fontFamily: 'monospace' },
+    avatarText: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: Colors.brand.primary,
+        fontFamily: 'monospace',
+    },
     avatarEditBadge: {
-        position: 'absolute', bottom: 0, right: 0,
-        width: 18, height: 18, borderRadius: 9,
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
         backgroundColor: Colors.brand.primary,
-        alignItems: 'center', justifyContent: 'center',
-        borderWidth: 2, borderColor: Colors.bg.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: Colors.bg.primary,
     },
     headerMid: { flex: 1 },
     greeting: { fontSize: 12, color: Colors.text.muted, fontWeight: '500' },
@@ -638,56 +821,98 @@ const styles = StyleSheet.create({
 
     // Role badge
     roleBadge: {
-        flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.lg,
-        padding: Spacing.sm, marginBottom: Spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.lg,
+        padding: Spacing.sm,
+        marginBottom: Spacing.md,
         borderWidth: 1,
     },
-    roleIconBox: { width: 32, height: 32, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
+    roleIconBox: {
+        width: 32,
+        height: 32,
+        borderRadius: Radius.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     roleLabel: { fontSize: 14, fontWeight: '700' },
     roleDesc: { fontSize: 11, color: Colors.text.muted, marginTop: 1 },
     roleLockIcon: { width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
     langToggle: {
-        paddingHorizontal: 12, paddingVertical: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         backgroundColor: Colors.bg.tertiary,
-        borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.border,
+        borderRadius: Radius.full,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     langToggleText: { fontSize: 11, fontWeight: '800', color: Colors.text.secondary },
 
     // Bell badge
     bellBadge: {
-        position: 'absolute', top: -4, right: -6,
-        minWidth: 16, height: 16, borderRadius: 8,
+        position: 'absolute',
+        top: -4,
+        right: -6,
+        minWidth: 16,
+        height: 16,
+        borderRadius: 8,
         backgroundColor: Colors.alert.critical,
-        alignItems: 'center', justifyContent: 'center',
-        paddingHorizontal: 3, borderWidth: 1.5, borderColor: Colors.bg.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 3,
+        borderWidth: 1.5,
+        borderColor: Colors.bg.primary,
     },
     bellBadgeText: { fontSize: 9, fontWeight: '800', color: Colors.white },
 
     // Notification modal
     notifModalCard: {
-        backgroundColor: Colors.bg.secondary, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
-        paddingTop: Spacing.lg, paddingBottom: 40, borderTopWidth: 1, borderTopColor: Colors.border,
+        backgroundColor: Colors.bg.secondary,
+        borderTopLeftRadius: Radius.xl,
+        borderTopRightRadius: Radius.xl,
+        paddingTop: Spacing.lg,
+        paddingBottom: 40,
+        borderTopWidth: 1,
+        borderTopColor: Colors.border,
         maxHeight: '80%',
     },
     notifModalHeader: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: Spacing.lg, marginBottom: Spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing.lg,
+        marginBottom: Spacing.md,
     },
-    notifModalTitle: { fontSize: 14, fontWeight: '800', color: Colors.text.muted, letterSpacing: 1.2 },
+    notifModalTitle: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: Colors.text.muted,
+        letterSpacing: 1.2,
+    },
     notifModalScroll: { paddingHorizontal: Spacing.sm },
     notifEmpty: { alignItems: 'center', paddingVertical: 40, gap: 10 },
     notifEmptyText: { fontSize: 14, color: Colors.text.muted },
     notifCloseBtn: {
-        marginHorizontal: Spacing.lg, marginTop: Spacing.lg,
-        backgroundColor: Colors.brand.primary, borderRadius: Radius.lg,
-        paddingVertical: 14, alignItems: 'center',
+        marginHorizontal: Spacing.lg,
+        marginTop: Spacing.lg,
+        backgroundColor: Colors.brand.primary,
+        borderRadius: Radius.lg,
+        paddingVertical: 14,
+        alignItems: 'center',
     },
     notifCloseBtnText: { fontSize: 15, fontWeight: '700', color: Colors.bg.primary },
 
     // Notification log rows
     logActionText: { fontSize: 11, color: Colors.brand.primary, fontWeight: '600' },
-    notifRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: Spacing.sm, gap: 10 },
+    notifRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: Spacing.sm,
+        gap: 10,
+    },
     notifRowUnread: { backgroundColor: Colors.brand.primary + '06' },
     notifDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.bg.tertiary },
     notifDotActive: { backgroundColor: Colors.brand.primary },
@@ -697,132 +922,294 @@ const styles = StyleSheet.create({
 
     // Route card (референс: "Current Order")
     routeCard: {
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.xl,
-        padding: Spacing.md, marginBottom: Spacing.md,
-        borderWidth: 1, borderColor: Colors.border, ...Shadow.card,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.xl,
+        padding: Spacing.md,
+        marginBottom: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        ...Shadow.card,
     },
-    routeCardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: Spacing.md },
-    routeCardLabel: { fontSize: 10, fontWeight: '800', color: Colors.text.muted, letterSpacing: 1.2 },
+    routeCardTop: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: Spacing.md,
+    },
+    routeCardLabel: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: Colors.text.muted,
+        letterSpacing: 1.2,
+    },
     routeCardName: { fontSize: 18, fontWeight: '800', color: Colors.text.primary, marginTop: 2 },
     routeChip: {
-        paddingHorizontal: 14, paddingVertical: 6, borderRadius: Radius.full,
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: Radius.full,
     },
-    routeChipText: { fontSize: 14, fontWeight: '800', color: Colors.brand.primary, fontFamily: 'monospace' },
+    routeChipText: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: Colors.brand.primary,
+        fontFamily: 'monospace',
+    },
     routeProgress: {
-        flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md, gap: 0, position: 'relative',
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: Spacing.md,
+        gap: 0,
+        position: 'relative',
     },
     progressDot: {
-        width: 10, height: 10, borderRadius: 5,
-        backgroundColor: Colors.border, zIndex: 1, marginHorizontal: '8%',
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: Colors.border,
+        zIndex: 1,
+        marginHorizontal: '8%',
     },
     progressLine: {
-        position: 'absolute', left: 0, right: 0, height: 2,
-        backgroundColor: Colors.border, zIndex: 0,
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        height: 2,
+        backgroundColor: Colors.border,
+        zIndex: 0,
     },
     routeFromTo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    routePointLabel: { fontSize: 10, color: Colors.text.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+    routePointLabel: {
+        fontSize: 10,
+        color: Colors.text.muted,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
     routePoint: { fontSize: 14, fontWeight: '700', color: Colors.text.primary, marginTop: 2 },
-    routeLengthBadge: { backgroundColor: Colors.border, paddingHorizontal: 12, paddingVertical: 4, borderRadius: Radius.full },
+    routeLengthBadge: {
+        backgroundColor: Colors.border,
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: Radius.full,
+    },
     routeLength: { fontSize: 11, color: Colors.text.muted, fontFamily: 'monospace' },
 
     // Stats grid (2×2 ячейки)
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.md },
     statCard: {
-        width: '47.5%', backgroundColor: Colors.bg.secondary,
-        borderRadius: Radius.lg, padding: Spacing.md,
-        borderWidth: 1, borderColor: Colors.border, gap: 6,
+        width: '47.5%',
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.lg,
+        padding: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        gap: 6,
     },
-    statIcon: { width: 32, height: 32, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
+    statIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: Radius.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     statValue: { fontSize: 22, fontWeight: '800', fontFamily: 'monospace' },
     statLabel: { fontSize: 11, color: Colors.text.muted, fontWeight: '500' },
 
     // Section headers (Nothing-style: point + line)
-    sectionHeaderWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: Spacing.sm, marginTop: Spacing.sm },
+    sectionHeaderWrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: Spacing.sm,
+        marginTop: Spacing.sm,
+    },
     sectionDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.brand.primary },
-    sectionHeader: { fontSize: 10, fontWeight: '800', color: Colors.text.muted, letterSpacing: 1.5 },
+    sectionHeader: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: Colors.text.muted,
+        letterSpacing: 1.5,
+    },
     sectionLine: { flex: 1, height: 1, backgroundColor: Colors.border },
 
     // Cards
     card: {
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.lg,
-        borderWidth: 1, borderColor: Colors.border, overflow: 'hidden',
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.lg,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        overflow: 'hidden',
         marginBottom: Spacing.md,
     },
-    settingsRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md, minHeight: 54 },
-    rowIcon: { width: 36, height: 36, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
+    settingsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: Spacing.md,
+        gap: Spacing.md,
+        minHeight: 54,
+    },
+    rowIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: Radius.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     rowBody: { flex: 1 },
     rowLabel: { fontSize: 15, color: Colors.text.primary, fontWeight: '500' },
     rowValue: { fontSize: 12, color: Colors.text.muted, marginTop: 2 },
     rowDivider: { height: 1, backgroundColor: Colors.border, marginLeft: 64 },
 
     // Route list
-    routeRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.sm, minHeight: 54 },
+    routeRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: Spacing.md,
+        gap: Spacing.sm,
+        minHeight: 54,
+    },
     routeRowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border },
     routeRowBody: { flex: 1 },
-    routeRowCode: { fontSize: 13, fontWeight: '800', color: Colors.text.primary, fontFamily: 'monospace' },
+    routeRowCode: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: Colors.text.primary,
+        fontFamily: 'monospace',
+    },
     routeRowName: { fontSize: 11, color: Colors.text.muted, marginTop: 2 },
     routeRowKm: { fontSize: 12, color: Colors.text.muted, fontFamily: 'monospace' },
 
     // Radius
-    radiusSection: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md, minHeight: 64 },
+    radiusSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: Spacing.md,
+        gap: Spacing.md,
+        minHeight: 64,
+    },
     radiusRow: { flexDirection: 'row', gap: 6, marginTop: 6, alignItems: 'center' },
     radiusBtn: {
-        width: 32, height: 32, borderRadius: Radius.sm,
-        alignItems: 'center', justifyContent: 'center',
-        backgroundColor: Colors.bg.tertiary, borderWidth: 1, borderColor: Colors.border,
+        width: 32,
+        height: 32,
+        borderRadius: Radius.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.bg.tertiary,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     radiusBtnActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
-    radiusBtnText: { fontSize: 12, fontWeight: '700', color: Colors.text.muted, fontFamily: 'monospace' },
+    radiusBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.text.muted,
+        fontFamily: 'monospace',
+    },
     radiusBtnTextActive: { color: Colors.bg.primary },
     radiusUnit: { fontSize: 12, color: Colors.text.muted },
 
     // Livestock info
     trackerInfoBox: {
-        flexDirection: 'row', gap: 8, alignItems: 'flex-start',
-        padding: Spacing.md, backgroundColor: Colors.alert.info + '10',
-        margin: Spacing.sm, borderRadius: Radius.md,
+        flexDirection: 'row',
+        gap: 8,
+        alignItems: 'flex-start',
+        padding: Spacing.md,
+        backgroundColor: Colors.alert.info + '10',
+        margin: Spacing.sm,
+        borderRadius: Radius.md,
     },
     trackerInfoText: { flex: 1, fontSize: 12, color: Colors.text.muted, lineHeight: 17 },
 
     // Mission card (dot-grid декор)
     missionCard: {
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.xl,
-        padding: Spacing.lg, alignItems: 'center',
-        borderWidth: 1, borderColor: Colors.brand.primary + '30',
-        overflow: 'hidden', gap: 6,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.xl,
+        padding: Spacing.lg,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.brand.primary + '30',
+        overflow: 'hidden',
+        gap: 6,
     },
     dotGrid: {
-        position: 'absolute', top: 0, right: 0, bottom: 0,
-        flexDirection: 'row', flexWrap: 'wrap', width: 100, opacity: 0.08,
-        padding: 8, gap: 6,
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        width: 100,
+        opacity: 0.08,
+        padding: 8,
+        gap: 6,
     },
     decorDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.brand.primary },
-    missionTitle: { fontSize: 20, fontWeight: '900', color: Colors.brand.primary, fontFamily: 'monospace' },
+    missionTitle: {
+        fontSize: 20,
+        fontWeight: '900',
+        color: Colors.brand.primary,
+        fontFamily: 'monospace',
+    },
     missionText: { fontSize: 13, color: Colors.text.muted, textAlign: 'center', lineHeight: 19 },
     missionStats: { flexDirection: 'row', gap: 0, marginTop: Spacing.sm },
     missionStat: { alignItems: 'center', paddingHorizontal: Spacing.lg },
-    missionStatValue: { fontSize: 22, fontWeight: '800', color: Colors.brand.primary, fontFamily: 'monospace' },
+    missionStatValue: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: Colors.brand.primary,
+        fontFamily: 'monospace',
+    },
     missionStatLabel: { fontSize: 10, color: Colors.text.muted, marginTop: 2 },
     missionDivider: { width: 1, backgroundColor: Colors.border },
 
     // Edit Modal
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
     modalCard: {
-        backgroundColor: Colors.bg.secondary, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
-        padding: Spacing.lg, paddingBottom: 40, borderTopWidth: 1, borderTopColor: Colors.border,
+        backgroundColor: Colors.bg.secondary,
+        borderTopLeftRadius: Radius.xl,
+        borderTopRightRadius: Radius.xl,
+        padding: Spacing.lg,
+        paddingBottom: 40,
+        borderTopWidth: 1,
+        borderTopColor: Colors.border,
     },
-    modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.text.primary, marginBottom: Spacing.md },
-    inputLabel: { fontSize: 11, fontWeight: '700', color: Colors.text.muted, marginBottom: 6, marginTop: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.text.primary,
+        marginBottom: Spacing.md,
+    },
+    inputLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: Colors.text.muted,
+        marginBottom: 6,
+        marginTop: 12,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
     input: {
-        backgroundColor: Colors.bg.tertiary, borderRadius: Radius.md,
-        padding: Spacing.md, color: Colors.text.primary, fontSize: 15,
-        borderWidth: 1, borderColor: Colors.border,
+        backgroundColor: Colors.bg.tertiary,
+        borderRadius: Radius.md,
+        padding: Spacing.md,
+        color: Colors.text.primary,
+        fontSize: 15,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     modalButtons: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.lg },
     modalBtn: { flex: 1, padding: 14, borderRadius: Radius.lg, alignItems: 'center' },
-    modalBtnCancel: { backgroundColor: Colors.bg.tertiary, borderWidth: 1, borderColor: Colors.border },
+    modalBtnCancel: {
+        backgroundColor: Colors.bg.tertiary,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
     modalBtnSave: { backgroundColor: Colors.brand.primary },
     modalBtnCancelText: { fontSize: 15, fontWeight: '600', color: Colors.text.secondary },
     modalBtnSaveText: { fontSize: 15, fontWeight: '700', color: Colors.bg.primary },
-    modalErrorText: { color: Colors.alert.critical, fontSize: 12, marginTop: -Spacing.xs, marginBottom: Spacing.xs },
+    modalErrorText: {
+        color: Colors.alert.critical,
+        fontSize: 12,
+        marginTop: -Spacing.xs,
+        marginBottom: Spacing.xs,
+    },
 });

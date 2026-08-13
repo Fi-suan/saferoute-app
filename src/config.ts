@@ -11,9 +11,7 @@ import Constants from 'expo-constants';
 const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
 
 export const Config = {
-
     BACKEND_URL: extra.BACKEND_URL ?? 'https://saferoute-api-ce7l.onrender.com',
-
 
     /** Polling interval for incidents (ms) */
     INCIDENTS_POLL_INTERVAL_MS: 10_000,

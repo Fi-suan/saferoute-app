@@ -4,7 +4,7 @@
 export const Colors = {
     // Core brand
     brand: {
-        primary: '#2ECC71',     // Neon green accent
+        primary: '#2ECC71', // Neon green accent
         secondary: '#27AE60',
         glow: '#2ECC7120',
         glowStrong: '#2ECC7150',
@@ -12,18 +12,18 @@ export const Colors = {
 
     // True-black Nothing Phone backgrounds
     bg: {
-        primary: '#000000',     // App root — pure black
-        secondary: '#0F0F0F',   // Cards, panels
-        tertiary: '#1A1A1A',    // Nested elements, inputs
+        primary: '#000000', // App root — pure black
+        secondary: '#0F0F0F', // Cards, panels
+        tertiary: '#1A1A1A', // Nested elements, inputs
         map: '#0A0A0A',
-        glass: 'rgba(255,255,255,0.04)',    // Frosted glass card fill
+        glass: 'rgba(255,255,255,0.04)', // Frosted glass card fill
         glassStrong: 'rgba(255,255,255,0.07)',
     },
 
     // Text
     text: {
         primary: '#FFFFFF',
-        secondary: '#8A8A8A',   // Nothing uses cooler grey
+        secondary: '#8A8A8A', // Nothing uses cooler grey
         muted: '#666666',
         accent: '#2ECC71',
     },
@@ -48,7 +48,7 @@ export const Colors = {
     // UI chrome
     white: '#FFFFFF',
     black: '#000000',
-    border: 'rgba(255,255,255,0.08)',    // Subtle white glass border
+    border: 'rgba(255,255,255,0.08)', // Subtle white glass border
     borderStrong: 'rgba(255,255,255,0.14)',
     divider: 'rgba(255,255,255,0.05)',
     overlay: 'rgba(0,0,0,0.85)',

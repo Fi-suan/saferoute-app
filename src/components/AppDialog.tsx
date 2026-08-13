@@ -10,9 +10,7 @@
  *   // Триггер: showDialog({ title, message, buttons })
  */
 import React, { useState, useCallback } from 'react';
-import {
-    Modal, View, Text, StyleSheet, TouchableOpacity,
-} from 'react-native';
+import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius } from '../constants/colors';
 
@@ -41,17 +39,23 @@ export function AppDialog({ config, onDismiss }: AppDialogProps) {
 
     const getButtonStyle = (style?: DialogButton['style']) => {
         switch (style) {
-            case 'destructive': return styles.btnDestructive;
-            case 'cancel': return styles.btnCancel;
-            default: return styles.btnDefault;
+            case 'destructive':
+                return styles.btnDestructive;
+            case 'cancel':
+                return styles.btnCancel;
+            default:
+                return styles.btnDefault;
         }
     };
 
     const getButtonTextStyle = (style?: DialogButton['style']) => {
         switch (style) {
-            case 'destructive': return styles.btnTextDestructive;
-            case 'cancel': return styles.btnTextCancel;
-            default: return styles.btnTextDefault;
+            case 'destructive':
+                return styles.btnTextDestructive;
+            case 'cancel':
+                return styles.btnTextCancel;
+            default:
+                return styles.btnTextDefault;
         }
     };
 
@@ -61,7 +65,15 @@ export function AppDialog({ config, onDismiss }: AppDialogProps) {
                 <View style={styles.card}>
                     {/* Icon */}
                     {config.icon && (
-                        <View style={[styles.iconWrap, { backgroundColor: (config.iconColor ?? Colors.brand.primary) + '18' }]}>
+                        <View
+                            style={[
+                                styles.iconWrap,
+                                {
+                                    backgroundColor:
+                                        (config.iconColor ?? Colors.brand.primary) + '18',
+                                },
+                            ]}
+                        >
                             <Ionicons
                                 name={config.icon as any}
                                 size={32}
@@ -81,15 +93,15 @@ export function AppDialog({ config, onDismiss }: AppDialogProps) {
                     <Text style={styles.title}>{config.title}</Text>
 
                     {/* Message */}
-                    {config.message ? (
-                        <Text style={styles.message}>{config.message}</Text>
-                    ) : null}
+                    {config.message ? <Text style={styles.message}>{config.message}</Text> : null}
 
                     {/* Divider */}
                     <View style={styles.divider} />
 
                     {/* Buttons */}
-                    <View style={[styles.btnRow, config.buttons.length === 1 && styles.btnRowSingle]}>
+                    <View
+                        style={[styles.btnRow, config.buttons.length === 1 && styles.btnRowSingle]}
+                    >
                         {config.buttons.map((btn, idx) => (
                             <TouchableOpacity
                                 key={idx}
@@ -104,7 +116,13 @@ export function AppDialog({ config, onDismiss }: AppDialogProps) {
                                     <Ionicons
                                         name={btn.icon as any}
                                         size={16}
-                                        color={btn.style === 'default' ? Colors.bg.primary : btn.style === 'destructive' ? Colors.white : Colors.text.secondary}
+                                        color={
+                                            btn.style === 'default'
+                                                ? Colors.bg.primary
+                                                : btn.style === 'destructive'
+                                                  ? Colors.white
+                                                  : Colors.text.secondary
+                                        }
                                         style={{ marginRight: 4 }}
                                     />
                                 )}
@@ -207,7 +225,11 @@ const styles = StyleSheet.create({
         borderRadius: Radius.lg,
     },
     btnDefault: { backgroundColor: Colors.brand.primary },
-    btnCancel: { backgroundColor: Colors.bg.tertiary, borderWidth: 1, borderColor: Colors.borderStrong },
+    btnCancel: {
+        backgroundColor: Colors.bg.tertiary,
+        borderWidth: 1,
+        borderColor: Colors.borderStrong,
+    },
     btnDestructive: { backgroundColor: Colors.alert.critical },
     btnTextDefault: { fontSize: 14, fontWeight: '700', color: Colors.bg.primary },
     btnTextCancel: { fontSize: 14, fontWeight: '600', color: Colors.text.primary },

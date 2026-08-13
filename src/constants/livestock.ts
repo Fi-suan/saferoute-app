@@ -38,27 +38,42 @@ export interface Livestock {
     ownerPhone: string;
     type: LivestockType;
     count: number;
-    name: string;          // название стада / кличка
-    chipId?: string;       // ID физического чипа/трекера
+    name: string; // название стада / кличка
+    chipId?: string; // ID физического чипа/трекера
     latitude: number;
     longitude: number;
-    lastUpdated: string;   // ISO
-    isNearRoad: boolean;   // < 300м от трассы
+    lastUpdated: string; // ISO
+    isNearRoad: boolean; // < 300м от трассы
     distanceToRoadM: number;
-    routeId?: string;      // рядом с какой трассой
-    trackingMode: 'chip' | 'manual' | 'phone';  // источник данных
+    routeId?: string; // рядом с какой трассой
+    trackingMode: 'chip' | 'manual' | 'phone'; // источник данных
 }
 
-export const LIVESTOCK_META: Record<LivestockType, {
-    label: string;
-    labelKk: string;
-    icon: string;
-    color: string;
-    emoji: string;
-}> = {
+export const LIVESTOCK_META: Record<
+    LivestockType,
+    {
+        label: string;
+        labelKk: string;
+        icon: string;
+        color: string;
+        emoji: string;
+    }
+> = {
     horse: { label: 'Жылқы', labelKk: 'Жылқы үйірі', icon: 'paw', color: '#E67E22', emoji: '🐴' },
-    cow: { label: 'Сиыр', labelKk: 'Сиыр табыны', icon: 'nutrition', color: '#27AE60', emoji: '🐄' },
-    camel: { label: 'Түйе', labelKk: 'Түйе үйірі', icon: 'partly-sunny', color: '#F39C12', emoji: '🐪' },
+    cow: {
+        label: 'Сиыр',
+        labelKk: 'Сиыр табыны',
+        icon: 'nutrition',
+        color: '#27AE60',
+        emoji: '🐄',
+    },
+    camel: {
+        label: 'Түйе',
+        labelKk: 'Түйе үйірі',
+        icon: 'partly-sunny',
+        color: '#F39C12',
+        emoji: '🐪',
+    },
     sheep: { label: 'Қой', labelKk: 'Қой отары', icon: 'cloud', color: '#95A5A6', emoji: '🐑' },
     goat: { label: 'Ешкі', labelKk: 'Ешкі табыны', icon: 'leaf', color: '#2ECC71', emoji: '🐐' },
 };
@@ -77,7 +92,7 @@ export interface UserProfile {
     role: UserRole;
     joinedAt: string;
     totalReports: number;
-    avatarInitials: string;  // первые 2 буквы имени
+    avatarInitials: string; // первые 2 буквы имени
 }
 
 export const ROUTES = [
@@ -119,4 +134,4 @@ export const ROUTES = [
     },
 ] as const;
 
-export type RouteId = typeof ROUTES[number]['id'];
+export type RouteId = (typeof ROUTES)[number]['id'];

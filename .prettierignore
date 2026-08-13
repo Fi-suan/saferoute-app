@@ -5,3 +5,7 @@ android/
 ios/
 backend/
 package-lock.json
+# Данные анимаций из After Effects — машинный вывод, форматировать нечего
+src/assets/lottie/
+# Юридическая страница: пробелы влияют на вёрстку, переформатирование ничего не даёт
+privacy.html

@@ -41,9 +41,11 @@ function SeverityDots({ level }: { level: number }) {
                         {
                             backgroundColor:
                                 i <= level
-                                    ? level >= 4 ? Colors.alert.critical
-                                        : level >= 3 ? Colors.alert.high
-                                            : Colors.alert.medium
+                                    ? level >= 4
+                                        ? Colors.alert.critical
+                                        : level >= 3
+                                          ? Colors.alert.high
+                                          : Colors.alert.medium
                                     : Colors.bg.tertiary,
                         },
                     ]}
@@ -101,15 +103,28 @@ export default function IncidentCard({ item, onPress, compact }: Props) {
                     </View>
                 )}
                 {!item.is_active && (
-                    <View style={[styles.aiBadge, { backgroundColor: Colors.incident.resolved + '20' }]}>
-                        <Ionicons name="checkmark-done" size={14} color={Colors.incident.resolved} />
-                        <Text style={[styles.aiBadgeText, { color: Colors.incident.resolved }]}>Шешілді</Text>
+                    <View
+                        style={[
+                            styles.aiBadge,
+                            { backgroundColor: Colors.incident.resolved + '20' },
+                        ]}
+                    >
+                        <Ionicons
+                            name="checkmark-done"
+                            size={14}
+                            color={Colors.incident.resolved}
+                        />
+                        <Text style={[styles.aiBadgeText, { color: Colors.incident.resolved }]}>
+                            Шешілді
+                        </Text>
                     </View>
                 )}
             </View>
 
             {!compact && item.description ? (
-                <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
+                <Text style={styles.cardDesc} numberOfLines={2}>
+                    {item.description}
+                </Text>
             ) : null}
 
             <View style={styles.cardFooter}>
@@ -130,7 +145,12 @@ export default function IncidentCard({ item, onPress, compact }: Props) {
                 </View>
 
                 {onPress && (
-                    <Ionicons name="chevron-forward" size={16} color={Colors.text.muted} style={{ marginLeft: 'auto' }} />
+                    <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color={Colors.text.muted}
+                        style={{ marginLeft: 'auto' }}
+                    />
                 )}
             </View>
         </TouchableOpacity>
@@ -152,23 +172,33 @@ const styles = StyleSheet.create({
 
     // Фича 1: фото
     photo: {
-        width: '100%', height: 120,
-        borderRadius: Radius.md, marginBottom: Spacing.sm,
+        width: '100%',
+        height: 120,
+        borderRadius: Radius.md,
+        marginBottom: Spacing.sm,
     },
 
     cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
     typeIconWrap: {
-        width: 36, height: 36, borderRadius: Radius.sm,
-        alignItems: 'center', justifyContent: 'center', marginRight: Spacing.sm,
+        width: 36,
+        height: 36,
+        borderRadius: Radius.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: Spacing.sm,
     },
     cardHeaderText: { flex: 1 },
     cardTitle: { fontSize: 15, fontWeight: '600', color: Colors.text.primary },
     cardTime: { fontSize: 12, color: Colors.text.muted, marginTop: 1 },
     aiBadge: {
-        flexDirection: 'row', alignItems: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: Colors.brand.glow,
-        paddingHorizontal: 8, paddingVertical: 3,
-        borderRadius: Radius.full, gap: 3, marginLeft: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: Radius.full,
+        gap: 3,
+        marginLeft: 6,
     },
     aiBadgeText: { fontSize: 10, fontWeight: '700', color: Colors.brand.primary },
     cardDesc: { fontSize: 13, color: Colors.text.secondary, lineHeight: 18, marginBottom: 8 },

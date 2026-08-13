@@ -9,8 +9,8 @@ export type IncidentType = 'animal' | 'crash' | 'hazard' | 'other';
 export interface IncidentMeta {
     icon: string;
     color: string;
-    label: string;       // Казахский
-    labelRu: string;     // Русский (fallback)
+    label: string; // Казахский
+    labelRu: string; // Русский (fallback)
 }
 
 export const INCIDENT_META: Record<IncidentType, IncidentMeta> = {
@@ -59,7 +59,7 @@ export interface Incident {
     id: number;
     incident_type: IncidentType;
     description: string | null;
-    severity: number;          // 1–5
+    severity: number; // 1–5
     latitude: number;
     longitude: number;
     is_active: boolean;
@@ -68,8 +68,8 @@ export interface Incident {
     ai_confidence?: number;
     ai_severity_suggestion?: number;
     confirmations_count: number;
-    created_at: string;        // ISO string
+    created_at: string; // ISO string
     resolved_at: string | null;
-    photo_uri?: string;        // локальное фото (оптимистичный инцидент)
-    photo_url?: string;        // фото с сервера
+    photo_uri?: string; // локальное фото (оптимистичный инцидент)
+    photo_url?: string; // фото с сервера
 }

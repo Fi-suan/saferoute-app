@@ -11,78 +11,81 @@ import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchDirections } from '../services/directions';
 
-export interface LatLng { latitude: number; longitude: number; }
+export interface LatLng {
+    latitude: number;
+    longitude: number;
+}
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 /** Start → End for each supported route */
 const ROUTE_ENDPOINTS: Record<string, { start: LatLng; end: LatLng }> = {
     a17: {
-        start: { latitude: 51.180, longitude: 71.446 }, // Астана
-        end:   { latitude: 52.287, longitude: 76.967 }, // Павлодар
+        start: { latitude: 51.18, longitude: 71.446 }, // Астана
+        end: { latitude: 52.287, longitude: 76.967 }, // Павлодар
     },
     a1: {
-        start: { latitude: 51.180, longitude: 71.446 }, // Астана
-        end:   { latitude: 43.240, longitude: 76.910 }, // Алматы
+        start: { latitude: 51.18, longitude: 71.446 }, // Астана
+        end: { latitude: 43.24, longitude: 76.91 }, // Алматы
     },
     a21: {
-        start: { latitude: 51.180, longitude: 71.446 }, // Астана
-        end:   { latitude: 50.420, longitude: 80.250 }, // Семей
+        start: { latitude: 51.18, longitude: 71.446 }, // Астана
+        end: { latitude: 50.42, longitude: 80.25 }, // Семей
     },
     e40: {
         start: { latitude: 42.316, longitude: 69.596 }, // Шымкент
-        end:   { latitude: 42.900, longitude: 71.350 }, // Тараз
+        end: { latitude: 42.9, longitude: 71.35 }, // Тараз
     },
 };
 
 /** Static fallback waypoints (used when API unavailable) */
 export const STATIC_WAYPOINTS: Record<string, LatLng[]> = {
     a17: [
-        { latitude: 51.180, longitude: 71.446 },
-        { latitude: 51.260, longitude: 71.750 },
-        { latitude: 51.350, longitude: 72.100 },
-        { latitude: 51.450, longitude: 72.600 },
-        { latitude: 51.530, longitude: 73.100 },
-        { latitude: 51.600, longitude: 73.600 },
-        { latitude: 51.680, longitude: 74.100 },
-        { latitude: 51.750, longitude: 74.500 },
-        { latitude: 51.820, longitude: 75.000 },
-        { latitude: 51.900, longitude: 75.500 },
-        { latitude: 51.980, longitude: 76.000 },
-        { latitude: 52.050, longitude: 76.300 },
-        { latitude: 52.150, longitude: 76.600 },
-        { latitude: 52.230, longitude: 76.800 },
+        { latitude: 51.18, longitude: 71.446 },
+        { latitude: 51.26, longitude: 71.75 },
+        { latitude: 51.35, longitude: 72.1 },
+        { latitude: 51.45, longitude: 72.6 },
+        { latitude: 51.53, longitude: 73.1 },
+        { latitude: 51.6, longitude: 73.6 },
+        { latitude: 51.68, longitude: 74.1 },
+        { latitude: 51.75, longitude: 74.5 },
+        { latitude: 51.82, longitude: 75.0 },
+        { latitude: 51.9, longitude: 75.5 },
+        { latitude: 51.98, longitude: 76.0 },
+        { latitude: 52.05, longitude: 76.3 },
+        { latitude: 52.15, longitude: 76.6 },
+        { latitude: 52.23, longitude: 76.8 },
         { latitude: 52.287, longitude: 76.967 },
     ],
     a1: [
         // Астана → Караганда → Балхаш → Алматы (A-1, ~1256 км)
-        { latitude: 51.180, longitude: 71.446 },
-        { latitude: 50.950, longitude: 71.700 },
-        { latitude: 50.630, longitude: 72.960 },  // Теміртау
-        { latitude: 49.800, longitude: 73.100 },  // Қарағанды
-        { latitude: 49.100, longitude: 73.200 },
-        { latitude: 48.300, longitude: 73.500 },
-        { latitude: 47.600, longitude: 74.000 },
-        { latitude: 46.850, longitude: 75.000 },  // Балхаш
-        { latitude: 45.700, longitude: 75.300 },
-        { latitude: 44.850, longitude: 76.000 },
-        { latitude: 44.200, longitude: 76.500 },
-        { latitude: 43.600, longitude: 76.800 },
-        { latitude: 43.240, longitude: 76.910 },  // Алматы
+        { latitude: 51.18, longitude: 71.446 },
+        { latitude: 50.95, longitude: 71.7 },
+        { latitude: 50.63, longitude: 72.96 }, // Теміртау
+        { latitude: 49.8, longitude: 73.1 }, // Қарағанды
+        { latitude: 49.1, longitude: 73.2 },
+        { latitude: 48.3, longitude: 73.5 },
+        { latitude: 47.6, longitude: 74.0 },
+        { latitude: 46.85, longitude: 75.0 }, // Балхаш
+        { latitude: 45.7, longitude: 75.3 },
+        { latitude: 44.85, longitude: 76.0 },
+        { latitude: 44.2, longitude: 76.5 },
+        { latitude: 43.6, longitude: 76.8 },
+        { latitude: 43.24, longitude: 76.91 }, // Алматы
     ],
     a21: [
-        { latitude: 51.180, longitude: 71.446 },
-        { latitude: 51.300, longitude: 73.000 },
-        { latitude: 51.500, longitude: 75.000 },
-        { latitude: 51.200, longitude: 77.000 },
-        { latitude: 50.800, longitude: 79.000 },
-        { latitude: 50.420, longitude: 80.250 },
+        { latitude: 51.18, longitude: 71.446 },
+        { latitude: 51.3, longitude: 73.0 },
+        { latitude: 51.5, longitude: 75.0 },
+        { latitude: 51.2, longitude: 77.0 },
+        { latitude: 50.8, longitude: 79.0 },
+        { latitude: 50.42, longitude: 80.25 },
     ],
     e40: [
         { latitude: 42.316, longitude: 69.596 },
-        { latitude: 42.500, longitude: 70.200 },
-        { latitude: 42.700, longitude: 70.800 },
-        { latitude: 42.900, longitude: 71.350 },
+        { latitude: 42.5, longitude: 70.2 },
+        { latitude: 42.7, longitude: 70.8 },
+        { latitude: 42.9, longitude: 71.35 },
     ],
 };
 
@@ -121,7 +124,9 @@ export function useRoutePolyline(routeId: string): LatLng[] {
                     // Stale cache — show it while we refresh
                     if (!cancelled) setPolyline(cached.polyline);
                 }
-            } catch { /* ignore */ }
+            } catch {
+                /* ignore */
+            }
 
             // 2. Fetch from Directions API (via backend proxy)
             if (fetchingRef.current) return;
@@ -138,11 +143,13 @@ export function useRoutePolyline(routeId: string): LatLng[] {
             if (result && !cancelled) {
                 setPolyline(result.polyline);
                 const entry: CacheEntry = { polyline: result.polyline, fetchedAt: Date.now() };
-                AsyncStorage.setItem(cacheKey(routeId), JSON.stringify(entry)).catch(() => { });
+                AsyncStorage.setItem(cacheKey(routeId), JSON.stringify(entry)).catch(() => {});
             }
         })();
 
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [routeId]);
 
     return polyline;
