@@ -26,8 +26,14 @@ def register_device(request: Request, data: DeviceRegister, db: Session = Depend
     if device:
         device.fcm_token = data.fcm_token or device.fcm_token
         device.phone_number = data.phone_number or device.phone_number
-        device.latitude = data.latitude
-        device.longitude = data.longitude
+        # Только если координаты прислали. Раньше присваивалось безусловно, и
+        # повторная регистрация (она идёт на каждом запуске приложения и не
+        # передаёт координат) обнуляла позицию — после чего устройство выпадало
+        # из рассылки предупреждений, которая отбирает водителей по позиции.
+        if data.latitude is not None:
+            device.latitude = data.latitude
+        if data.longitude is not None:
+            device.longitude = data.longitude
         device.last_seen = datetime.now(UTC)
     else:
         role = Role.OWNER if data.role == "owner" else Role.DRIVER

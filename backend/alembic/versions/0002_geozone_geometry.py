@@ -24,22 +24,51 @@ branch_labels = None
 depends_on = None
 
 
-def _has_geozones() -> bool:
-    return "geozones" in sa.inspect(op.get_bind()).get_table_names()
+def _inspector():
+    return sa.inspect(op.get_bind())
+
+
+def _geozone_columns() -> set[str]:
+    insp = _inspector()
+    if "geozones" not in insp.get_table_names():
+        return set()
+    return {c["name"] for c in insp.get_columns("geozones")}
+
+
+def _geozone_indexes() -> set[str]:
+    insp = _inspector()
+    if "geozones" not in insp.get_table_names():
+        return set()
+    return {i["name"] for i in insp.get_indexes("geozones")}
 
 
 def upgrade() -> None:
     # На чистой БД таблиц ещё нет — их создаст create_all уже с этими колонками.
-    if not _has_geozones():
+    #
+    # Проверяем не только наличие таблицы, но и каждую колонку: приложение
+    # вызывает create_all в lifespan, поэтому база вполне может уже иметь новую
+    # схему, а alembic_version при этом отставать (так бывает, если БД подняли
+    # запуском приложения, а миграции прогнали позже). Без этой проверки
+    # add_column падал бы с DuplicateColumn, и `alembic upgrade head && uvicorn`
+    # не пускал бы сервис вообще.
+    columns = _geozone_columns()
+    if not columns:
         return
-    op.add_column("geozones", sa.Column("road_geometry", sa.Text(), nullable=True))
-    op.add_column("geozones", sa.Column("slug", sa.String(length=100), nullable=True))
-    op.create_index("ix_geozones_slug", "geozones", ["slug"], unique=True)
+    if "road_geometry" not in columns:
+        op.add_column("geozones", sa.Column("road_geometry", sa.Text(), nullable=True))
+    if "slug" not in columns:
+        op.add_column("geozones", sa.Column("slug", sa.String(length=100), nullable=True))
+    if "ix_geozones_slug" not in _geozone_indexes():
+        op.create_index("ix_geozones_slug", "geozones", ["slug"], unique=True)
 
 
 def downgrade() -> None:
-    if not _has_geozones():
+    columns = _geozone_columns()
+    if not columns:
         return
-    op.drop_index("ix_geozones_slug", table_name="geozones")
-    op.drop_column("geozones", "slug")
-    op.drop_column("geozones", "road_geometry")
+    if "ix_geozones_slug" in _geozone_indexes():
+        op.drop_index("ix_geozones_slug", table_name="geozones")
+    if "slug" in columns:
+        op.drop_column("geozones", "slug")
+    if "road_geometry" in columns:
+        op.drop_column("geozones", "road_geometry")

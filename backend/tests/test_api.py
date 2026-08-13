@@ -219,3 +219,72 @@ def test_delete_removes_own_reports(client, driver):
     assert res.status_code == 200
     assert res.json()["deleted"]["reports"] == 1
     assert client.get("/api/v1/incidents/active").json() == []
+
+
+# ── Регрессы, найденные на ревью ─────────────────────────────────────────────
+
+def test_reregistration_keeps_known_position(client, register):
+    """
+    Повторная регистрация без координат не должна обнулять позицию.
+
+    Клиент перерегистрируется на каждом запуске и координат не шлёт, а рассылка
+    предупреждений отбирает водителей по позиции — обнуление молча выкидывало
+    устройство из неё.
+    """
+    from app.database import SessionLocal
+    from app.models import Device
+
+    register("pos-device", "driver")
+    db = SessionLocal()
+    device = db.query(Device).filter(Device.device_id == "pos-device").first()
+    device.latitude, device.longitude = 51.18, 71.45
+    db.commit()
+    db.close()
+
+    client.post("/api/v1/auth/register",
+                json={"device_id": "pos-device", "role": "driver",
+                      "fcm_token": "ExponentPushToken[x]"})
+
+    db = SessionLocal()
+    device = db.query(Device).filter(Device.device_id == "pos-device").first()
+    assert device.latitude == 51.18, "позиция затёрта повторной регистрацией"
+    assert device.longitude == 71.45
+    assert device.fcm_token == "ExponentPushToken[x]", "токен должен обновиться"
+    db.close()
+
+
+def test_registration_updates_position_when_provided(client):
+    """Присланные координаты по-прежнему записываются."""
+    from app.database import SessionLocal
+    from app.models import Device
+
+    client.post("/api/v1/auth/register", json={"device_id": "pos2", "role": "driver"})
+    client.post("/api/v1/auth/register",
+                json={"device_id": "pos2", "role": "driver",
+                      "latitude": 43.24, "longitude": 76.91})
+
+    db = SessionLocal()
+    device = db.query(Device).filter(Device.device_id == "pos2").first()
+    assert (device.latitude, device.longitude) == (43.24, 76.91)
+    db.close()
+
+
+def test_wrapped_base64_photo_is_normalised(client, driver):
+    """
+    Валидатор допускает переносы строк, а b64decode(validate=True) на них падал —
+    фото проходило проверку и молча терялось на загрузке.
+    """
+    import base64
+    raw = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01" * 8
+    wrapped = "\n".join(base64.b64encode(raw).decode()[i:i + 16] for i in range(0, 60, 16))
+
+    res = client.post(
+        "/api/v1/incidents/report",
+        json={"incident_type": "animal", "severity": 3,
+              "latitude": 51.9, "longitude": 74.2, "photo_base64": wrapped},
+        headers=driver,
+    )
+    assert res.status_code == 201
+    # Значение должно дойти до декодера уже без пробелов.
+    normalised = wrapped.replace("\n", "")
+    base64.b64decode(normalised, validate=True)  # не должно бросить

@@ -168,13 +168,21 @@ async function flushQueue(): Promise<void> {
             }
         }
 
-        await saveQueue(failed);
+        // Перечитываем очередь, а не пишем поверх `failed`: отправка идёт по
+        // сети, и за это время submitReport мог добавить новый репорт. Запись
+        // старого снимка потеряла бы его целиком — вместе с фото, которое тут
+        // же удалила бы чистка, и с оптимистичной меткой, застрявшей навсегда.
+        const settledIds = new Set(settled);
+        const current = await loadQueue();
+        const remaining = current.filter((r) => !settledIds.has(r.localId));
+        await saveQueue(remaining);
+
         // Файлы отправленных и отклонённых репортов больше не нужны; заодно
         // подчищаем всё, на что очередь уже не ссылается.
-        cleanupOrphans(failed.map((r) => r.photo_file).filter((n): n is string => !!n));
+        cleanupOrphans(remaining.map((r) => r.photo_file).filter((n): n is string => !!n));
         set((s) => ({
-            pending: s.pending.filter((p) => !settled.includes(p.id)),
-            pendingReportsCount: failed.length,
+            pending: s.pending.filter((p) => !settledIds.has(p.id)),
+            pendingReportsCount: remaining.length,
         }));
     } finally {
         _flushing = false;

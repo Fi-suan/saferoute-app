@@ -13,6 +13,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from app.config import settings
 from app.database import get_db
@@ -64,7 +65,10 @@ class IncidentCreate(BaseModel):
             raise ValueError("photo_base64 too large (max ~1.5MB)")
         if not re.fullmatch(r'[A-Za-z0-9+/=\s]+', v):
             raise ValueError("photo_base64 contains invalid characters")
-        return v
+        # Переносы строк допустимы во входных данных, но дальше значение идёт
+        # в b64decode(validate=True), который на любой пробел падает. Приводим
+        # к каноническому виду здесь, иначе фото молча терялось бы на загрузке.
+        return re.sub(r'\s+', '', v)
 
 
 class ConfirmRequest(BaseModel):
@@ -294,7 +298,12 @@ async def create_incident(
     # выполнялась (нет ключа OpenAI) — сохраняем: решать будет сообщество.
     ai_rejected = ai_result["checked"] and not ai_result["verified"]
     if data.photo_base64 and not ai_rejected:
-        photo_url = storage.upload_incident_photo(incident.id, data.photo_base64)
+        # boto3 синхронный, а обработчик async: прямой вызов заблокировал бы
+        # цикл событий на всё время загрузки и подвесил бы остальные запросы —
+        # на бесплатном тарифе Render воркер один.
+        photo_url = await run_in_threadpool(
+            storage.upload_incident_photo, incident.id, data.photo_base64
+        )
         if photo_url:
             incident.photo_url = photo_url
             db.commit()
