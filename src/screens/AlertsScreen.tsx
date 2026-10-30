@@ -6,21 +6,22 @@
  * - useIncidents хук (единый источник данных)
  * - Навигация к IncidentDetailScreen при тапе на карточку
  */
-import React, { useState } from 'react';
-import {
-    View, Text, StyleSheet, FlatList,
-    TouchableOpacity, RefreshControl,
-} from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, CompositeNavigationProp } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Colors, Spacing, Radius } from '../constants/colors';
+import { STORAGE } from '../constants/storage';
 import { Incident } from '../constants/incidents';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIncidents } from '../hooks/useIncidents';
 import { useT } from '../i18n';
 import IncidentCard from '../components/IncidentCard';
+import { isOnCorridor } from '../hooks/useRoute';
+import { ROUTE_NAMES } from './map/constants';
 import { IncidentListSkeleton } from '../components/Skeleton';
 import { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -34,7 +35,22 @@ export default function AlertsScreen() {
     const navigation = useNavigation<NavProp>();
     const t = useT();
     const [activeTab, setActiveTab] = useState<'active' | 'all'>('active');
-    const { incidents, loading, refreshing, refresh, pendingReportsCount } = useIncidents(activeTab);
+    const [activeRouteId, setActiveRouteId] = useState('a17');
+    const { incidents, loading, refreshing, refresh, pendingReportsCount } =
+        useIncidents(activeTab);
+
+    // Keep the corridor in sync with the route selected in Profile
+    useFocusEffect(
+        useCallback(() => {
+            AsyncStorage.getItem(STORAGE.ACTIVE_ROUTE).then((id) => {
+                if (id) setActiveRouteId(id);
+            });
+        }, []),
+    );
+
+    const routeIncidents = incidents.filter((i) =>
+        isOnCorridor(i.latitude, i.longitude, activeRouteId),
+    );
 
     const handleCardPress = (incident: Incident) => {
         navigation.navigate('IncidentDetail', { incident });
@@ -47,13 +63,17 @@ export default function AlertsScreen() {
                 <View>
                     <Text style={styles.headerTitle}>{t('alerts_title')}</Text>
                     <Text style={styles.headerSub}>
-                        {incidents.length} {activeTab === 'active' ? t('alerts_count_active') : t('alerts_count_all')}
-                        {pendingReportsCount > 0 && ` · ${pendingReportsCount} ${t('alerts_pending_send')}`}
+                        {routeIncidents.length}{' '}
+                        {activeTab === 'active' ? t('alerts_count_active') : t('alerts_count_all')}
+                        {pendingReportsCount > 0 &&
+                            ` · ${pendingReportsCount} ${t('alerts_pending_send')}`}
                     </Text>
                 </View>
                 <View style={[styles.onlineBadge, { backgroundColor: Colors.brand.glow }]}>
-                    <Ionicons name="shield-checkmark" size={14} color={Colors.brand.primary} />
-                    <Text style={styles.onlineBadgeText}>A-17</Text>
+                    <Ionicons name="navigate" size={14} color={Colors.brand.primary} />
+                    <Text style={styles.onlineBadgeText}>
+                        {ROUTE_NAMES[activeRouteId] ?? 'A-17'}
+                    </Text>
                 </View>
             </View>
 
@@ -82,7 +102,7 @@ export default function AlertsScreen() {
                 <IncidentListSkeleton count={5} />
             ) : (
                 <FlatList
-                    data={incidents}
+                    data={routeIncidents}
                     keyExtractor={(item) => String(item.id)}
                     renderItem={({ item }) => (
                         <IncidentCard item={item} onPress={handleCardPress} />
@@ -98,7 +118,11 @@ export default function AlertsScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.centered}>
-                            <Ionicons name="shield-checkmark" size={48} color={Colors.brand.primary} />
+                            <Ionicons
+                                name="shield-checkmark"
+                                size={48}
+                                color={Colors.brand.primary}
+                            />
                             <Text style={styles.emptyText}>{t('alerts_empty_title')}</Text>
                             <Text style={styles.emptySubtext}>{t('alerts_empty_subtitle')}</Text>
                         </View>
@@ -112,30 +136,53 @@ export default function AlertsScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.bg.primary },
     header: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: Spacing.md, paddingTop: Spacing.md, paddingBottom: Spacing.sm,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing.md,
+        paddingTop: Spacing.md,
+        paddingBottom: Spacing.sm,
     },
     headerTitle: { fontSize: 24, fontWeight: '800', color: Colors.text.primary },
     headerSub: { fontSize: 13, color: Colors.text.muted, marginTop: 2 },
     onlineBadge: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
-        paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: Radius.full,
     },
     onlineBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.brand.primary },
     tabs: {
-        flexDirection: 'row', marginHorizontal: Spacing.md, marginBottom: Spacing.sm,
-        backgroundColor: Colors.bg.secondary, borderRadius: Radius.lg,
-        padding: 4, borderWidth: 1, borderColor: Colors.border,
+        flexDirection: 'row',
+        marginHorizontal: Spacing.md,
+        marginBottom: Spacing.sm,
+        backgroundColor: Colors.bg.secondary,
+        borderRadius: Radius.lg,
+        padding: 4,
+        borderWidth: 1,
+        borderColor: Colors.border,
     },
     tab: {
-        flex: 1, flexDirection: 'row', alignItems: 'center',
-        justifyContent: 'center', paddingVertical: 10, borderRadius: Radius.md, gap: 6,
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        borderRadius: Radius.md,
+        gap: 6,
     },
     tabActive: { backgroundColor: Colors.bg.tertiary },
     tabText: { fontSize: 14, fontWeight: '600', color: Colors.text.muted },
     tabTextActive: { color: Colors.brand.primary },
     list: { paddingHorizontal: Spacing.md, paddingBottom: 100 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
-    emptyText: { fontSize: 18, fontWeight: '600', color: Colors.text.primary, marginTop: Spacing.md },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.text.primary,
+        marginTop: Spacing.md,
+    },
     emptySubtext: { fontSize: 14, color: Colors.text.muted, marginTop: 4 },
 });

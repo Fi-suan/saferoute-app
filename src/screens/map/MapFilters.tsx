@@ -1,11 +1,14 @@
 /**
- * MapFilters — чипы фильтров (Все / Инциденты / Скот) поверх карты.
+ * MapFilters — сегмент-контрол фильтров (Все / Метки / Скот) поверх карты.
+ *
+ * Design: one rounded glass container, three equal-width segments.
+ * Active segment fills green — no ragged chip row.
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Colors, Spacing, Radius } from '../../constants/colors';
+import { Colors, Radius } from '../../constants/colors';
 import { useT } from '../../i18n';
 import { FilterType } from './constants';
 
@@ -23,56 +26,56 @@ export default function MapFilters({ filter, onChange }: MapFiltersProps) {
     ];
 
     return (
-        <View style={styles.filterRow}>
-            {chips.map((f) => (
-                <TouchableOpacity
-                    key={f.key}
-                    style={[styles.filterChip, filter === f.key && styles.filterChipActive]}
-                    onPress={() => {
-                        Haptics.selectionAsync();
-                        onChange(f.key);
-                    }}
-                >
-                    <Ionicons
-                        name={f.icon as any}
-                        size={16}
-                        color={filter === f.key ? Colors.bg.primary : Colors.text.secondary}
-                    />
-                    <Text
-                        style={[
-                            styles.filterChipText,
-                            filter === f.key && styles.filterChipTextActive,
-                        ]}
+        <View style={styles.segment}>
+            {chips.map((f) => {
+                const active = filter === f.key;
+                return (
+                    <TouchableOpacity
+                        key={f.key}
+                        style={[styles.segBtn, active && styles.segBtnActive]}
+                        onPress={() => {
+                            Haptics.selectionAsync();
+                            onChange(f.key);
+                        }}
+                        activeOpacity={0.8}
                     >
-                        {f.label}
-                    </Text>
-                </TouchableOpacity>
-            ))}
+                        <Ionicons
+                            name={f.icon as any}
+                            size={15}
+                            color={active ? Colors.bg.primary : Colors.text.secondary}
+                        />
+                        <Text style={[styles.segBtnText, active && styles.segBtnTextActive]}>
+                            {f.label}
+                        </Text>
+                    </TouchableOpacity>
+                );
+            })}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    filterRow: {
-        position: 'absolute',
-        top: 150,
-        left: Spacing.md,
-        right: Spacing.md,
+    segment: {
         flexDirection: 'row',
-        gap: 8,
-    },
-    filterChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: Radius.sm,
-        backgroundColor: 'rgba(0,0,0,0.85)',
+        alignSelf: 'flex-start',
+        backgroundColor: 'rgba(8, 10, 14, 0.92)',
+        borderRadius: Radius.lg,
+        padding: 4,
         borderWidth: 1,
         borderColor: Colors.border,
+        gap: 3,
     },
-    filterChipActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
-    filterChipText: { fontSize: 14, fontWeight: '700', color: Colors.text.secondary },
-    filterChipTextActive: { color: Colors.bg.primary },
+    segBtn: {
+        flex: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 9,
+        paddingHorizontal: 14,
+        borderRadius: Radius.md,
+    },
+    segBtnActive: { backgroundColor: Colors.brand.primary },
+    segBtnText: { fontSize: 13, fontWeight: '700', color: Colors.text.secondary },
+    segBtnTextActive: { color: Colors.bg.primary },
 });

@@ -554,11 +554,11 @@ export default function MapScreen() {
                     source={require('../assets/lottie/alert_pulse.json')}
                     autoPlay
                     loop
-                    style={{ position: 'absolute', width: 150, height: 150 }}
+                    style={{ position: 'absolute', width: 104, height: 104 }}
                 />
                 <Ionicons
                     name={profile.role === 'livestock_owner' ? 'paw' : 'add'}
-                    size={28}
+                    size={26}
                     color={Colors.bg.primary}
                 />
             </TouchableOpacity>
@@ -716,8 +716,8 @@ const styles = StyleSheet.create({
         right: Spacing.md,
         backgroundColor: Colors.brand.primary,
         borderRadius: Radius.full,
-        width: 64,
-        height: 64,
+        width: 60,
+        height: 60,
         alignItems: 'center',
         justifyContent: 'center',
         ...Shadow.glow,
