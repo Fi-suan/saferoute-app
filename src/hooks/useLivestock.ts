@@ -15,6 +15,7 @@ import {
     createHerd,
     insertHerdLocation,
     deactivateHerd,
+    cleanupStaleManualHerds,
 } from '../services/api';
 import { useT } from '../i18n';
 
@@ -157,6 +158,8 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
 
     const refreshLivestock = useCallback(async () => {
         await loadRoadZones();
+        // призрачные manual-стада (приложение владельца умерло) убираем
+        cleanupStaleManualHerds().catch(() => {});
         const data = await fetchLivestockFromServer(t);
         setLivestock(data);
     }, []);

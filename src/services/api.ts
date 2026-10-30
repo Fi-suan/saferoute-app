@@ -191,6 +191,11 @@ export async function deactivateHerd(herdId: number): Promise<void> {
     await supabase.from('herds').update({ is_active: false }).eq('id', herdId);
 }
 
+/** Деактивировать manual-стада без обновлений 30+ минут (призраки). */
+export async function cleanupStaleManualHerds(): Promise<void> {
+    await supabase.rpc('cleanup_stale_manual_herds');
+}
+
 // ── GeoZones ───────────────────────────────────────────────────────────────────
 export async function getGeozones(): Promise<GeoZone[]> {
     const { data, error } = await supabase.from('geozones').select('*').eq('is_active', true);

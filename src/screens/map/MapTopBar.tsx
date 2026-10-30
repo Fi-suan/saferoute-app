@@ -101,7 +101,9 @@ export default function MapTopBar({
                     </Text>
                     <View style={styles.routeDivider} />
                     <View style={[styles.statusDot, { backgroundColor: STATUS_DOT[roadStatus] }]} />
-                    <Text style={styles.statusText}>{statusLabel}</Text>
+                    <Text style={styles.statusText} numberOfLines={1} ellipsizeMode="tail">
+                        {statusLabel}
+                    </Text>
                 </View>
 
                 <TouchableOpacity
@@ -206,7 +208,7 @@ const styles = StyleSheet.create({
     routeText: { fontSize: 13, fontWeight: '800', color: Colors.brand.primary },
     routeDivider: { width: 1, height: 12, backgroundColor: Colors.border },
     statusDot: { width: 8, height: 8, borderRadius: 4 },
-    statusText: { fontSize: 12.5, fontWeight: '700', color: Colors.text.secondary },
+    statusText: { fontSize: 12.5, fontWeight: '700', color: Colors.text.secondary, flexShrink: 1 },
 
     navBtn: {
         flexDirection: 'row',

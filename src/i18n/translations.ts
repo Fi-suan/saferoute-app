@@ -21,7 +21,7 @@ const translations = {
         road_open: 'Жол таза',
         road_caution: 'Сақтық!',
         road_closed: 'Жол жабық',
-        route_mode_label: 'Маршрут режимі',
+        route_mode_label: 'Маршрут',
         nav_arrived: 'Сіз мақсатыңызға жеттіңіз!',
         nav_failed: 'Бағытты жүктеу сәтсіз болды. Интернетті тексеріңіз.',
 
@@ -160,7 +160,6 @@ const translations = {
         stat_reports: 'Менің репорттарым',
         my_reports_title: 'Менің белгілерім',
         stat_resolved: 'Шешілген',
-        stat_unread: 'Оқылмаған хабарлама',
         route_start: 'Бастапқы',
         route_end: 'Соңғы',
         notif_mark_read: 'Барлығын оқылды',
@@ -264,10 +263,10 @@ const translations = {
         loading_location: 'Определяется местоположение...',
         herd_mode_badge: 'С табуном',
 
-        road_open: 'Дорога открыта',
+        road_open: 'Открыта',
         road_caution: 'Осторожно!',
-        road_closed: 'Дорога закрыта',
-        route_mode_label: 'Режим маршрута',
+        road_closed: 'Закрыта',
+        route_mode_label: 'Маршрут',
         nav_arrived: 'Вы прибыли!',
         nav_failed: 'Не удалось загрузить маршрут. Проверьте интернет.',
 
@@ -397,7 +396,6 @@ const translations = {
         stat_reports: 'Мои репорты',
         my_reports_title: 'Мои метки',
         stat_resolved: 'Решено',
-        stat_unread: 'Непрочитанные',
         route_start: 'Начало',
         route_end: 'Конец',
         notif_mark_read: 'Отметить прочитанными',

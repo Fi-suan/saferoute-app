@@ -104,7 +104,9 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
         setDescError(null);
         setSubmitting(true);
 
-        // Resize + compress photo before base64 to avoid OOM on weak devices
+        // Resize + compress photo before base64 to avoid OOM on weak devices.
+        // Фолбэк: если сжатие сорвалось (HEIC/особые форматы) — читаем оригинал
+        // напрямую как base64; диалог показываем только если не вышло вообще.
         let photo_base64: string | undefined;
         let photoFailed = false;
         if (photoUri) {
@@ -119,8 +121,15 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
                 });
                 photo_base64 = base64Data;
             } catch (e) {
-                console.warn('[ReportModal] Failed to process photo:', e);
-                photoFailed = true;
+                console.warn('[ReportModal] resize failed, trying original file:', e);
+                try {
+                    photo_base64 = await FileSystem.readAsStringAsync(photoUri, {
+                        encoding: 'base64',
+                    });
+                } catch (e2) {
+                    console.warn('[ReportModal] original read failed:', e2);
+                    photoFailed = true;
+                }
             }
         }
 

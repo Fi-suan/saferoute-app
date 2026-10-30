@@ -118,7 +118,6 @@ export default function ProfileScreen() {
         reload: reloadNotifLog,
         markAllRead,
         clearLog: clearNotifLog,
-        unreadCount,
     } = useNotificationLog();
     const [editModal, setEditModal] = useState(false);
     const [notifModal, setNotifModal] = useState(false);
@@ -257,13 +256,6 @@ export default function ProfileScreen() {
                                 size={21}
                                 color={Colors.text.secondary}
                             />
-                            {unreadCount > 0 && (
-                                <View style={styles.bellBadge}>
-                                    <Text style={styles.bellBadgeText}>
-                                        {unreadCount > 9 ? '9+' : unreadCount}
-                                    </Text>
-                                </View>
-                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -334,7 +326,7 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* ── STATS GRID 2×2 (Nothing-style cards) ─────────── */}
+                {/* ── STATS GRID (Nothing-style cards) ─────────── */}
                 <View style={styles.grid}>
                     <StatCard
                         value={activeIncidents}
@@ -350,23 +342,6 @@ export default function ProfileScreen() {
                         onPress={() => {
                             Haptics.selectionAsync();
                             setMyIncidentsModal(true);
-                        }}
-                    />
-                    {/* Реальные данные вместо счётчика маршрутов */}
-                    <StatCard
-                        value={incidents.filter((i) => !i.is_active).length}
-                        label={t('stat_resolved')}
-                        icon="checkmark-done"
-                        color={Colors.brand.secondary}
-                    />
-                    <StatCard
-                        value={unreadCount}
-                        label={t('stat_unread')}
-                        icon="notifications"
-                        color={Colors.alert.info}
-                        onPress={() => {
-                            Haptics.selectionAsync();
-                            setNotifModal(true);
                         }}
                     />
                 </View>
@@ -952,25 +927,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: 18,
-    },
-    bellBadge: {
-        position: 'absolute',
-        top: 1,
-        right: 1,
-        minWidth: 16,
-        height: 16,
-        borderRadius: 8,
-        paddingHorizontal: 3,
-        backgroundColor: Colors.alert.critical,
-        borderWidth: 1.5,
-        borderColor: Colors.bg.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    bellBadgeText: {
-        fontSize: 9,
-        fontWeight: '800',
-        color: Colors.white,
     },
 
     // Notification modal
