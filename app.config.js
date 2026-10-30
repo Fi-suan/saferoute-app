@@ -6,7 +6,7 @@ module.exports = {
   expo: {
     name: 'Sapa Jol',
     slug: 'saferoute-app',
-    version: '1.0.0',
+    version: '1.1.0',
     orientation: 'portrait',
     icon: './assets/image.png',
     userInterfaceStyle: 'dark',
@@ -50,7 +50,7 @@ module.exports = {
           apiKey: process.env.GOOGLE_MAPS_API_KEY,
         },
       },
-      privacyPolicyUrl: 'https://saferoute.kz/privacy.html',
+      privacyPolicyUrl: 'https://github.com/Fi-suan/saferoute-app/blob/master/privacy.html',
     },
     web: {
       favicon: './assets/image.png',
