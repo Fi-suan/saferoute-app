@@ -346,6 +346,17 @@ export async function submitIncidentReport(params: {
     return normalizeIncident(data as IncidentRow);
 }
 
+/** Live incident by id (used by the detail screen for realtime updates) */
+export async function getIncidentById(id: number): Promise<Incident | null> {
+    const { data, error } = await supabase
+        .from('incident_reports')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+    if (error || !data) return null;
+    return normalizeIncident(data as IncidentRow);
+}
+
 export async function confirmIncidentOnServer(
     incidentId: number,
     deviceId: string,
