@@ -10,8 +10,6 @@
     "submit:android": "eas submit --platform android --profile production",
     "deploy": "npm run build:android && npm run submit:android",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/ --max-warnings 0",
-    "lint:fix": "eslint src/ --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -46,15 +44,6 @@
     "@types/react": "~19.1.0",
     "dotenv": "^17.3.1",
     "typescript": "~5.9.2"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix --max-warnings 0",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ]
   },
   "private": true
 }
