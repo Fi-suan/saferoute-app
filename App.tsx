@@ -101,7 +101,7 @@ export default function App() {
         <ErrorBoundary onError={reportError}>
             <GestureHandlerRootView style={styles.root}>
                 <SafeAreaProvider>
-                    <StatusBar style="light" backgroundColor={Colors.bg.primary} />
+                    <StatusBar style="light" />
                     {onboardingDone ? (
                         <NavigationContainer
                             theme={{

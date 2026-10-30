@@ -196,7 +196,8 @@ export default function OnboardingScreen({
 
     const slides = lang === 'kk' ? SLIDES_KK : SLIDES_RU;
     const ui = L[lang];
-    const scrollRef = useRef<ScrollView>(null);
+    // RN 0.88: тип рефа — инстанс компонента, не сам компонент
+    const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
 
     const clear = (k: string) => setErrors((e) => ({ ...e, [k]: '' }));
 
