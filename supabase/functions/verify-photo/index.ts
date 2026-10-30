@@ -82,6 +82,11 @@ Deno.serve(async (req: Request) => {
         const confidence = typeof verdict.confidence === 'number' ? verdict.confidence : 0;
         const isValid = verdict.is_valid === true && confidence >= 0.75;
 
+        // Критерии мусора: модель уверенно говорит «это не дорожная опасность»
+        // (is_valid=false и уверенность >= 0.6) — метка автоматически убирается
+        // с карты; при неуверенном отказе решение остаётся за сообществом.
+        const autoRejected = verdict.is_valid === false && confidence >= 0.6;
+
         // 2. Пишем результат в метку (service role обходит RLS)
         const url = `${Deno.env.get('SUPABASE_URL')}/rest/v1/incident_reports?id=eq.${rec.id}`;
         const updateRes = await fetch(url, {
@@ -98,11 +103,12 @@ Deno.serve(async (req: Request) => {
                 ai_analysis: verdict.analysis_kk ?? null,
                 ai_severity_suggestion:
                     typeof verdict.severity === 'number' ? Math.max(1, Math.min(5, Math.round(verdict.severity))) : null,
+                ...(autoRejected ? { is_active: false, resolved_at: new Date().toISOString() } : {}),
             }),
         });
 
         return new Response(
-            `incident ${rec.id}: valid=${isValid} conf=${confidence} updated=${updateRes.ok}`,
+            `incident ${rec.id}: valid=${isValid} autoRejected=${autoRejected} conf=${confidence} updated=${updateRes.ok}`,
             { status: 200 },
         );
     } catch (e) {

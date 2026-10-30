@@ -296,7 +296,10 @@ export async function submitIncidentReport(params: {
             route_id: params.route_id ?? null,
             photo_url: params.photo_url ?? null,
             ai_verified: false,
-            ai_analysis: 'AI метканы тексеруде...',
+            // с фото ИИ проверит; без фото — честный плейсхолдер, а не вечное «тексеруде»
+            ai_analysis: params.photo_url
+                ? 'AI метканы тексеруде...'
+                : 'Фото жоқ — қауымдастық растауын күтуде.',
             is_active: true,
             confirmations_count: 0,
         })

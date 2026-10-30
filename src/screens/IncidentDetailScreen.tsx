@@ -198,33 +198,48 @@ export default function IncidentDetailScreen() {
                     <Text style={styles.sectionLabel}>{t('ai_section')}</Text>
                     <View style={styles.aiBanner}>
                         <View style={styles.aiBannerRow}>
-                            <Ionicons
-                                name={incident.ai_verified ? 'checkmark-circle' : 'time'}
-                                size={18}
-                                color={
-                                    incident.ai_verified ? Colors.brand.primary : Colors.text.muted
-                                }
-                            />
-                            <Text
-                                style={[
-                                    styles.aiBannerStatus,
-                                    {
-                                        color: incident.ai_verified
-                                            ? Colors.brand.primary
-                                            : Colors.text.muted,
-                                    },
-                                ]}
-                            >
-                                {incident.ai_verified ? t('ai_verified_badge') : t('ai_pending')}
-                            </Text>
-                            {incident.ai_confidence !== undefined && (
-                                <Text style={styles.aiConfidence}>
-                                    {Math.round(incident.ai_confidence * 100)}%
-                                </Text>
-                            )}
+                            {/* Три состояния: расталды / отклонено / проверяется.
+                                Вердикт пришёл ⇔ ai_confidence — число (не null). */}
+                            {(() => {
+                                const hasVerdict =
+                                    incident.ai_confidence !== undefined &&
+                                    incident.ai_confidence !== null;
+                                const rejected = !incident.ai_verified && hasVerdict;
+                                const icon = incident.ai_verified
+                                    ? 'checkmark-circle'
+                                    : rejected
+                                      ? 'close-circle'
+                                      : 'time';
+                                const color = incident.ai_verified
+                                    ? Colors.brand.primary
+                                    : rejected
+                                      ? Colors.alert.critical
+                                      : Colors.text.muted;
+                                const label = incident.ai_verified
+                                    ? t('ai_verified_badge')
+                                    : rejected
+                                      ? t('ai_rejected')
+                                      : t('ai_pending');
+                                return (
+                                    <>
+                                        <Ionicons name={icon as any} size={18} color={color} />
+                                        <Text
+                                            style={[styles.aiBannerStatus, { color }]}
+                                        >
+                                            {label}
+                                        </Text>
+                                    </>
+                                );
+                            })()}
+                            {incident.ai_verified &&
+                                incident.ai_confidence !== undefined && (
+                                    <Text style={styles.aiConfidence}>
+                                        {Math.round(incident.ai_confidence * 100)}%
+                                    </Text>
+                                )}
                         </View>
                         {/* 🎨 ANIMATION_SLOT: ai_confidence_bar — анимированный прогресс */}
-                        {incident.ai_confidence !== undefined && (
+                        {incident.ai_verified && incident.ai_confidence !== undefined && (
                             <View style={styles.aiBar}>
                                 <View
                                     style={[

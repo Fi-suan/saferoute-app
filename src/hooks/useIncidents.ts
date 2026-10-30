@@ -239,7 +239,9 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
                 // работал и для оптимистичных/офлайн меток
                 reporter_device_id: deviceId,
                 ai_verified: false,
-                ai_analysis: 'AI тексеруде...',
+                ai_analysis: params.photo_base64
+                    ? 'AI метканы тексеруде...'
+                    : 'Фото жоқ — қауымдастық растауын күтуде.',
                 ai_confidence: undefined,
                 confirmations_count: 0,
                 created_at: new Date().toISOString(),
