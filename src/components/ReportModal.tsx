@@ -25,7 +25,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { INCIDENT_TYPES_LIST } from '../constants/incidents';
 import { GeoPoint } from '../hooks/useLocation';
-import * as FileSystem from 'expo-file-system';
+// SDK 54: readAsStringAsync переехал в /legacy — из 'expo-file-system' кидает ошибку
+import * as FileSystem from 'expo-file-system/legacy';
 import { useT } from '../i18n';
 import { useAppDialog } from './AppDialog';
 
@@ -85,7 +86,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
         }
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (skipPhoto = false) => {
         if (!location) {
             showDialog({
                 title: t('common_error'),
@@ -107,9 +108,10 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
         // Resize + compress photo before base64 to avoid OOM on weak devices.
         // Фолбэк: если сжатие сорвалось (HEIC/особые форматы) — читаем оригинал
         // напрямую как base64; диалог показываем только если не вышло вообще.
+        // skipPhoto: путь «Отправить без фото» — стейт ещё мог не обновиться.
         let photo_base64: string | undefined;
         let photoFailed = false;
-        if (photoUri) {
+        if (photoUri && !skipPhoto) {
             try {
                 const resized = await ImageManipulator.manipulateAsync(
                     photoUri,
@@ -146,7 +148,8 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
                         style: 'default',
                         onPress: () => {
                             setPhotoUri(null);
-                            handleSubmit();
+                            // skipPhoto=true: state ещё старый, пересабыть не выйдет
+                            handleSubmit(true);
                         },
                     },
                     { text: t('no_exit'), style: 'cancel' },
@@ -337,7 +340,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
                         {/* Submit */}
                         <TouchableOpacity
                             style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
-                            onPress={handleSubmit}
+                            onPress={() => handleSubmit()}
                             disabled={submitting}
                         >
                             {submitting ? (

@@ -39,7 +39,8 @@ export function IncidentMarkers({ incidents, onCalloutPress }: IncidentMarkersPr
                         <Circle center={{ latitude: inc.latitude, longitude: inc.longitude }} radius={50}   fillColor={meta.color + 'AA'} strokeWidth={0} />
                         <Circle center={{ latitude: inc.latitude, longitude: inc.longitude }} radius={200}  fillColor={meta.color + '40'} strokeWidth={0} />
                         <Circle center={{ latitude: inc.latitude, longitude: inc.longitude }} radius={600}  fillColor={meta.color + '18'} strokeWidth={0} />
-                        <Circle center={{ latitude: inc.latitude, longitude: inc.longitude }} radius={1200} fillColor={meta.color + '08'} strokeColor={meta.color + '30'} strokeWidth={1} />
+                        {/* 2 км — радиус срабатывания предупреждения (Config.DEFAULT_PROXIMITY_RADIUS_KM) */}
+                        <Circle center={{ latitude: inc.latitude, longitude: inc.longitude }} radius={2000} fillColor={meta.color + '10'} strokeColor={meta.color + '40'} strokeWidth={1} />
                     </React.Fragment>
                 );
             })}
