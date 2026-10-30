@@ -98,6 +98,12 @@ export interface IncidentRow {
     resolved_at: string | null;
 }
 
+/** PostgREST returns naive UTC timestamps; JS would parse them as local. */
+function toIso(s: string | null | undefined): string {
+    if (!s) return new Date().toISOString();
+    return /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : s + 'Z';
+}
+
 /** Postgres enum label ('ANIMAL') → app value ('animal') */
 function lowerEnum<T extends string>(v: string | null | undefined, fallback: T): T {
     return (v?.toLowerCase() as T) ?? fallback;
@@ -118,8 +124,8 @@ function normalizeIncident(row: IncidentRow): Incident {
         ai_severity_suggestion: row.ai_severity_suggestion ?? undefined,
         reporter_device_id: row.reporter_device_id ?? null,
         confirmations_count: row.confirmations_count ?? 0,
-        created_at: row.created_at ?? new Date().toISOString(),
-        resolved_at: row.resolved_at ?? null,
+        created_at: toIso(row.created_at),
+        resolved_at: row.resolved_at ? toIso(row.resolved_at) : null,
         photo_url: row.photo_url ?? undefined,
     };
 }

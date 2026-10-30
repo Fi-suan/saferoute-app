@@ -46,8 +46,8 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
     const a =
         Math.sin(dLat / 2) ** 2 +
         Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) ** 2;
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) ** 2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -57,6 +57,7 @@ export function useLocation(
     onNearbyAlert?: (incidentId: number, title: string, body: string) => void,
 ): UseLocationReturn {
     const [location, setLocation] = useState<GeoPoint | null>(null);
+    const myDeviceIdRef = useRef<string | null>(null);
     const [hasPermission, setHasPermission] = useState(false);
     const [loading, setLoading] = useState(true);
     const [nearbyAlert, setNearbyAlert] = useState<Incident | null>(null);
@@ -64,7 +65,9 @@ export function useLocation(
 
     // Simulation states
     const [isSimulating, setIsSimulating] = useState(false);
-    const [simulationStage, setSimulationStage] = useState<'idle' | 'approaching' | 'nearby' | 'passed'>('idle');
+    const [simulationStage, setSimulationStage] = useState<
+        'idle' | 'approaching' | 'nearby' | 'passed'
+    >('idle');
     const simulationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Refs чтобы не триггерить proximity дважды для одного инцидента
@@ -93,7 +96,11 @@ export function useLocation(
                     accuracy: Location.Accuracy.Balanced,
                 });
                 if (!cancelled) {
-                    setLocation({ lat: loc.coords.latitude, lon: loc.coords.longitude, heading: loc.coords.heading ?? null });
+                    setLocation({
+                        lat: loc.coords.latitude,
+                        lon: loc.coords.longitude,
+                        heading: loc.coords.heading ?? null,
+                    });
                     setLoading(false);
                 }
             } catch {
@@ -120,14 +127,16 @@ export function useLocation(
                             const now = Date.now();
                             if (now - lastSentRef.current > 30_000) {
                                 lastSentRef.current = now;
-                                getDeviceId().then(id =>
-                                    updateDeviceLocation(id, lat, lon).catch(() => {})
+                                getDeviceId().then((id) =>
+                                    updateDeviceLocation(id, lat, lon).catch(() => {}),
                                 );
                             }
                         }
                     },
                 );
-            } catch { /* watch unavailable */ }
+            } catch {
+                /* watch unavailable */
+            }
         })();
 
         return () => {
@@ -136,12 +145,32 @@ export function useLocation(
         };
     }, [isSimulating]);
 
+    // Own device id for the author anti-spam cooldown below
+    useEffect(() => {
+        getDeviceId()
+            .then((id) => {
+                myDeviceIdRef.current = id;
+            })
+            .catch(() => {});
+    }, []);
+
     // Proximity check — запускается при изменении позиции или инцидентов
     useEffect(() => {
         if (!location || incidents.length === 0) return;
 
         for (const inc of incidents) {
             if (!inc.is_active) continue;
+
+            // Анти-спам: автор метки стоит В точке метки в момент создания —
+            // первые 3 минуты его собственную метку не алертим.
+            // Через 3 минуты метка для автора — обычная опасность (и это
+            // позволяет тестировать proximity с одного устройства).
+            if (
+                inc.reporter_device_id &&
+                inc.reporter_device_id === myDeviceIdRef.current &&
+                Date.now() - new Date(inc.created_at).getTime() < 3 * 60 * 1000
+            )
+                continue;
             const dist = haversineKm(location.lat, location.lon, inc.latitude, inc.longitude);
 
             // Алерт-баннер 2 км
@@ -174,33 +203,37 @@ export function useLocation(
     const dismissConfirmCandidate = useCallback(() => setConfirmCandidate(null), []);
 
     // ── GPS Simulation Engine ──────────────────────────────────────────────
-    const startSimulation = useCallback((targetIncident?: Incident) => {
-        const target = targetIncident || incidents.find(i => i.is_active) || {
-            latitude: 52.2855,
-            longitude: 76.9675,
-            id: 99999,
-            incident_type: 'animal' as const,
-            severity: 3,
-            description: 'Киіктер табыны / Стадо сайгаков',
-            is_active: true,
-            confirmations_count: 0,
-            created_at: new Date().toISOString(),
-        };
+    const startSimulation = useCallback(
+        (targetIncident?: Incident) => {
+            const target = targetIncident ||
+                incidents.find((i) => i.is_active) || {
+                    latitude: 52.2855,
+                    longitude: 76.9675,
+                    id: 99999,
+                    incident_type: 'animal' as const,
+                    severity: 3,
+                    description: 'Киіктер табыны / Стадо сайгаков',
+                    is_active: true,
+                    confirmations_count: 0,
+                    created_at: new Date().toISOString(),
+                };
 
-        // Reset alerted tracking so the banner and dialog trigger reliably
-        alertedIds.current.delete(target.id);
-        confirmIds.current.delete(target.id);
+            // Reset alerted tracking so the banner and dialog trigger reliably
+            alertedIds.current.delete(target.id);
+            confirmIds.current.delete(target.id);
 
-        setIsSimulating(true);
-        setSimulationStage('approaching');
+            setIsSimulating(true);
+            setSimulationStage('approaching');
 
-        // Start at ~2.5 km south of incident (approx -0.0225 latitude)
-        setLocation({
-            lat: target.latitude - 0.0225,
-            lon: target.longitude,
-            heading: 0,
-        });
-    }, [incidents]);
+            // Start at ~2.5 km south of incident (approx -0.0225 latitude)
+            setLocation({
+                lat: target.latitude - 0.0225,
+                lon: target.longitude,
+                heading: 0,
+            });
+        },
+        [incidents],
+    );
 
     const stopSimulation = useCallback(() => {
         setIsSimulating(false);
@@ -211,38 +244,44 @@ export function useLocation(
         }
     }, []);
 
-    const triggerSimulationStep = useCallback((stage: 'nearby' | 'confirm') => {
-        const target = incidents.find(i => i.is_active) || {
-            latitude: 52.2855,
-            longitude: 76.9675,
-            id: 99999,
-        };
+    const triggerSimulationStep = useCallback(
+        (stage: 'nearby' | 'confirm') => {
+            const target = incidents.find((i) => i.is_active) || {
+                latitude: 52.2855,
+                longitude: 76.9675,
+                id: 99999,
+            };
 
-        if (stage === 'nearby') {
-            // Place at ~1.6 km (within 2 km proximity)
-            alertedIds.current.delete(target.id);
-            setSimulationStage('nearby');
-            setLocation({
-                lat: target.latitude - 0.0145,
-                lon: target.longitude,
-                heading: 0,
-            });
-        } else if (stage === 'confirm') {
-            // Place at ~0.35 km (within 500m confirmation dialog)
-            confirmIds.current.delete(target.id);
-            setSimulationStage('passed');
-            setLocation({
-                lat: target.latitude - 0.003,
-                lon: target.longitude,
-                heading: 0,
-            });
-        }
-    }, [incidents]);
+            if (stage === 'nearby') {
+                // Place at ~1.6 km (within 2 km proximity)
+                alertedIds.current.delete(target.id);
+                setSimulationStage('nearby');
+                setLocation({
+                    lat: target.latitude - 0.0145,
+                    lon: target.longitude,
+                    heading: 0,
+                });
+            } else if (stage === 'confirm') {
+                // Place at ~0.35 km (within 500m confirmation dialog)
+                confirmIds.current.delete(target.id);
+                setSimulationStage('passed');
+                setLocation({
+                    lat: target.latitude - 0.003,
+                    lon: target.longitude,
+                    heading: 0,
+                });
+            }
+        },
+        [incidents],
+    );
 
-    useEffect(() => () => {
-        if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-        if (simulationTimerRef.current) clearInterval(simulationTimerRef.current);
-    }, []);
+    useEffect(
+        () => () => {
+            if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+            if (simulationTimerRef.current) clearInterval(simulationTimerRef.current);
+        },
+        [],
+    );
 
     return {
         location,
