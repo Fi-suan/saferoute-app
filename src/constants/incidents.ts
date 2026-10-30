@@ -63,6 +63,7 @@ export interface Incident {
     latitude: number;
     longitude: number;
     is_active: boolean;
+    reporter_device_id?: string | null;
     ai_verified: boolean;
     ai_analysis: string | null;
     ai_confidence?: number;

@@ -9,8 +9,17 @@
  * while the app expects lowercase ('animal'). Insert helpers convert the
  * other way. Timestamps are returned as ISO strings.
  */
+import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase';
 import { Incident } from '../constants/incidents';
+
+/** Demo-grade password hashing (SHA-256, salted with phone). */
+export async function hashPassword(phone: string, password: string): Promise<string> {
+    return Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        `saferoute:${phone}:${password}`,
+    );
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export type AnimalType = 'saiga' | 'horse' | 'camel' | 'other';
@@ -76,13 +85,13 @@ export interface IncidentRow {
     description: string | null;
     severity: number;
     photo_url: string | null;
+    reporter_device_id: string | null;
     ai_verified: boolean;
     ai_confidence: number | null;
     ai_analysis: string | null;
     ai_severity_suggestion: number | null;
     latitude: number;
     longitude: number;
-    reporter_device_id: string | null;
     confirmations_count: number;
     is_active: boolean;
     created_at: string | null;
@@ -107,6 +116,7 @@ function normalizeIncident(row: IncidentRow): Incident {
         ai_analysis: row.ai_analysis ?? null,
         ai_confidence: row.ai_confidence ?? undefined,
         ai_severity_suggestion: row.ai_severity_suggestion ?? undefined,
+        reporter_device_id: row.reporter_device_id ?? null,
         confirmations_count: row.confirmations_count ?? 0,
         created_at: row.created_at ?? new Date().toISOString(),
         resolved_at: row.resolved_at ?? null,
@@ -347,6 +357,7 @@ export interface RegisterDeviceParams {
     device_id: string;
     role?: string;
     name?: string;
+    password_hash?: string;
     fcm_token?: string;
     phone_number?: string;
     latitude?: number;
@@ -360,6 +371,7 @@ export async function registerDevice(data: RegisterDeviceParams): Promise<{ ok: 
             device_id: data.device_id,
             role: data.role === 'owner' ? 'OWNER' : 'DRIVER',
             name: data.name ?? null,
+            password_hash: data.password_hash ?? null,
             fcm_token: data.fcm_token ?? null,
             phone_number: data.phone_number?.replace(/\s/g, '') ?? null,
             latitude: data.latitude ?? null,
@@ -380,12 +392,13 @@ export interface LoginResult {
     role: AppRole;
 }
 
-/** Sign in an existing account by phone number (demo-grade: no OTP). */
-export async function loginWithPhone(phone: string): Promise<LoginResult | null> {
+/** Sign in an existing account by phone + password. */
+export async function loginWithPhone(phone: string, password: string): Promise<LoginResult | null> {
     const digits = phone.replace(/\s/g, '');
+    const selectCols = 'name, phone_number, role, password_hash';
     const exact = await supabase
         .from('devices')
-        .select('name, phone_number, role')
+        .select(selectCols)
         .eq('phone_number', digits)
         .order('last_seen', { ascending: false })
         .limit(1);
@@ -395,13 +408,19 @@ export async function loginWithPhone(phone: string): Promise<LoginResult | null>
         const tail = digits.slice(-10);
         const fuzzy = await supabase
             .from('devices')
-            .select('name, phone_number, role')
+            .select(selectCols)
             .ilike('phone_number', `%${tail}`)
             .order('last_seen', { ascending: false })
             .limit(1);
         row = fuzzy.data?.[0];
     }
     if (!row) return null;
+
+    // Verify password (legacy accounts without a hash still sign in)
+    if (row.password_hash) {
+        const candidate = await hashPassword(row.phone_number ?? digits, password);
+        if (candidate !== row.password_hash) return null;
+    }
     return {
         name: row.name ?? 'Пайдаланушы',
         phone: row.phone_number ?? digits,

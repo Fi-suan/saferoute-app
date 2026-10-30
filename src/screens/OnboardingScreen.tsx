@@ -28,7 +28,7 @@ import * as Haptics from 'expo-haptics';
 import { Colors, Spacing, Radius } from '../constants/colors';
 import type { UserRole } from '../constants/livestock';
 import OnboardingIllustration from '../components/OnboardingIllustration';
-import { registerDevice, loginWithPhone } from '../services/api';
+import { registerDevice, loginWithPhone, hashPassword } from '../services/api';
 import { getDeviceId } from '../services/deviceId';
 
 const { width } = Dimensions.get('window');
@@ -144,6 +144,9 @@ const L = {
         phoneLabel: 'ТЕЛЕФОН',
         phonePh: '+7 700 000 0000',
         phoneErr: 'Формат: +7XXXXXXXXXX',
+        passwordLabel: 'ҚҰПИЯСӨЗ',
+        passwordPh: 'Мин. 4 таңба',
+        passwordErr: 'Мин. 4 таңба',
         roleLabel: 'РӨЛІҢІЗДІ ТАҢДАҢЫЗ',
         roleErr: 'Рөл таңдаңыз',
         driver: 'Жүргізуші',
@@ -159,6 +162,7 @@ const L = {
         modeLogin: 'Кіру',
         loginHint: 'Бұрын тіркелген телефон номеріңізді енгізіңіз',
         loginNotFound: 'Осы номермен аккаунт табылмады',
+        loginWrongPassword: 'Құпиясөз қате',
         loginBtn: 'Кіру',
     },
     ru: {
@@ -168,6 +172,9 @@ const L = {
         phoneLabel: 'ТЕЛЕФОН',
         phonePh: '+7 700 000 0000',
         phoneErr: 'Формат: +7XXXXXXXXXX',
+        passwordLabel: 'ПАРОЛЬ',
+        passwordPh: 'Мин. 4 символа',
+        passwordErr: 'Мин. 4 символа',
         roleLabel: 'ВЫБЕРИТЕ РОЛЬ',
         roleErr: 'Выберите роль',
         driver: 'Водитель',
@@ -183,6 +190,7 @@ const L = {
         modeLogin: 'Вход',
         loginHint: 'Введите номер, указанный при регистрации',
         loginNotFound: 'Аккаунт с этим номером не найден',
+        loginWrongPassword: 'Неверный пароль',
         loginBtn: 'Войти',
     },
 };
@@ -201,6 +209,7 @@ export default function OnboardingScreen({
     // Registration fields
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
+    const [password, setPassword] = useState('');
     const [role, setRole] = useState<UserRole | null>(null);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -243,6 +252,7 @@ export default function OnboardingScreen({
         const e: Record<string, string> = {};
         if (name.trim().length < 2) e.name = ui.nameErr;
         if (!isValidPhone(phone)) e.phone = ui.phoneErr;
+        if (password.length < 4) e.password = ui.passwordErr;
         if (!role) e.role = ui.roleErr;
         setErrors(e);
         if (Object.keys(e).length > 0) {
@@ -268,6 +278,7 @@ export default function OnboardingScreen({
                 role: role === 'livestock_owner' ? 'owner' : 'driver',
                 name: profile.name,
                 phone_number: profile.phone,
+                password_hash: await hashPassword(profile.phone, password),
             });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onFinish(profile);
@@ -276,24 +287,25 @@ export default function OnboardingScreen({
         } finally {
             setLoading(false);
         }
-    }, [name, phone, role, lang, onFinish]);
+    }, [name, phone, password, role, lang, onFinish]);
 
     // ── Sign in to an existing account ─────────────────────────
     const handleLogin = useCallback(async () => {
         const e: Record<string, string> = {};
         if (!isValidPhone(phone)) e.phone = ui.phoneErr;
+        if (password.length < 4) e.password = ui.passwordErr;
         setErrors(e);
-        if (e.phone) {
+        if (Object.keys(e).length > 0) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             return;
         }
         setLoading(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         try {
-            const account = await loginWithPhone(phone);
+            const account = await loginWithPhone(phone, password);
             if (!account) {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                setErrors({ login: ui.loginNotFound });
+                setErrors({ login: ui.loginWrongPassword });
                 return;
             }
             // Keep this device in sync with the account role
@@ -315,7 +327,7 @@ export default function OnboardingScreen({
         } finally {
             setLoading(false);
         }
-    }, [phone, lang, onFinish]);
+    }, [phone, password, lang, onFinish]);
 
     const handleNext = () => {
         if (slideIdx < slides.length - 1) goToSlide(slideIdx + 1);
@@ -369,6 +381,8 @@ export default function OnboardingScreen({
                                     setName={setName}
                                     phone={phone}
                                     setPhone={setPhone}
+                                    password={password}
+                                    setPassword={setPassword}
                                     role={role}
                                     setRole={setRole}
                                     errors={errors}
@@ -519,6 +533,8 @@ interface AuthFormProps {
     setName: (v: string) => void;
     phone: string;
     setPhone: (v: string) => void;
+    password: string;
+    setPassword: (v: string) => void;
     role: UserRole | null;
     setRole: (r: UserRole) => void;
     errors: Record<string, string>;
@@ -535,6 +551,8 @@ function AuthForm({
     setName,
     phone,
     setPhone,
+    password,
+    setPassword,
     role,
     setRole,
     errors,
@@ -591,6 +609,18 @@ function AuthForm({
                         error={errors.phone}
                         icon="call-outline"
                     />
+                    <Field
+                        label={ui.passwordLabel}
+                        value={password}
+                        onChange={(v) => {
+                            setPassword(v);
+                            clear('password');
+                        }}
+                        placeholder={ui.passwordPh}
+                        error={errors.password}
+                        secureTextEntry
+                        icon="lock-closed-outline"
+                    />
                     {!!errors.login && <Text style={styles.formError}>{errors.login}</Text>}
                 </>
             ) : (
@@ -618,6 +648,18 @@ function AuthForm({
                         keyboardType="phone-pad"
                         error={errors.phone}
                         icon="call-outline"
+                    />
+                    <Field
+                        label={ui.passwordLabel}
+                        value={password}
+                        onChange={(v) => {
+                            setPassword(v);
+                            clear('password');
+                        }}
+                        placeholder={ui.passwordPh}
+                        error={errors.password}
+                        secureTextEntry
+                        icon="lock-closed-outline"
                     />
 
                     {/* Role */}
@@ -802,19 +844,19 @@ const styles = StyleSheet.create({
     },
     slideIndexTotal: { color: Colors.text.muted, opacity: 0.5 },
     illustTile: {
-        width: 180,
-        height: 180,
-        borderRadius: 44,
+        width: 176,
+        height: 176,
+        borderRadius: 40,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: Spacing.xl,
         backgroundColor: Colors.bg.glass,
         borderWidth: 1,
         borderColor: Colors.border,
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.25,
-        shadowRadius: 30,
-        elevation: 12,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.14,
+        shadowRadius: 18,
+        elevation: 6,
     },
     slideTitle: {
         fontSize: 34,

@@ -1,18 +1,17 @@
 /**
  * AppDialog — SafeRoute / Sapa Jol
  *
- * Кастомный диалог в стиле Nothing Phone.
- * Заменяет нативные Alert.alert() во всём приложении.
+ * Native-alert style custom dialog: icon chip, bold title, message, and a
+ * vertically stacked button list separated by hairlines (like iOS alerts).
+ * Text buttons read clearly — no full-width colored bars.
  *
- * Использование:
+ * Usage:
  *   const { showDialog, DialogComponent } = useAppDialog();
- *   // В render: {DialogComponent}
- *   // Триггер: showDialog({ title, message, buttons })
+ *   // In render: {DialogComponent}
+ *   showDialog({ title, message, buttons })
  */
 import React, { useState, useCallback } from 'react';
-import {
-    Modal, View, Text, StyleSheet, TouchableOpacity, Animated,
-} from 'react-native';
+import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius } from '../constants/colors';
 
@@ -36,80 +35,73 @@ interface AppDialogProps {
     onDismiss: () => void;
 }
 
+const ACCENT: Record<NonNullable<DialogButton['style']>, string> = {
+    default: Colors.brand.primary,
+    cancel: Colors.text.secondary,
+    destructive: Colors.alert.critical,
+};
+
 export function AppDialog({ config, onDismiss }: AppDialogProps) {
     if (!config) return null;
 
-    const getButtonStyle = (style?: DialogButton['style']) => {
-        switch (style) {
-            case 'destructive': return styles.btnDestructive;
-            case 'cancel': return styles.btnCancel;
-            default: return styles.btnDefault;
-        }
-    };
-
-    const getButtonTextStyle = (style?: DialogButton['style']) => {
-        switch (style) {
-            case 'destructive': return styles.btnTextDestructive;
-            case 'cancel': return styles.btnTextCancel;
-            default: return styles.btnTextDefault;
-        }
-    };
-
     return (
-        <Modal visible transparent animationType="fade">
+        <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
             <View style={styles.overlay}>
                 <View style={styles.card}>
-                    {/* Icon */}
                     {config.icon && (
-                        <View style={[styles.iconWrap, { backgroundColor: (config.iconColor ?? Colors.brand.primary) + '18' }]}>
+                        <View
+                            style={[
+                                styles.iconChip,
+                                {
+                                    backgroundColor:
+                                        (config.iconColor ?? Colors.brand.primary) + '18',
+                                },
+                            ]}
+                        >
                             <Ionicons
                                 name={config.icon as any}
-                                size={32}
+                                size={26}
                                 color={config.iconColor ?? Colors.brand.primary}
                             />
                         </View>
                     )}
 
-                    {/* Dot accent */}
-                    <View style={styles.dotRow}>
-                        <View style={styles.dot} />
-                        <View style={[styles.dot, styles.dotMid]} />
-                        <View style={styles.dot} />
-                    </View>
-
-                    {/* Title */}
                     <Text style={styles.title}>{config.title}</Text>
 
-                    {/* Message */}
-                    {config.message ? (
-                        <Text style={styles.message}>{config.message}</Text>
-                    ) : null}
+                    {config.message ? <Text style={styles.message}>{config.message}</Text> : null}
 
-                    {/* Divider */}
-                    <View style={styles.divider} />
-
-                    {/* Buttons */}
-                    <View style={[styles.btnRow, config.buttons.length === 1 && styles.btnRowSingle]}>
+                    <View style={styles.buttonList}>
                         {config.buttons.map((btn, idx) => (
-                            <TouchableOpacity
-                                key={idx}
-                                style={[styles.btn, getButtonStyle(btn.style)]}
-                                onPress={() => {
-                                    onDismiss();
-                                    btn.onPress?.();
-                                }}
-                                activeOpacity={0.75}
-                            >
-                                {btn.icon && (
-                                    <Ionicons
-                                        name={btn.icon as any}
-                                        size={16}
-                                        color={btn.style === 'default' ? Colors.bg.primary : btn.style === 'destructive' ? Colors.white : Colors.text.secondary}
-                                        style={{ marginRight: 4 }}
-                                    />
-                                )}
-                                <Text style={getButtonTextStyle(btn.style)}>{btn.text}</Text>
-                            </TouchableOpacity>
+                            <React.Fragment key={idx}>
+                                {idx > 0 && <View style={styles.hairline} />}
+                                <TouchableOpacity
+                                    style={styles.buttonRow}
+                                    onPress={() => {
+                                        onDismiss();
+                                        btn.onPress?.();
+                                    }}
+                                    activeOpacity={0.6}
+                                >
+                                    {btn.icon && (
+                                        <Ionicons
+                                            name={btn.icon as any}
+                                            size={17}
+                                            color={ACCENT[btn.style ?? 'default']}
+                                            style={{ marginRight: 7 }}
+                                        />
+                                    )}
+                                    <Text
+                                        style={[
+                                            styles.buttonText,
+                                            { color: ACCENT[btn.style ?? 'default'] },
+                                            btn.style !== 'cancel' && styles.buttonTextBold,
+                                        ]}
+                                        numberOfLines={1}
+                                    >
+                                        {btn.text}
+                                    </Text>
+                                </TouchableOpacity>
+                            </React.Fragment>
                         ))}
                     </View>
                 </View>
@@ -118,7 +110,7 @@ export function AppDialog({ config, onDismiss }: AppDialogProps) {
     );
 }
 
-/** Хук для управления диалогом */
+/** Hook for dialog state management */
 export function useAppDialog() {
     const [config, setConfig] = useState<DialogConfig | null>(null);
 
@@ -138,78 +130,69 @@ export function useAppDialog() {
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.75)',
+        backgroundColor: 'rgba(0,0,0,0.72)',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: Spacing.lg,
+        padding: Spacing.xl,
     },
     card: {
         backgroundColor: Colors.bg.secondary,
-        borderRadius: Radius.xl,
-        padding: Spacing.lg,
+        borderRadius: Radius.xl + 2,
         width: '100%',
-        maxWidth: 340,
+        maxWidth: 320,
         borderWidth: 1,
         borderColor: Colors.border,
         alignItems: 'center',
+        paddingTop: Spacing.lg,
+        overflow: 'hidden',
     },
-    iconWrap: {
-        width: 64,
-        height: 64,
+    iconChip: {
+        width: 56,
+        height: 56,
         borderRadius: Radius.lg,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: Spacing.md,
     },
-    dotRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        marginBottom: Spacing.sm,
-    },
-    dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.border },
-    dotMid: { backgroundColor: Colors.brand.primary, width: 6, height: 6, borderRadius: 3 },
     title: {
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: '800',
         color: Colors.text.primary,
         textAlign: 'center',
-        letterSpacing: -0.3,
+        letterSpacing: -0.2,
         marginBottom: Spacing.sm,
+        paddingHorizontal: Spacing.lg,
     },
     message: {
-        fontSize: 14,
+        fontSize: 13.5,
         color: Colors.text.secondary,
         textAlign: 'center',
-        lineHeight: 20,
-        marginBottom: Spacing.md,
+        lineHeight: 19,
+        marginBottom: Spacing.lg,
+        paddingHorizontal: Spacing.lg,
     },
-    divider: {
+    buttonList: {
+        width: '100%',
+        borderTopWidth: 1,
+        borderTopColor: Colors.divider,
+    },
+    hairline: {
         width: '100%',
         height: 1,
-        backgroundColor: Colors.border,
-        marginVertical: Spacing.md,
+        backgroundColor: Colors.divider,
     },
-    btnRow: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
-        width: '100%',
-    },
-    btnRowSingle: {
-        flexDirection: 'column',
-    },
-    btn: {
-        flex: 1,
+    buttonRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 13,
-        borderRadius: Radius.lg,
+        paddingVertical: 14,
+        paddingHorizontal: Spacing.md,
     },
-    btnDefault: { backgroundColor: Colors.brand.primary },
-    btnCancel: { backgroundColor: Colors.bg.tertiary, borderWidth: 1, borderColor: Colors.borderStrong },
-    btnDestructive: { backgroundColor: Colors.alert.critical },
-    btnTextDefault: { fontSize: 14, fontWeight: '700', color: Colors.bg.primary },
-    btnTextCancel: { fontSize: 14, fontWeight: '600', color: Colors.text.primary },
-    btnTextDestructive: { fontSize: 14, fontWeight: '700', color: Colors.white },
+    buttonText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    buttonTextBold: {
+        fontWeight: '700',
+    },
 });
