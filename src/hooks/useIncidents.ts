@@ -26,11 +26,16 @@ import { supabase } from '../services/supabase';
  */
 const incidentRealtimeListeners = new Set<() => void>();
 let incidentChannel: ReturnType<typeof supabase.channel> | null = null;
+let incidentChannelSeq = 0;
 
 function subscribeIncidentChanges(cb: () => void): () => void {
     if (!incidentChannel) {
+        // Unique topic: supabase-js DEDUPES channels by topic and returns the
+        // already-subscribed instance on a name clash — which then throws on
+        // .on(). This bit us after Fast Refresh (stale channel in the client,
+        // fresh module state). A unique suffix guarantees a fresh channel.
         incidentChannel = supabase
-            .channel('incident_reports_realtime')
+            .channel(`incident_reports_realtime_${++incidentChannelSeq}`)
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'incident_reports' },
