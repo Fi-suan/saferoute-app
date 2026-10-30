@@ -23,7 +23,6 @@ export async function hashPassword(phone: string, password: string): Promise<str
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export type AnimalType = 'saiga' | 'horse' | 'camel' | 'other';
-export type AlertLevel = 'low' | 'medium' | 'high' | 'critical';
 
 export interface HerdLocation {
     id?: number;
@@ -47,23 +46,6 @@ export interface Herd {
     current_location: HerdLocation | null;
 }
 
-export interface Alert {
-    id: number;
-    herd_id: number;
-    geozone_id: number;
-    level: AlertLevel;
-    message_ru: string;
-    message_kk: string;
-    distance_to_road_km: number | null;
-    estimated_arrival_minutes: number | null;
-    is_active: boolean;
-    notified_count: number;
-    created_at: string;
-    resolved_at: string | null;
-    herd_name?: string;
-    herd_animal_type?: string;
-    geozone_name?: string;
-}
 
 export interface GeoZone {
     id: number;
@@ -165,25 +147,6 @@ export async function getHerds(): Promise<Herd[]> {
     }));
 }
 
-export async function getHerdTrack(id: number, limit = 50): Promise<HerdLocation[]> {
-    const { data, error } = await supabase
-        .from('herd_locations')
-        .select('*')
-        .eq('herd_id', id)
-        .order('timestamp', { ascending: false })
-        .limit(limit);
-    if (error || !data) return [];
-    return (data as any[]).map((l) => ({
-        id: l.id,
-        herd_id: l.herd_id,
-        latitude: l.latitude,
-        longitude: l.longitude,
-        speed_kmh: l.speed_kmh ?? 0,
-        heading_degrees: l.heading_degrees ?? null,
-        timestamp: l.timestamp,
-        source: l.source ?? 'simulator',
-    }));
-}
 
 /** Owner manual mode: create a herd so other users see it on the map */
 export async function createHerd(params: {
@@ -228,35 +191,6 @@ export async function deactivateHerd(herdId: number): Promise<void> {
     await supabase.from('herds').update({ is_active: false }).eq('id', herdId);
 }
 
-// ── Alerts ─────────────────────────────────────────────────────────────────────
-async function fetchAlerts(eqActive: boolean, limit = 50): Promise<Alert[]> {
-    let q = supabase
-        .from('alerts')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(limit);
-    if (eqActive) q = q.eq('is_active', true);
-    const { data, error } = await q;
-    if (error || !data) return [];
-    return (data as any[]).map((a) => ({
-        id: a.id,
-        herd_id: a.herd_id,
-        geozone_id: a.geozone_id,
-        level: lowerEnum<AlertLevel>(a.level, 'medium'),
-        message_ru: a.message_ru ?? '',
-        message_kk: a.message_kk ?? '',
-        distance_to_road_km: a.distance_to_road_km ?? null,
-        estimated_arrival_minutes: a.estimated_arrival_minutes ?? null,
-        is_active: a.is_active,
-        notified_count: a.notified_count ?? 0,
-        created_at: a.created_at ?? new Date().toISOString(),
-        resolved_at: a.resolved_at ?? null,
-    }));
-}
-
-export const getActiveAlerts = () => fetchAlerts(true);
-export const getAlertHistory = (limit = 50) => fetchAlerts(false, limit);
-
 // ── GeoZones ───────────────────────────────────────────────────────────────────
 export async function getGeozones(): Promise<GeoZone[]> {
     const { data, error } = await supabase.from('geozones').select('*').eq('is_active', true);
@@ -276,35 +210,7 @@ export async function getGeozones(): Promise<GeoZone[]> {
     }));
 }
 
-/** Rectangle GeoJSON built client-side (same shape as the old backend endpoint) */
-export async function getGeozonesGeoJSON(): Promise<{ type: string; features: unknown[] }> {
-    const zones = await getGeozones();
-    return {
-        type: 'FeatureCollection',
-        features: zones.map((zone) => ({
-            type: 'Feature',
-            properties: {
-                id: zone.id,
-                name: zone.name,
-                road_type: zone.road_type,
-                buffer_km: zone.buffer_km,
-                layer: 'buffer_zone',
-            },
-            geometry: {
-                type: 'Polygon',
-                coordinates: [
-                    [
-                        [zone.lon_min, zone.lat_min],
-                        [zone.lon_max, zone.lat_min],
-                        [zone.lon_max, zone.lat_max],
-                        [zone.lon_min, zone.lat_max],
-                        [zone.lon_min, zone.lat_min],
-                    ],
-                ],
-            },
-        })),
-    };
-}
+// NOTE: getGeozonesGeoJSON/getHerdTrack удалены — не использовались с ухода FastAPI.
 
 // ── Incidents ──────────────────────────────────────────────────────────────────
 
