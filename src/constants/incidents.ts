@@ -63,6 +63,7 @@ export interface Incident {
     latitude: number;
     longitude: number;
     is_active: boolean;
+    route_id?: string | null; // маршрут, на котором поставлена метка ('a17' | 'a1' | ...)
     reporter_device_id?: string | null;
     ai_verified: boolean;
     ai_analysis: string | null;

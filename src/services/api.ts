@@ -92,6 +92,7 @@ export interface IncidentRow {
     ai_severity_suggestion: number | null;
     latitude: number;
     longitude: number;
+    route_id: string | null;
     confirmations_count: number;
     is_active: boolean;
     created_at: string | null;
@@ -117,6 +118,7 @@ function normalizeIncident(row: IncidentRow): Incident {
         severity: row.severity ?? 3,
         latitude: row.latitude,
         longitude: row.longitude,
+        route_id: row.route_id ?? null,
         is_active: row.is_active,
         ai_verified: row.ai_verified ?? false,
         ai_analysis: row.ai_analysis ?? null,
@@ -324,6 +326,7 @@ export async function submitIncidentReport(params: {
     latitude: number;
     longitude: number;
     reporter_device_id: string;
+    route_id?: string | null;
 }): Promise<Incident | null> {
     const type = params.incident_type.toLowerCase();
     const { data, error } = await supabase
@@ -335,6 +338,7 @@ export async function submitIncidentReport(params: {
             latitude: params.latitude,
             longitude: params.longitude,
             reporter_device_id: params.reporter_device_id,
+            route_id: params.route_id ?? null,
             ai_verified: false,
             ai_analysis: 'AI тексеруі демо режимінде өшірілген — қоғамдастық растауын күтуде.',
             is_active: true,

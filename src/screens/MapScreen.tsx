@@ -392,7 +392,13 @@ export default function MapScreen() {
                 customMapStyle={DARK_MAP_STYLE}
             >
                 {showIncidents && (
-                    <IncidentMarkers incidents={displayedIncidents} onCalloutPress={goToDetail} />
+                    // key: react-native-maps на Android не всегда удаляет маркеры
+                    // (tracksViewChanges=false) — ремоунт слоя гарантирует удаление.
+                    <IncidentMarkers
+                        key={`inc-${displayedIncidents.map((i) => i.id).join(',')}`}
+                        incidents={displayedIncidents}
+                        onCalloutPress={goToDetail}
+                    />
                 )}
                 {showLivestock && <LivestockMarkers livestock={livestock} />}
 

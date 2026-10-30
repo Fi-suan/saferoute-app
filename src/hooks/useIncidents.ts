@@ -59,6 +59,7 @@ export interface SubmitReportParams {
     longitude: number;
     photo_base64?: string;
     photo_uri?: string;
+    route_id?: string | null;
 }
 
 interface QueuedReport extends SubmitReportParams {
@@ -122,6 +123,7 @@ async function flushQueue(deviceId: string): Promise<void> {
                 latitude: report.latitude,
                 longitude: report.longitude,
                 reporter_device_id: deviceId,
+                route_id: report.route_id ?? null,
             });
         } catch {
             failed.push(report);
@@ -144,6 +146,10 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
     const tabRef = useRef(tab);
     tabRef.current = tab;
 
+    // Гонка запросов: realtime-события прилетают пачкой, и ответ более
+    // старого fetch может перезаписать свежий. Пропускаем устаревшие ответы.
+    const refreshSeq = useRef(0);
+
     useEffect(() => {
         const unsubscribe = incidentStore.subscribe((all) => {
             setIncidents(tabRef.current === 'active' ? all.filter((i) => i.is_active) : all);
@@ -152,7 +158,9 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
     }, []);
 
     const refresh = useCallback(async () => {
+        const seq = ++refreshSeq.current;
         const { data, online } = await fetchFromServer(tab);
+        if (seq !== refreshSeq.current) return; // уже приземлился более свежий refresh
         const currentOptimistic = incidentStore
             .get()
             .filter((i) => !data.find((d) => d.id === i.id));
@@ -190,6 +198,9 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
             params: SubmitReportParams,
         ): Promise<{ ok: boolean; error?: string; queued?: boolean }> => {
             const deviceId = await getDeviceId();
+            // Метка привязывается к маршруту, выбранному в профиле
+            const routeId =
+                params.route_id ?? (await AsyncStorage.getItem(STORAGE.ACTIVE_ROUTE));
 
             const optimistic: Incident & { photo_uri?: string } = {
                 id: -Date.now(),
@@ -199,6 +210,7 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
                 latitude: params.latitude,
                 longitude: params.longitude,
                 is_active: true,
+                route_id: routeId,
                 ai_verified: false,
                 ai_analysis: 'AI тексеруде...',
                 ai_confidence: undefined,
@@ -217,6 +229,7 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
                     latitude: params.latitude,
                     longitude: params.longitude,
                     reporter_device_id: deviceId,
+                    route_id: routeId,
                 });
                 if (created) {
                     incidentStore.update(optimistic.id, { ...created });

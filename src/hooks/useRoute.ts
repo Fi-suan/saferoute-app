@@ -29,6 +29,15 @@ export function isOnA17Corridor(lat: number, lon: number): boolean {
 }
 
 /**
+ * Инцидент принадлежит маршруту, если он поставлен на этом маршруте
+ * (route_id с сервера). Для старых строк без route_id — фолбэк на bbox.
+ */
+export function matchesRoute(incident: Incident, routeId: string): boolean {
+    if (incident.route_id) return incident.route_id === routeId;
+    return isOnCorridor(incident.latitude, incident.longitude, routeId);
+}
+
+/**
  * Вычисляет статус дороги из списка активных инцидентов.
  */
 export type RoadStatus = 'open' | 'caution' | 'closed';
@@ -60,7 +69,7 @@ export function useRoute(allIncidents: Incident[], routeId: string = 'a17'): Use
     }, [isRouteMode]);
 
     const routeIncidents = allIncidents.filter(
-        i => isOnCorridor(i.latitude, i.longitude, routeId),
+        i => matchesRoute(i, routeId),
     );
 
     const src = isRouteMode ? routeIncidents : allIncidents;

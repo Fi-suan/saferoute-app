@@ -20,7 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIncidents } from '../hooks/useIncidents';
 import { useT } from '../i18n';
 import IncidentCard from '../components/IncidentCard';
-import { isOnCorridor } from '../hooks/useRoute';
+import { matchesRoute } from '../hooks/useRoute';
 import { ROUTE_NAMES } from './map/constants';
 import { IncidentListSkeleton } from '../components/Skeleton';
 import OnboardingIllustration from '../components/OnboardingIllustration';
@@ -49,9 +49,7 @@ export default function AlertsScreen() {
         }, []),
     );
 
-    const routeIncidents = incidents.filter((i) =>
-        isOnCorridor(i.latitude, i.longitude, activeRouteId),
-    );
+    const routeIncidents = incidents.filter((i) => matchesRoute(i, activeRouteId));
 
     const handleCardPress = (incident: Incident) => {
         navigation.navigate('IncidentDetail', { incident });
