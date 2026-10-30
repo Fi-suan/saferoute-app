@@ -1,10 +1,12 @@
 /**
  * OnboardingScreen — Sapa Jol / SafeRoute
  *
- * Design: dark "road safety" aesthetic — strict typographic hierarchy
- * (Swiss-inspired), road-marking dash motifs, one green functional accent.
- * 4 info slides + 1 auth slide with two modes: register (Тіркелу) and
- * login by phone (Кіру) for already-registered accounts.
+ * Two phases:
+ *  1) INTRO — horizontal paging carousel (4 info slides, original circle
+ *     illustration design) with dots + next/skip.
+ *  2) AUTH  — full-screen register/login page with a pinned bottom action
+ *     bar. Never embedded in the horizontal carousel: that's what squeezed
+ *     the form and pushed the action button off screen.
  */
 import React, { useRef, useState, useCallback } from 'react';
 import {
@@ -13,7 +15,6 @@ import {
     StyleSheet,
     Dimensions,
     TouchableOpacity,
-    Animated,
     ScrollView,
     TextInput,
     KeyboardAvoidingView,
@@ -40,12 +41,13 @@ export interface OnboardingResult {
 }
 
 const KZ_PHONE_RE = /^(\+7|8)\d{10}$/;
-function isValidPhone(p: string) {
-    return KZ_PHONE_RE.test(p.replace(/\s/g, ''));
-}
+const isValidPhone = (p: string) => KZ_PHONE_RE.test(p.replace(/\s/g, ''));
 
-// ── Slide data ────────────────────────────────────────────────────────────────
-type IllustType = 'shield' | 'marker' | 'bell' | 'community' | 'profile';
+type Lang = 'kk' | 'ru';
+type AuthMode = 'register' | 'login';
+
+// ── Intro slides ───────────────────────────────────────────────────────────────
+type IllustType = 'shield' | 'marker' | 'bell' | 'community';
 
 interface Slide {
     illust: IllustType;
@@ -53,7 +55,6 @@ interface Slide {
     subtitle: string;
     desc: string;
     accent: string;
-    isReg?: true;
 }
 
 const SLIDES_KK: Slide[] = [
@@ -85,14 +86,6 @@ const SLIDES_KK: Slide[] = [
         desc: 'Белгіні растаңыз. 3 растаудан кейін белгі автоматты жойылады.',
         accent: Colors.alert.info,
     },
-    {
-        illust: 'profile',
-        title: 'Тіркелу',
-        subtitle: '',
-        desc: '',
-        accent: Colors.brand.primary,
-        isReg: true,
-    },
 ];
 const SLIDES_RU: Slide[] = [
     {
@@ -123,74 +116,61 @@ const SLIDES_RU: Slide[] = [
         desc: 'Подтвердите метку. После 3 подтверждений метка удаляется.',
         accent: Colors.alert.info,
     },
-    {
-        illust: 'profile',
-        title: 'Регистрация',
-        subtitle: '',
-        desc: '',
-        accent: Colors.brand.primary,
-        isReg: true,
-    },
 ];
-
-type Lang = 'kk' | 'ru';
-type AuthMode = 'register' | 'login';
 
 const L = {
     kk: {
+        next: 'Келесі',
+        back: 'Артқа',
+        skip: 'Өткізу',
+        langToggle: 'RU',
+        modeRegister: 'Тіркелу',
+        modeLogin: 'Кіру',
         nameLabel: 'АТЫ-ЖӨНІ',
         nameErr: 'Мин. 2 таңба',
         namePh: 'Айбек',
         phoneLabel: 'ТЕЛЕФОН',
-        phonePh: '+7 700 000 0000',
         phoneErr: 'Формат: +7XXXXXXXXXX',
+        phonePh: '+7 700 000 0000',
         passwordLabel: 'ҚҰПИЯСӨЗ',
-        passwordPh: 'Мин. 4 таңба',
         passwordErr: 'Мин. 4 таңба',
+        passwordPh: 'Мин. 4 таңба',
         roleLabel: 'РӨЛІҢІЗДІ ТАҢДАҢЫЗ',
         roleErr: 'Рөл таңдаңыз',
         driver: 'Жүргізуші',
         driverDesc: 'Жол ескертулерін алады',
         owner: 'Мал иесі',
         ownerDesc: 'Малды тіркеу және қорғау',
-        next: 'Келесі',
-        back: 'Артқа',
+        loginHint: 'Бұрын тіркелген телефон номеріңіз бен құпиясөзіңізді енгізіңіз',
+        loginWrong: 'Телефон немесе құпиясөз қате',
         start: 'Бастау',
-        skip: 'Өткізу',
-        langToggle: 'RU',
-        modeRegister: 'Тіркелу',
-        modeLogin: 'Кіру',
-        loginHint: 'Бұрын тіркелген телефон номеріңізді енгізіңіз',
-        loginNotFound: 'Осы номермен аккаунт табылмады',
-        loginWrongPassword: 'Құпиясөз қате',
         loginBtn: 'Кіру',
     },
     ru: {
+        next: 'Далее',
+        back: 'Назад',
+        skip: 'Пропустить',
+        langToggle: 'ҚАЗ',
+        modeRegister: 'Регистрация',
+        modeLogin: 'Вход',
         nameLabel: 'ИМЯ',
         nameErr: 'Мин. 2 символа',
         namePh: 'Айбек',
         phoneLabel: 'ТЕЛЕФОН',
-        phonePh: '+7 700 000 0000',
         phoneErr: 'Формат: +7XXXXXXXXXX',
+        phonePh: '+7 700 000 0000',
         passwordLabel: 'ПАРОЛЬ',
-        passwordPh: 'Мин. 4 символа',
         passwordErr: 'Мин. 4 символа',
+        passwordPh: 'Мин. 4 символа',
         roleLabel: 'ВЫБЕРИТЕ РОЛЬ',
         roleErr: 'Выберите роль',
         driver: 'Водитель',
         driverDesc: 'Получает дорожные предупреждения',
         owner: 'Владелец скота',
         ownerDesc: 'Регистрация и защита скота',
-        next: 'Далее',
-        back: 'Назад',
+        loginHint: 'Введите телефон и пароль, указанные при регистрации',
+        loginWrong: 'Неверный телефон или пароль',
         start: 'Начать',
-        skip: 'Пропустить',
-        langToggle: 'ҚАЗ',
-        modeRegister: 'Регистрация',
-        modeLogin: 'Вход',
-        loginHint: 'Введите номер, указанный при регистрации',
-        loginNotFound: 'Аккаунт с этим номером не найден',
-        loginWrongPassword: 'Неверный пароль',
         loginBtn: 'Войти',
     },
 };
@@ -202,77 +182,80 @@ export default function OnboardingScreen({
     onFinish: (d: OnboardingResult) => void;
 }) {
     const [lang, setLang] = useState<Lang>('kk');
+    const [phase, setPhase] = useState<'intro' | 'auth'>('intro');
     const [slideIdx, setSlideIdx] = useState(0);
-    const [authMode, setAuthMode] = useState<AuthMode>('register');
-    const [loading, setLoading] = useState(false);
 
-    // Registration fields
+    // Auth state
+    const [mode, setMode] = useState<AuthMode>('register');
+    const [loading, setLoading] = useState(false);
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState<UserRole | null>(null);
-
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const scrollRef = useRef<ScrollView>(null);
-    const dotAnims = useRef(SLIDES_KK.map((_, i) => new Animated.Value(i === 0 ? 1 : 0))).current;
 
     const slides = lang === 'kk' ? SLIDES_KK : SLIDES_RU;
     const ui = L[lang];
+    const scrollRef = useRef<ScrollView>(null);
 
-    const animateDots = (idx: number) => {
-        dotAnims.forEach((a, i) =>
-            Animated.timing(a, {
-                toValue: i === idx ? 1 : 0,
-                duration: 250,
-                useNativeDriver: false,
-            }).start(),
-        );
+    const clear = (k: string) => setErrors((e) => ({ ...e, [k]: '' }));
+
+    const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+        if (idx !== slideIdx && idx >= 0 && idx < slides.length) {
+            setSlideIdx(idx);
+        }
     };
 
     const goToSlide = (idx: number) => {
         scrollRef.current?.scrollTo({ x: idx * width, animated: true });
-        animateDots(idx);
         setSlideIdx(idx);
-        setErrors({});
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     };
 
-    // Handle manual swipe
-    const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const newIdx = Math.round(e.nativeEvent.contentOffset.x / width);
-        if (newIdx !== slideIdx && newIdx >= 0 && newIdx < slides.length) {
-            animateDots(newIdx);
-            setSlideIdx(newIdx);
-            setErrors({});
-        }
-    };
-
-    // ── Validate registration ────────────────────────────────
-    const validateReg = (): boolean => {
+    // ── Submit ────────────────────────────────────────────────
+    const handleAuth = useCallback(async () => {
         const e: Record<string, string> = {};
-        if (name.trim().length < 2) e.name = ui.nameErr;
         if (!isValidPhone(phone)) e.phone = ui.phoneErr;
         if (password.length < 4) e.password = ui.passwordErr;
-        if (!role) e.role = ui.roleErr;
-        setErrors(e);
-        if (Object.keys(e).length > 0) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        if (mode === 'register') {
+            if (name.trim().length < 2) e.name = ui.nameErr;
+            if (!role) e.role = ui.roleErr;
         }
-        return Object.keys(e).length === 0;
-    };
+        if (Object.keys(e).length > 0) {
+            setErrors(e);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            return;
+        }
 
-    // ── Register a new account ────────────────────────────────
-    const handleRegister = useCallback(async () => {
-        if (!validateReg()) return;
         setLoading(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         try {
-            const profile = {
-                name: name.trim(),
-                phone: phone.trim(),
-                role: role!,
-            };
             const deviceId = await getDeviceId();
+
+            if (mode === 'login') {
+                const account = await loginWithPhone(phone, password);
+                if (!account) {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                    setErrors({ login: ui.loginWrong });
+                    return;
+                }
+                await registerDevice({
+                    device_id: deviceId,
+                    role: account.role === 'livestock_owner' ? 'owner' : 'driver',
+                    name: account.name,
+                    phone_number: account.phone,
+                });
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                onFinish({
+                    name: account.name,
+                    phone: account.phone,
+                    role: account.role as UserRole,
+                });
+                return;
+            }
+
+            const profile = { name: name.trim(), phone: phone.trim(), role: role! };
             await registerDevice({
                 device_id: deviceId,
                 role: role === 'livestock_owner' ? 'owner' : 'driver',
@@ -287,55 +270,13 @@ export default function OnboardingScreen({
         } finally {
             setLoading(false);
         }
-    }, [name, phone, password, role, lang, onFinish]);
+    }, [mode, name, phone, password, role, lang, onFinish]);
 
-    // ── Sign in to an existing account ─────────────────────────
-    const handleLogin = useCallback(async () => {
-        const e: Record<string, string> = {};
-        if (!isValidPhone(phone)) e.phone = ui.phoneErr;
-        if (password.length < 4) e.password = ui.passwordErr;
-        setErrors(e);
-        if (Object.keys(e).length > 0) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            return;
-        }
-        setLoading(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        try {
-            const account = await loginWithPhone(phone, password);
-            if (!account) {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                setErrors({ login: ui.loginWrongPassword });
-                return;
-            }
-            // Keep this device in sync with the account role
-            const deviceId = await getDeviceId();
-            await registerDevice({
-                device_id: deviceId,
-                role: account.role === 'livestock_owner' ? 'owner' : 'driver',
-                name: account.name,
-                phone_number: account.phone,
-            });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            onFinish({
-                name: account.name,
-                phone: account.phone,
-                role: account.role as UserRole,
-            });
-        } catch (err: any) {
-            setErrors({ submit: err?.message ?? 'Error' });
-        } finally {
-            setLoading(false);
-        }
-    }, [phone, password, lang, onFinish]);
-
-    const handleNext = () => {
-        if (slideIdx < slides.length - 1) goToSlide(slideIdx + 1);
-        else if (authMode === 'login') handleLogin();
-        else handleRegister();
+    const switchMode = (m: AuthMode) => {
+        Haptics.selectionAsync();
+        setMode(m);
+        setErrors({});
     };
-
-    const currentSlide = slides[slideIdx];
 
     return (
         <SafeAreaView style={styles.root}>
@@ -350,76 +291,214 @@ export default function OnboardingScreen({
                 <Text style={styles.langBtnText}>{ui.langToggle}</Text>
             </TouchableOpacity>
 
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            >
-                <ScrollView
-                    ref={scrollRef}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    scrollEnabled
-                    onMomentumScrollEnd={handleScroll}
-                    style={{ flex: 1 }}
-                >
-                    {slides.map((s, i) => (
-                        <View key={i} style={[styles.slide, { width }]}>
-                            {s.isReg ? (
-                                <AuthForm
-                                    ui={ui}
-                                    mode={authMode}
-                                    setMode={(m) => {
-                                        Haptics.selectionAsync();
-                                        setAuthMode(m);
-                                        setErrors({});
-                                    }}
-                                    name={name}
-                                    setName={setName}
-                                    phone={phone}
-                                    setPhone={setPhone}
-                                    password={password}
-                                    setPassword={setPassword}
-                                    role={role}
-                                    setRole={setRole}
-                                    errors={errors}
-                                    setErrors={setErrors}
-                                    accent={s.accent}
-                                    loading={loading}
-                                />
-                            ) : (
-                                <InfoSlide slide={s} />
-                            )}
-                        </View>
-                    ))}
-                </ScrollView>
+            {phase === 'intro' ? (
+                <>
+                    <ScrollView
+                        ref={scrollRef}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        onMomentumScrollEnd={handleScroll}
+                        style={{ flex: 1 }}
+                    >
+                        {slides.map((slide, i) => (
+                            <View key={i} style={[styles.slide, { width }]}>
+                                <View
+                                    style={[
+                                        styles.illustWrap,
+                                        { borderColor: slide.accent + '30' },
+                                    ]}
+                                >
+                                    <OnboardingIllustration
+                                        type={slide.illust}
+                                        size={100}
+                                        color={slide.accent}
+                                    />
+                                </View>
+                                <Text style={[styles.slideTitle, { color: slide.accent }]}>
+                                    {slide.title}
+                                </Text>
+                                <Text style={styles.slideSubtitle}>
+                                    {slide.subtitle.toUpperCase()}
+                                </Text>
+                                <Text style={styles.slideDesc}>{slide.desc}</Text>
+                            </View>
+                        ))}
+                    </ScrollView>
 
-                {/* Dots */}
-                <View style={styles.dots}>
-                    {slides.map((s, i) => {
-                        const w = dotAnims[i].interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [6, 24],
-                        });
-                        const op = dotAnims[i].interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.25, 1],
-                        });
-                        return (
-                            <Animated.View
+                    {/* Dots */}
+                    <View style={styles.dots}>
+                        {slides.map((s, i) => (
+                            <View
                                 key={i}
                                 style={[
                                     styles.dot,
-                                    { width: w, opacity: op, backgroundColor: s.accent },
+                                    i === slideIdx && styles.dotActive,
+                                    { backgroundColor: i === slideIdx ? s.accent : Colors.border },
                                 ]}
                             />
-                        );
-                    })}
-                </View>
+                        ))}
+                    </View>
+                </>
+            ) : (
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                >
+                    <ScrollView
+                        style={{ flex: 1 }}
+                        contentContainerStyle={styles.authContent}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {/* Mode switch */}
+                        <View style={styles.segRow}>
+                            <TouchableOpacity
+                                style={[styles.segBtn, mode === 'register' && styles.segBtnActive]}
+                                onPress={() => switchMode('register')}
+                                activeOpacity={0.8}
+                            >
+                                <Text
+                                    style={[
+                                        styles.segBtnText,
+                                        mode === 'register' && styles.segBtnTextActive,
+                                    ]}
+                                >
+                                    {ui.modeRegister}
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.segBtn, mode === 'login' && styles.segBtnActive]}
+                                onPress={() => switchMode('login')}
+                                activeOpacity={0.8}
+                            >
+                                <Text
+                                    style={[
+                                        styles.segBtnText,
+                                        mode === 'login' && styles.segBtnTextActive,
+                                    ]}
+                                >
+                                    {ui.modeLogin}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
 
-                {/* Nav buttons */}
-                <View style={styles.navRow}>
-                    {slideIdx > 0 && (
+                        {mode === 'login' && <Text style={styles.loginHint}>{ui.loginHint}</Text>}
+
+                        {mode === 'register' && (
+                            <Field
+                                label={ui.nameLabel}
+                                value={name}
+                                onChange={(v) => {
+                                    setName(v);
+                                    clear('name');
+                                }}
+                                error={errors.name}
+                                autoCapitalize="words"
+                                placeholder={ui.namePh}
+                                icon="person-outline"
+                            />
+                        )}
+                        <Field
+                            label={ui.phoneLabel}
+                            value={phone}
+                            onChange={(v) => {
+                                setPhone(v);
+                                clear('phone');
+                            }}
+                            placeholder={ui.phonePh}
+                            keyboardType="phone-pad"
+                            error={errors.phone}
+                            icon="call-outline"
+                        />
+                        <Field
+                            label={ui.passwordLabel}
+                            value={password}
+                            onChange={(v) => {
+                                setPassword(v);
+                                clear('password');
+                            }}
+                            placeholder={ui.passwordPh}
+                            error={errors.password}
+                            secureTextEntry
+                            icon="lock-closed-outline"
+                        />
+
+                        {mode === 'register' && (
+                            <>
+                                <Text
+                                    style={[
+                                        styles.fieldLabel,
+                                        errors.role ? { color: Colors.alert.critical } : null,
+                                    ]}
+                                >
+                                    {ui.roleLabel}
+                                </Text>
+                                {errors.role && (
+                                    <Text style={styles.fieldError}>{errors.role}</Text>
+                                )}
+                                <RoleCard
+                                    icon="car-sport-outline"
+                                    title={ui.driver}
+                                    desc={ui.driverDesc}
+                                    selected={role === 'driver'}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        setRole('driver');
+                                        clear('role');
+                                    }}
+                                />
+                                <RoleCard
+                                    icon="paw-outline"
+                                    title={ui.owner}
+                                    desc={ui.ownerDesc}
+                                    selected={role === 'livestock_owner'}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        setRole('livestock_owner');
+                                        clear('role');
+                                    }}
+                                />
+                            </>
+                        )}
+
+                        {!!errors.login && <Text style={styles.formError}>{errors.login}</Text>}
+                        {!!errors.submit && <Text style={styles.formError}>{errors.submit}</Text>}
+                    </ScrollView>
+
+                    {/* Pinned action bar — always on screen, keyboard-safe */}
+                    <View style={styles.actionBar}>
+                        <TouchableOpacity
+                            style={styles.backBtn}
+                            onPress={() => {
+                                setPhase('intro');
+                                setErrors({});
+                            }}
+                        >
+                            <Ionicons name="chevron-back" size={18} color={Colors.text.secondary} />
+                            <Text style={styles.backBtnText}>{ui.back}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.primaryBtn, loading && { opacity: 0.6 }]}
+                            onPress={handleAuth}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color={Colors.bg.primary} />
+                            ) : (
+                                <Text style={styles.primaryBtnText}>
+                                    {mode === 'login' ? ui.loginBtn : ui.start}
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </KeyboardAvoidingView>
+            )}
+
+            {/* Bottom nav for intro phase */}
+            {phase === 'intro' && (
+                <View style={styles.actionBar}>
+                    {slideIdx > 0 ? (
                         <TouchableOpacity
                             style={styles.backBtn}
                             onPress={() => goToSlide(slideIdx - 1)}
@@ -427,247 +506,41 @@ export default function OnboardingScreen({
                             <Ionicons name="chevron-back" size={18} color={Colors.text.secondary} />
                             <Text style={styles.backBtnText}>{ui.back}</Text>
                         </TouchableOpacity>
+                    ) : (
+                        <View />
                     )}
-                    <TouchableOpacity
-                        style={[
-                            styles.nextBtn,
-                            { backgroundColor: currentSlide.accent },
-                            slideIdx > 0 && { flex: 1 },
-                            slideIdx === 0 && { width: '100%' },
-                            loading && { opacity: 0.6 },
-                        ]}
-                        onPress={handleNext}
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color={Colors.bg.primary} />
-                        ) : (
-                            <>
-                                <Text style={styles.nextBtnText}>
-                                    {slideIdx === slides.length - 1
-                                        ? authMode === 'login'
-                                            ? ui.loginBtn
-                                            : ui.start
-                                        : ui.next}
-                                </Text>
-                                {slideIdx < slides.length - 1 && (
-                                    <Ionicons
-                                        name="chevron-forward"
-                                        size={18}
-                                        color={Colors.bg.primary}
-                                    />
-                                )}
-                            </>
-                        )}
-                    </TouchableOpacity>
+                    {slideIdx < slides.length - 1 ? (
+                        <TouchableOpacity
+                            style={styles.primaryBtn}
+                            onPress={() => goToSlide(slideIdx + 1)}
+                        >
+                            <Text style={styles.primaryBtnText}>{ui.next}</Text>
+                            <Ionicons name="chevron-forward" size={18} color={Colors.bg.primary} />
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity
+                            style={styles.primaryBtn}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setPhase('auth');
+                            }}
+                        >
+                            <Text style={styles.primaryBtnText}>{ui.modeRegister}</Text>
+                            <Ionicons name="chevron-forward" size={18} color={Colors.bg.primary} />
+                        </TouchableOpacity>
+                    )}
                 </View>
-
-                {/* Skip to auth */}
-                {slideIdx < slides.length - 1 && (
-                    <TouchableOpacity
-                        style={styles.skipBtn}
-                        onPress={() => goToSlide(slides.length - 1)}
-                    >
-                        <Text style={styles.skipText}>{ui.skip}</Text>
-                    </TouchableOpacity>
-                )}
-            </KeyboardAvoidingView>
+            )}
+            {phase === 'intro' && (
+                <TouchableOpacity style={styles.skipBtn} onPress={() => setPhase('auth')}>
+                    <Text style={styles.skipText}>{ui.skip}</Text>
+                </TouchableOpacity>
+            )}
         </SafeAreaView>
     );
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-function InfoSlide({ slide }: { slide: Slide }) {
-    return (
-        <View style={styles.infoSlide}>
-            <View style={[styles.illustWrap, { borderColor: slide.accent + '30' }]}>
-                <OnboardingIllustration type={slide.illust} size={100} color={slide.accent} />
-            </View>
-            <Text style={[styles.slideTitle, { color: slide.accent }]}>{slide.title}</Text>
-            <Text style={styles.slideSubtitle}>{slide.subtitle.toUpperCase()}</Text>
-            <Text style={styles.slideDesc}>{slide.desc}</Text>
-        </View>
-    );
-}
-
-interface AuthFormProps {
-    ui: (typeof L)['kk'];
-    mode: AuthMode;
-    setMode: (m: AuthMode) => void;
-    name: string;
-    setName: (v: string) => void;
-    phone: string;
-    setPhone: (v: string) => void;
-    password: string;
-    setPassword: (v: string) => void;
-    role: UserRole | null;
-    setRole: (r: UserRole) => void;
-    errors: Record<string, string>;
-    setErrors: (e: Record<string, string>) => void;
-    accent: string;
-    loading: boolean;
-}
-
-function AuthForm({
-    ui,
-    mode,
-    setMode,
-    name,
-    setName,
-    phone,
-    setPhone,
-    password,
-    setPassword,
-    role,
-    setRole,
-    errors,
-    setErrors,
-    accent,
-}: AuthFormProps) {
-    const clear = (k: string) => setErrors({ ...errors, [k]: '' });
-    return (
-        <ScrollView
-            contentContainerStyle={styles.regContainer}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-        >
-            <Text style={[styles.authTitle]}>
-                {mode === 'login' ? ui.modeLogin : ui.modeRegister}
-            </Text>
-
-            {/* Mode switcher */}
-            <View style={styles.segRow}>
-                <TouchableOpacity
-                    style={[styles.segBtn, mode === 'register' && styles.segBtnActive]}
-                    onPress={() => setMode('register')}
-                    activeOpacity={0.8}
-                >
-                    <Text
-                        style={[styles.segBtnText, mode === 'register' && styles.segBtnTextActive]}
-                    >
-                        {ui.modeRegister}
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.segBtn, mode === 'login' && styles.segBtnActive]}
-                    onPress={() => setMode('login')}
-                    activeOpacity={0.8}
-                >
-                    <Text style={[styles.segBtnText, mode === 'login' && styles.segBtnTextActive]}>
-                        {ui.modeLogin}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            {mode === 'login' ? (
-                <>
-                    <Text style={styles.loginHint}>{ui.loginHint}</Text>
-                    <Field
-                        label={ui.phoneLabel}
-                        value={phone}
-                        onChange={(v) => {
-                            setPhone(v);
-                            clear('phone');
-                        }}
-                        placeholder={ui.phonePh}
-                        keyboardType="phone-pad"
-                        error={errors.phone}
-                        icon="call-outline"
-                    />
-                    <Field
-                        label={ui.passwordLabel}
-                        value={password}
-                        onChange={(v) => {
-                            setPassword(v);
-                            clear('password');
-                        }}
-                        placeholder={ui.passwordPh}
-                        error={errors.password}
-                        secureTextEntry
-                        icon="lock-closed-outline"
-                    />
-                    {!!errors.login && <Text style={styles.formError}>{errors.login}</Text>}
-                </>
-            ) : (
-                <>
-                    <Field
-                        label={ui.nameLabel}
-                        value={name}
-                        onChange={(v) => {
-                            setName(v);
-                            clear('name');
-                        }}
-                        error={errors.name}
-                        autoCapitalize="words"
-                        placeholder={ui.namePh}
-                        icon="person-outline"
-                    />
-                    <Field
-                        label={ui.phoneLabel}
-                        value={phone}
-                        onChange={(v) => {
-                            setPhone(v);
-                            clear('phone');
-                        }}
-                        placeholder={ui.phonePh}
-                        keyboardType="phone-pad"
-                        error={errors.phone}
-                        icon="call-outline"
-                    />
-                    <Field
-                        label={ui.passwordLabel}
-                        value={password}
-                        onChange={(v) => {
-                            setPassword(v);
-                            clear('password');
-                        }}
-                        placeholder={ui.passwordPh}
-                        error={errors.password}
-                        secureTextEntry
-                        icon="lock-closed-outline"
-                    />
-
-                    {/* Role */}
-                    <Text
-                        style={[
-                            styles.fieldLabel,
-                            errors.role ? { color: Colors.alert.critical } : null,
-                        ]}
-                    >
-                        {ui.roleLabel}
-                    </Text>
-                    {errors.role && <Text style={styles.fieldError}>{errors.role}</Text>}
-                    <RoleCard
-                        icon="car-sport-outline"
-                        title={ui.driver}
-                        desc={ui.driverDesc}
-                        selected={role === 'driver'}
-                        onPress={() => {
-                            Haptics.selectionAsync();
-                            setRole('driver');
-                            clear('role');
-                        }}
-                    />
-                    <RoleCard
-                        icon="paw-outline"
-                        title={ui.owner}
-                        desc={ui.ownerDesc}
-                        selected={role === 'livestock_owner'}
-                        onPress={() => {
-                            Haptics.selectionAsync();
-                            setRole('livestock_owner');
-                            clear('role');
-                        }}
-                    />
-                </>
-            )}
-
-            {!!errors.submit && <Text style={styles.formError}>{errors.submit}</Text>}
-        </ScrollView>
-    );
-}
-
 function RoleCard({
     icon,
     title,
@@ -709,17 +582,6 @@ function RoleCard({
     );
 }
 
-interface FieldProps {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    placeholder?: string;
-    error?: string;
-    keyboardType?: any;
-    secureTextEntry?: boolean;
-    autoCapitalize?: 'none' | 'words' | 'sentences';
-    icon?: string;
-}
 function Field({
     label,
     value,
@@ -730,7 +592,17 @@ function Field({
     secureTextEntry,
     autoCapitalize,
     icon,
-}: FieldProps) {
+}: {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    error?: string;
+    keyboardType?: any;
+    secureTextEntry?: boolean;
+    autoCapitalize?: 'none' | 'words' | 'sentences';
+    icon?: string;
+}) {
     return (
         <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>{label}</Text>
@@ -780,14 +652,8 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
 
-    // ── Slides ──
+    // ── Intro slides ──
     slide: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    infoSlide: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: Spacing.xl,
-    },
     illustWrap: {
         width: 140,
         height: 140,
@@ -799,7 +665,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.bg.glass,
     },
     slideTitle: {
-        fontSize: 34,
+        fontSize: 32,
         fontWeight: '900',
         letterSpacing: -1,
         textAlign: 'center',
@@ -820,26 +686,28 @@ const styles = StyleSheet.create({
         maxWidth: 300,
     },
 
-    // ── Auth form ──
-    regContainer: {
-        paddingHorizontal: Spacing.lg,
-        paddingTop: Spacing.xl + 20,
-        paddingBottom: Spacing.xl,
-        alignItems: 'stretch',
+    dots: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: Spacing.sm,
     },
-    authTitle: {
-        fontSize: 26,
-        fontWeight: '900',
-        color: Colors.text.primary,
-        letterSpacing: -0.5,
-        marginBottom: Spacing.sm,
+    dot: { width: 6, height: 6, borderRadius: 3 },
+    dotActive: { width: 22 },
+
+    // ── Auth (full-screen) ──
+    authContent: {
+        paddingHorizontal: Spacing.lg,
+        paddingTop: 84,
+        paddingBottom: Spacing.xl,
     },
     segRow: {
         flexDirection: 'row',
         backgroundColor: Colors.bg.tertiary,
         borderRadius: Radius.lg,
         padding: 4,
-        marginBottom: Spacing.md,
+        marginBottom: Spacing.lg,
     },
     segBtn: {
         flex: 1,
@@ -874,12 +742,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.border,
     },
-    inputIconBox: {
-        width: 40,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
+    inputIconBox: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
     input: {
         flex: 1,
         paddingVertical: 14,
@@ -920,10 +783,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.brand.primary + '40',
     },
-    roleIconBoxActive: {
-        backgroundColor: 'rgba(0,0,0,0.15)',
-        borderColor: 'rgba(0,0,0,0.2)',
-    },
+    roleIconBoxActive: { backgroundColor: 'rgba(0,0,0,0.15)', borderColor: 'rgba(0,0,0,0.2)' },
     roleTitle: { fontSize: 16, fontWeight: '700', color: Colors.text.primary, marginBottom: 2 },
     roleDesc: { fontSize: 12, color: Colors.text.secondary },
     radioOuter: {
@@ -938,27 +798,20 @@ const styles = StyleSheet.create({
     radioOuterActive: { borderColor: Colors.bg.primary },
     radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.bg.primary },
 
-    // ── Bottom nav ──
-    dots: {
+    // ── Pinned action bar ──
+    actionBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: 5,
-        paddingBottom: Spacing.sm,
-    },
-    dot: { height: 6, borderRadius: Radius.full },
-    navRow: {
-        flexDirection: 'row',
         paddingHorizontal: Spacing.lg,
         gap: Spacing.sm,
-        paddingBottom: Spacing.sm,
+        paddingTop: Spacing.sm,
     },
     backBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
-        paddingVertical: 14,
+        paddingVertical: 16,
         paddingHorizontal: Spacing.md,
         borderRadius: Radius.lg,
         borderWidth: 1,
@@ -966,17 +819,17 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.bg.glass,
     },
     backBtnText: { color: Colors.text.secondary, fontWeight: '600', fontSize: 15 },
-    nextBtn: {
+    primaryBtn: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 6,
         paddingVertical: 16,
-        paddingHorizontal: 32,
         borderRadius: Radius.lg,
-        minWidth: 140,
+        backgroundColor: Colors.brand.primary,
     },
-    nextBtnText: { color: Colors.bg.primary, fontWeight: '900', fontSize: 16 },
-    skipBtn: { alignItems: 'center', paddingBottom: Spacing.md },
+    primaryBtnText: { color: Colors.bg.primary, fontWeight: '900', fontSize: 16 },
+    skipBtn: { alignItems: 'center', paddingVertical: Spacing.md },
     skipText: { color: Colors.text.muted, fontSize: 13 },
 });
