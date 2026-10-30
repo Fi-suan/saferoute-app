@@ -24,7 +24,7 @@ export function IncidentMarkers({ incidents, onCalloutPress }: IncidentMarkersPr
                     <React.Fragment key={`inc-${inc.id}`}>
                         <Marker
                             coordinate={{ latitude: inc.latitude, longitude: inc.longitude }}
-                            onCalloutPress={() => onCalloutPress(inc)}
+                            onPress={() => onCalloutPress(inc)}
                             tracksViewChanges={false}
                             anchor={{ x: 0.5, y: 1 }}
                         >
