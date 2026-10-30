@@ -93,10 +93,20 @@ export default function MapScreen() {
 
     const { incidents, isOnline, loading, submitReport, confirmIncident, pendingReportsCount } =
         useIncidents('active');
-    const { location, nearbyAlert, confirmCandidate, dismissNearbyAlert, dismissConfirmCandidate } =
-        useLocation(incidents, Config.DEFAULT_PROXIMITY_RADIUS_KM, (incidentId, title, body) => {
-            addNotifEntry({ title, body, incidentId });
-        });
+    const {
+        location,
+        nearbyAlert,
+        confirmCandidate,
+        dismissNearbyAlert,
+        dismissConfirmCandidate,
+        isSimulating,
+        simulationStage,
+        startSimulation,
+        stopSimulation,
+        triggerSimulationStep,
+    } = useLocation(incidents, Config.DEFAULT_PROXIMITY_RADIUS_KM, (incidentId, title, body) => {
+        addNotifEntry({ title, body, incidentId });
+    });
 
     const { isRouteMode, toggleRouteMode, routeIncidents, roadStatus } = useRoute(
         incidents,
@@ -437,8 +447,24 @@ export default function MapScreen() {
                 />
             )}
 
-            {/* Right buttons: compass + locate */}
+            {/* Right buttons: demo simulation + compass + locate */}
             <View style={styles.rightBtns}>
+                <TouchableOpacity
+                    style={[styles.mapBtn, isSimulating && styles.mapBtnSimActive]}
+                    onPress={() => {
+                        if (isSimulating) {
+                            stopSimulation();
+                        } else {
+                            startSimulation();
+                        }
+                    }}
+                >
+                    <Ionicons
+                        name={isSimulating ? 'stop' : 'speedometer-outline'}
+                        size={20}
+                        color={isSimulating ? Colors.alert.high : Colors.brand.primary}
+                    />
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.mapBtn} onPress={handleNorthReset}>
                     <Ionicons name="compass-outline" size={20} color={Colors.text.secondary} />
                 </TouchableOpacity>
@@ -449,6 +475,71 @@ export default function MapScreen() {
                     <Ionicons name="locate" size={20} color={Colors.brand.primary} />
                 </TouchableOpacity>
             </View>
+
+            {/* GPS Simulation Floating Bar (for in-room presentation) */}
+            {isSimulating && (
+                <View style={styles.simBar}>
+                    <View style={styles.simHeader}>
+                        <View style={styles.simDot} />
+                        <Text style={styles.simTitle}>Демо-симулятор (Қозғалыс)</Text>
+                        <TouchableOpacity onPress={stopSimulation} style={styles.simClose}>
+                            <Ionicons name="close-circle" size={20} color={Colors.text.secondary} />
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.simButtonsRow}>
+                        <TouchableOpacity
+                            style={[
+                                styles.simStepBtn,
+                                simulationStage === 'nearby' && styles.simStepBtnActive,
+                            ]}
+                            onPress={() => triggerSimulationStep('nearby')}
+                        >
+                            <Ionicons
+                                name="warning"
+                                size={14}
+                                color={
+                                    simulationStage === 'nearby'
+                                        ? Colors.bg.primary
+                                        : Colors.alert.high
+                                }
+                            />
+                            <Text
+                                style={[
+                                    styles.simStepBtnText,
+                                    simulationStage === 'nearby' && styles.simStepBtnTextActive,
+                                ]}
+                            >
+                                1. Жақындау (2 км)
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[
+                                styles.simStepBtn,
+                                simulationStage === 'passed' && styles.simStepBtnActive,
+                            ]}
+                            onPress={() => triggerSimulationStep('confirm')}
+                        >
+                            <Ionicons
+                                name="checkmark-circle"
+                                size={14}
+                                color={
+                                    simulationStage === 'passed'
+                                        ? Colors.bg.primary
+                                        : Colors.brand.primary
+                                }
+                            />
+                            <Text
+                                style={[
+                                    styles.simStepBtnText,
+                                    simulationStage === 'passed' && styles.simStepBtnTextActive,
+                                ]}
+                            >
+                                2. Мәселе орны (500 м)
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
 
             {/* FAB — Report or Owner panel; long-press = SOS */}
             <TouchableOpacity
@@ -561,6 +652,73 @@ const styles = StyleSheet.create({
         ...Shadow.card,
     },
     mapBtnPrimary: { borderColor: Colors.brand.primary + '60' },
+    mapBtnSimActive: {
+        backgroundColor: Colors.alert.high + '25',
+        borderColor: Colors.alert.high,
+    },
+
+    simBar: {
+        position: 'absolute',
+        bottom: 110,
+        left: Spacing.md,
+        right: 84, // keep room for FAB
+        backgroundColor: 'rgba(10, 15, 28, 0.95)',
+        borderRadius: Radius.md,
+        padding: 12,
+        borderWidth: 1.5,
+        borderColor: Colors.alert.high + '60',
+        ...Shadow.card,
+        gap: 8,
+    },
+    simHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    simDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: Colors.alert.high,
+    },
+    simTitle: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.text.primary,
+        flex: 1,
+    },
+    simClose: {
+        padding: 2,
+    },
+    simButtonsRow: {
+        flexDirection: 'row',
+        gap: 6,
+    },
+    simStepBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        backgroundColor: Colors.bg.secondary,
+        paddingVertical: 8,
+        paddingHorizontal: 6,
+        borderRadius: Radius.sm,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    simStepBtnActive: {
+        backgroundColor: Colors.brand.primary,
+        borderColor: Colors.brand.primary,
+    },
+    simStepBtnText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: Colors.text.primary,
+    },
+    simStepBtnTextActive: {
+        color: Colors.bg.primary,
+    },
 
     fab: {
         position: 'absolute',
