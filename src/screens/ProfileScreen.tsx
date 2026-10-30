@@ -39,6 +39,7 @@ import { STORAGE } from '../constants/storage';
 import { useT } from '../i18n';
 import { useNotificationLog } from '../hooks/useNotificationLog';
 import IncidentCard from '../components/IncidentCard';
+import OnboardingIllustration from '../components/OnboardingIllustration';
 import { Incident } from '../constants/incidents';
 import { useNavigation, CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -523,7 +524,7 @@ export default function ProfileScreen() {
                         <View style={styles.rowBody}>
                             <Text style={styles.rowLabel}>SafeRoute · Sapa Jol</Text>
                             <Text style={styles.rowValue}>
-                                Нұсқа {Config.VERSION} · Жол қауіпсіздігі
+                                {t('profile_version')} {Config.VERSION}
                             </Text>
                         </View>
                     </View>
@@ -801,7 +802,11 @@ export default function ProfileScreen() {
 
                         {myIncidents.length === 0 ? (
                             <View style={styles.notifEmpty}>
-                                <Ionicons name="flag-outline" size={40} color={Colors.text.muted} />
+                                <OnboardingIllustration
+                                    type="marker"
+                                    size={80}
+                                    color={Colors.text.muted}
+                                />
                                 <Text style={styles.notifEmptyText}>{t('alerts_empty_title')}</Text>
                             </View>
                         ) : (

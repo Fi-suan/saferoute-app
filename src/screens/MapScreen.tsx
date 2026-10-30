@@ -27,6 +27,7 @@ import { Config } from '../config';
 import { STORAGE } from '../constants/storage';
 import ProximityBanner from '../components/ProximityBanner';
 import ReportModal from '../components/ReportModal';
+import { useToast } from '../components/Toast';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { scheduleProximityNotification } from '../services/notifications';
 import { useAppDialog } from '../components/AppDialog';
@@ -84,6 +85,7 @@ export default function MapScreen() {
     const dangerZoneAlertedRef = useRef(false);
 
     const t = useT();
+    const { showToast, ToastComponent } = useToast();
     const { profile } = useUserProfile();
     const { showDialog, DialogComponent } = useAppDialog();
     const { settings } = useSettings();
@@ -495,6 +497,13 @@ export default function MapScreen() {
                 onClose={() => setShowReport(false)}
                 location={location}
                 onSubmit={submitReport}
+                onSuccess={(message, queued) =>
+                    showToast({
+                        text: message,
+                        icon: queued ? 'cloud-offline' : 'checkmark-circle',
+                        color: queued ? Colors.alert.medium : Colors.brand.primary,
+                    })
+                }
             />
 
             <OwnerPanel
@@ -511,6 +520,7 @@ export default function MapScreen() {
             />
 
             {DialogComponent}
+            {ToastComponent}
         </View>
     );
 }

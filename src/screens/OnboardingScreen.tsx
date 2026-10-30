@@ -339,9 +339,6 @@ export default function OnboardingScreen({
 
     return (
         <SafeAreaView style={styles.root}>
-            {/* Road-marking motif top */}
-            <RoadDashes />
-
             {/* Language toggle */}
             <TouchableOpacity
                 style={styles.langBtn}
@@ -355,7 +352,7 @@ export default function OnboardingScreen({
 
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
                 <ScrollView
                     ref={scrollRef}
@@ -391,7 +388,7 @@ export default function OnboardingScreen({
                                     loading={loading}
                                 />
                             ) : (
-                                <InfoSlide slide={s} index={i} total={slides.length} />
+                                <InfoSlide slide={s} />
                             )}
                         </View>
                     ))}
@@ -481,45 +478,14 @@ export default function OnboardingScreen({
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-/** Road-marking motif: centered row of dashes (decorative, subtle) */
-function RoadDashes() {
-    return (
-        <View style={styles.roadDashes} pointerEvents="none">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-                <View key={i} style={[styles.roadDash, i === 2 && { opacity: 0.5 }]} />
-            ))}
-        </View>
-    );
-}
-
-function InfoSlide({ slide, index, total }: { slide: Slide; index: number; total: number }) {
+function InfoSlide({ slide }: { slide: Slide }) {
     return (
         <View style={styles.infoSlide}>
-            {/* Slide index — Swiss-style metadata */}
-            <Text style={styles.slideIndex}>
-                {String(index + 1).padStart(2, '0')}
-                <Text style={styles.slideIndexTotal}> / {String(total).padStart(2, '0')}</Text>
-            </Text>
-
-            <View style={[styles.illustTile, { shadowColor: slide.accent }]}>
-                <OnboardingIllustration type={slide.illust} size={110} color={slide.accent} />
+            <View style={[styles.illustWrap, { borderColor: slide.accent + '30' }]}>
+                <OnboardingIllustration type={slide.illust} size={100} color={slide.accent} />
             </View>
-
             <Text style={[styles.slideTitle, { color: slide.accent }]}>{slide.title}</Text>
-            <Text style={[styles.slideSubtitle, { color: Colors.text.primary }]}>
-                {slide.subtitle.toUpperCase()}
-            </Text>
-
-            {/* Road-marking divider under the subtitle */}
-            <View style={styles.roadDashes}>
-                {[0, 1, 2, 3, 4].map((i) => (
-                    <View
-                        key={i}
-                        style={[styles.roadDash, { backgroundColor: slide.accent, opacity: 0.35 }]}
-                    />
-                ))}
-            </View>
-
+            <Text style={styles.slideSubtitle}>{slide.subtitle.toUpperCase()}</Text>
             <Text style={styles.slideDesc}>{slide.desc}</Text>
         </View>
     );
@@ -795,19 +761,6 @@ function Field({
 const styles = StyleSheet.create({
     root: { flex: 1, backgroundColor: Colors.bg.primary },
 
-    roadDashes: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    roadDash: {
-        width: 16,
-        height: 2,
-        borderRadius: 1,
-        backgroundColor: Colors.text.muted,
-        opacity: 0.5,
-    },
-
     langBtn: {
         position: 'absolute',
         top: 52,
@@ -835,28 +788,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: Spacing.xl,
     },
-    slideIndex: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: Colors.text.muted,
-        letterSpacing: 3,
-        marginBottom: Spacing.lg,
-    },
-    slideIndexTotal: { color: Colors.text.muted, opacity: 0.5 },
-    illustTile: {
-        width: 176,
-        height: 176,
-        borderRadius: 40,
+    illustWrap: {
+        width: 140,
+        height: 140,
+        borderRadius: 70,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1,
         marginBottom: Spacing.xl,
         backgroundColor: Colors.bg.glass,
-        borderWidth: 1,
-        borderColor: Colors.border,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.14,
-        shadowRadius: 18,
-        elevation: 6,
     },
     slideTitle: {
         fontSize: 34,
@@ -866,36 +806,40 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     slideSubtitle: {
-        fontSize: 12,
-        fontWeight: '800',
+        fontSize: 14,
+        color: Colors.text.secondary,
         textAlign: 'center',
-        letterSpacing: 2.5,
+        letterSpacing: 1.5,
         marginBottom: Spacing.md,
     },
     slideDesc: {
         fontSize: 15,
         color: Colors.text.secondary,
         textAlign: 'center',
-        lineHeight: 23,
-        maxWidth: 310,
-        marginTop: Spacing.md,
+        lineHeight: 22,
+        maxWidth: 300,
     },
 
     // ── Auth form ──
-    regContainer: { paddingHorizontal: Spacing.lg, paddingTop: 56, paddingBottom: Spacing.xl },
+    regContainer: {
+        paddingHorizontal: Spacing.lg,
+        paddingTop: Spacing.xl + 20,
+        paddingBottom: Spacing.xl,
+        alignItems: 'stretch',
+    },
     authTitle: {
-        fontSize: 28,
+        fontSize: 26,
         fontWeight: '900',
         color: Colors.text.primary,
         letterSpacing: -0.5,
-        marginBottom: Spacing.md,
+        marginBottom: Spacing.sm,
     },
     segRow: {
         flexDirection: 'row',
         backgroundColor: Colors.bg.tertiary,
         borderRadius: Radius.lg,
         padding: 4,
-        marginBottom: Spacing.lg,
+        marginBottom: Spacing.md,
     },
     segBtn: {
         flex: 1,

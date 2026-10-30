@@ -23,6 +23,7 @@ import IncidentCard from '../components/IncidentCard';
 import { isOnCorridor } from '../hooks/useRoute';
 import { ROUTE_NAMES } from './map/constants';
 import { IncidentListSkeleton } from '../components/Skeleton';
+import OnboardingIllustration from '../components/OnboardingIllustration';
 import { RootStackParamList } from '../navigation/RootNavigator';
 
 // Составной тип: Tab экран + выход в Root Stack
@@ -118,9 +119,9 @@ export default function AlertsScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.centered}>
-                            <Ionicons
-                                name="shield-checkmark"
-                                size={48}
+                            <OnboardingIllustration
+                                type="community"
+                                size={96}
                                 color={Colors.brand.primary}
                             />
                             <Text style={styles.emptyText}>{t('alerts_empty_title')}</Text>
