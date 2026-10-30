@@ -89,7 +89,7 @@ export default function ProfileScreen() {
     const [editPhone, setEditPhone] = useState('');
     const [editError, setEditError] = useState<string | null>(null);
     const [activeRouteId, setActiveRouteId] = useState<string>('a17');
-    const [deviceId, setDeviceId] = useState('Жүктелуде...');
+    const [deviceId, setDeviceId] = useState(t('device_id_loading'));
     const [showDeviceId, setShowDeviceId] = useState(false);
 
     // Загружаем сохранённый маршрут
@@ -425,13 +425,13 @@ export default function ProfileScreen() {
                     <View style={styles.rowDivider} />
                     <TouchableOpacity style={styles.settingsRow} onPress={() => {
                         showDialog({
-                            title: 'Деректерді жою',
-                            message: 'Барлық деректеріңіз (хабарламалар, инциденттер, құрылғы) біржола жойылады. Жалғастырасыз ба?',
+                            title: t('delete_data_title'),
+                            message: t('delete_data_msg'),
                             icon: 'trash',
                             iconColor: Colors.alert.critical,
                             buttons: [
                                 {
-                                    text: 'Жою',
+                                    text: t('common_delete'),
                                     style: 'destructive',
                                     onPress: async () => {
                                         try {
@@ -441,16 +441,16 @@ export default function ProfileScreen() {
                                             await AppResetEvent.trigger();
                                         } catch {
                                             showDialog({
-                                                title: 'Қате',
-                                                message: 'Деректерді жою мүмкін болмады',
+                                                title: t('common_error'),
+                                                message: t('delete_failed'),
                                                 icon: 'close-circle',
                                                 iconColor: Colors.alert.critical,
-                                                buttons: [{ text: 'Жабу', style: 'cancel' }],
+                                                buttons: [{ text: t('common_close'), style: 'cancel' }],
                                             });
                                         }
                                     },
                                 },
-                                { text: 'Бас тарту', style: 'cancel' },
+                                { text: t('cancel'), style: 'cancel' },
                             ],
                         });
                     }}>
@@ -565,7 +565,7 @@ export default function ProfileScreen() {
                             style={styles.input}
                             value={editName}
                             onChangeText={(v) => { setEditName(v); if (editError) setEditError(null); }}
-                            placeholder="Аты-жөніңіз..."
+                            placeholder={t('profile_name_placeholder')}
                             placeholderTextColor={Colors.text.muted}
                             maxLength={40}
                         />

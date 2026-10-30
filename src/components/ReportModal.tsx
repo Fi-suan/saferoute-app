@@ -19,6 +19,7 @@ import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { INCIDENT_TYPES_LIST } from '../constants/incidents';
 import { GeoPoint } from '../hooks/useLocation';
 import * as FileSystem from 'expo-file-system';
+import { useT } from '../i18n';
 import { useAppDialog } from './AppDialog';
 
 interface Props {
@@ -37,6 +38,7 @@ interface Props {
 }
 
 export default function ReportModal({ visible, onClose, location, onSubmit }: Props) {
+    const t = useT();
     const [reportType, setReportType] = useState('crash');
     const [reportDesc, setReportDesc] = useState('');
     const [severity, setSeverity] = useState(3);
@@ -76,11 +78,11 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
     const handleSubmit = async () => {
         if (!location) {
             showDialog({
-                title: 'Қате',
-                message: 'Геолокация жоқ. Рұқсат беріңіз.',
+                title: t('common_error'),
+                message: t('report_no_location'),
                 icon: 'warning',
                 iconColor: Colors.alert.critical,
-                buttons: [{ text: 'Жабу', style: 'default' }],
+                buttons: [{ text: t('common_close'), style: 'default' }],
             });
             return;
         }
@@ -109,17 +111,17 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
         if (photoFailed) {
             setSubmitting(false);
             showDialog({
-                title: 'Фото қатесі',
-                message: 'Фотоны өңдеу мүмкін болмады. Фотосыз жалғастыруға болады.',
+                title: t('report_photo_error'),
+                message: t('report_photo_error_msg'),
                 icon: 'warning',
                 iconColor: Colors.alert.high,
                 buttons: [
                     {
-                        text: 'Фотосыз жіберу',
+                        text: t('report_send_no_photo'),
                         style: 'default',
                         onPress: () => { setPhotoUri(null); handleSubmit(); },
                     },
-                    { text: 'Болдырмау', style: 'cancel' },
+                    { text: t('no_exit'), style: 'cancel' },
                 ],
             });
             return;
@@ -142,21 +144,21 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
             setReportType('crash');
             onClose();
             showDialog({
-                title: result.queued ? 'Кезекте' : 'Дайын!',
+                title: result.queued ? t('report_queued_title') : t('report_done_title'),
                 message: result.queued
-                    ? 'Интернет жоқ. Белгі кезекке қойылды — байланыс болғанда жіберіледі.'
-                    : 'Белгі қойылды. AI тексеруі жүргізілуде.',
+                    ? t('report_queued_msg')
+                    : t('report_success_msg'),
                 icon: result.queued ? 'cloud-offline' : 'checkmark-circle',
                 iconColor: result.queued ? Colors.text.muted : Colors.brand.primary,
-                buttons: [{ text: 'Түсіндім', style: 'default' }],
+                buttons: [{ text: t('understand'), style: 'default' }],
             });
         } else {
             showDialog({
-                title: 'Қате',
-                message: result.error ?? 'Белгісіз қате',
+                title: t('common_error'),
+                message: result.error ?? t('unknown_error'),
                 icon: 'close-circle',
                 iconColor: Colors.alert.critical,
-                buttons: [{ text: 'Жабу', style: 'cancel' }],
+                buttons: [{ text: t('common_close'), style: 'cancel' }],
             });
         }
     };
@@ -198,14 +200,14 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
                         </View>
 
                         {/* Тяжесть */}
-                        <Text style={styles.label}>Қауіп деңгейі</Text>
+                        <Text style={styles.label}>{t('report_severity_label')}</Text>
                         <View style={styles.severityRow}>
                             {([
-                                { n: 1, label: 'Төмен', color: Colors.alert.medium },
-                                { n: 2, label: 'Орташа', color: Colors.alert.medium },
-                                { n: 3, label: 'Жоғары', color: Colors.alert.high },
-                                { n: 4, label: 'Қауіпті', color: Colors.alert.critical },
-                                { n: 5, label: 'Сыни', color: Colors.alert.critical },
+                                { n: 1, label: t('sev_low'), color: Colors.alert.medium },
+                                { n: 2, label: t('sev_medium'), color: Colors.alert.medium },
+                                { n: 3, label: t('sev_high'), color: Colors.alert.high },
+                                { n: 4, label: t('sev_critical'), color: Colors.alert.critical },
+                                { n: 5, label: t('sev_max'), color: Colors.alert.critical },
                             ] as const).map(({ n, label, color }) => (
                                 <TouchableOpacity
                                     key={n}
@@ -235,7 +237,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
                         <Text style={styles.label}>Сипаттама</Text>
                         <TextInput
                             style={styles.textInput}
-                            placeholder="Не болды..."
+                            placeholder={t('report_desc_placeholder')}
                             placeholderTextColor={Colors.text.muted}
                             value={reportDesc}
                             onChangeText={setReportDesc}
@@ -267,7 +269,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit }: Pr
                             <Text style={styles.locationText}>
                                 {location
                                     ? `${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}`
-                                    : 'Анықталуда...'}
+                                    : t('location_detecting')}
                             </Text>
                         </View>
 

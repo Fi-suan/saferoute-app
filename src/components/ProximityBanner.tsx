@@ -8,6 +8,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
+import { useT } from '../i18n';
 import { Incident, getIncidentMeta } from '../constants/incidents';
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function ProximityBanner({ incident, onDismiss, onViewDetail }: Props) {
+    const t = useT();
     const translateY = useRef(new Animated.Value(-80)).current;
     const opacity = useRef(new Animated.Value(0)).current;
     const meta = getIncidentMeta(incident.incident_type);
@@ -51,19 +53,19 @@ export default function ProximityBanner({ incident, onDismiss, onViewDetail }: P
             <View style={[styles.accentBar, { backgroundColor: meta.color }]} />
             <Ionicons name="warning" size={22} color={Colors.alert.critical} />
             <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.title}>Абай болыңыз! Алдыда қауіп!</Text>
+                <Text style={styles.title}>{t('banner_title')}</Text>
                 <Text style={styles.desc} numberOfLines={1}>
                     {incident.incident_type === 'crash'
                         ? 'ЖКО'
                         : incident.incident_type === 'animal'
-                            ? 'Жануарлар жолда'
-                            : 'Қауіпті аймақ'}
+                            ? t('banner_animal')
+                            : t('banner_hazard')}
                     {incident.description ? ` — ${incident.description}` : ''}
                 </Text>
             </View>
             {onViewDetail && (
                 <TouchableOpacity onPress={() => onViewDetail(incident)} style={styles.detailBtn}>
-                    <Text style={styles.detailBtnText}>Толығырақ</Text>
+                    <Text style={styles.detailBtnText}>{t('banner_more')}</Text>
                 </TouchableOpacity>
             )}
             <TouchableOpacity onPress={dismiss} style={styles.closeBtn}>

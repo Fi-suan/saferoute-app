@@ -26,24 +26,26 @@ import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { getIncidentMeta } from '../constants/incidents';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { useAppDialog } from '../components/AppDialog';
+import { useT } from '../i18n';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
-const SEVERITY_LABELS: Record<number, { label: string; color: string }> = {
-    1: { label: 'Өте төмен', color: Colors.alert.low },
-    2: { label: 'Төмен', color: Colors.alert.info },
-    3: { label: 'Орташа', color: Colors.alert.medium },
-    4: { label: 'Жоғары', color: Colors.alert.high },
-    5: { label: 'КРИТИКАЛЫҚ', color: Colors.alert.critical },
+const SEVERITY_LABELS: Record<number, { key: string; color: string }> = {
+    1: { key: 'sev_very_low', color: Colors.alert.low },
+    2: { key: 'sev_low', color: Colors.alert.info },
+    3: { key: 'sev_medium', color: Colors.alert.medium },
+    4: { key: 'sev_high', color: Colors.alert.high },
+    5: { key: 'sev_critical', color: Colors.alert.critical },
 };
 
 const EMERGENCY_CONTACTS = [
-    { label: 'Бірыңғай (112)', number: '112', icon: 'call', color: Colors.alert.critical },
-    { label: 'Полиция (102)', number: '102', icon: 'shield', color: Colors.alert.high },
-    { label: 'Жедел жәрдем (103)', number: '103', icon: 'medical', color: Colors.alert.info },
+    { key: 'sos_112', number: '112', icon: 'call', color: Colors.alert.critical },
+    { key: 'sos_police', number: '102', icon: 'shield', color: Colors.alert.high },
+    { key: 'sos_ambulance', number: '103', icon: 'medical', color: Colors.alert.info },
 ];
 
 export default function IncidentDetailScreen() {
+    const t = useT();
     const navigation = useNavigation<NavProp>();
     const route = useNavRoute();
     const { incident } = (route.params as { incident: RootStackParamList['IncidentDetail']['incident'] });
@@ -60,7 +62,7 @@ export default function IncidentDetailScreen() {
             `⚠️ SafeRoute / Sapa Jol\n` +
             `${meta.label} — A-17 трассасы\n` +
             `📍 ${coordStr}\n` +
-            `⚡ Қауіп деңгейі: ${sevCfg.label}\n` +
+            `⚡ Қауіп деңгейі: ${t(sevCfg.key as any)}\n` +
             `${incident.description ? `💬 ${incident.description}\n` : ''}` +
             `\n🛡️ Sapa Jol қолданбасын жүктеп алыңыз — жол қауіпсіздігі үшін`;
 
@@ -68,11 +70,11 @@ export default function IncidentDetailScreen() {
             await Share.share({ message: shareText, title: 'SafeRoute инцидент' });
         } catch (e) {
             showDialog({
-                title: 'Қате',
-                message: 'Бөлісу мүмкін болмады',
+                title: t('common_error'),
+                message: t('share_failed'),
                 icon: 'warning',
                 iconColor: Colors.alert.critical,
-                buttons: [{ text: 'Жабу', style: 'cancel' }],
+                buttons: [{ text: t('common_close'), style: 'cancel' }],
             });
         }
     };
@@ -117,7 +119,7 @@ export default function IncidentDetailScreen() {
                         <View style={[styles.severityBadge, { backgroundColor: sevCfg.color + '20' }]}>
                             <View style={[styles.severityDot, { backgroundColor: sevCfg.color }]} />
                             <Text style={[styles.severityText, { color: sevCfg.color }]}>
-                                {sevCfg.label}
+                                {t(sevCfg.key as any)}
                             </Text>
                         </View>
                         <Text style={styles.heroDate}>
@@ -157,7 +159,7 @@ export default function IncidentDetailScreen() {
 
                 {/* AI анализ */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>AI ТЕКСЕРУ</Text>
+                    <Text style={styles.sectionLabel}>{t('ai_section')}</Text>
                     <View style={styles.aiBanner}>
                         <View style={styles.aiBannerRow}>
                             <Ionicons
@@ -166,7 +168,7 @@ export default function IncidentDetailScreen() {
                                 color={incident.ai_verified ? Colors.brand.primary : Colors.text.muted}
                             />
                             <Text style={[styles.aiBannerStatus, { color: incident.ai_verified ? Colors.brand.primary : Colors.text.muted }]}>
-                                {incident.ai_verified ? 'Расталды' : 'Тексеруде...'}
+                                {incident.ai_verified ? t('ai_verified_badge') : t('ai_pending')}
                             </Text>
                             {incident.ai_confidence !== undefined && (
                                 <Text style={styles.aiConfidence}>
@@ -215,7 +217,7 @@ export default function IncidentDetailScreen() {
                     </View>
                     <View style={styles.statCard}>
                         <Ionicons name="shield" size={20} color={incident.is_active ? Colors.alert.critical : Colors.brand.primary} />
-                        <Text style={styles.statValue}>{incident.is_active ? 'Белсенді' : 'Шешілді'}</Text>
+                        <Text style={styles.statValue}>{incident.is_active ? t('status_active') : t('status_resolved')}</Text>
                         <Text style={styles.statLabel}>Күй</Text>
                     </View>
                 </View>
@@ -237,7 +239,7 @@ export default function IncidentDetailScreen() {
 
                 {/* Экстренные контакты */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>ЖЕДЕЛ БАЙЛАНЫС</Text>
+                    <Text style={styles.sectionLabel}>{t('sos_section')}</Text>
                     <View style={styles.emergencyList}>
                         {EMERGENCY_CONTACTS.map((c) => (
                             <TouchableOpacity
@@ -249,7 +251,7 @@ export default function IncidentDetailScreen() {
                                     <Ionicons name={c.icon as any} size={18} color={c.color} />
                                 </View>
                                 <View>
-                                    <Text style={styles.emergencyLabel}>{c.label}</Text>
+                                    <Text style={styles.emergencyLabel}>{t(c.key as any)}</Text>
                                     <Text style={[styles.emergencyNumber, { color: c.color }]}>{c.number}</Text>
                                 </View>
                                 <Ionicons name="call-outline" size={16} color={c.color} style={{ marginLeft: 'auto' }} />

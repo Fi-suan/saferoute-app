@@ -126,6 +126,13 @@ export default function MapScreen() {
         }, []),
     );
 
+    // Route switched → stale navigation would point at the old destination
+    useEffect(() => {
+        setNavResult(null);
+        setNavStepIdx(0);
+        setNavLoading(false);
+    }, [activeRouteId]);
+
     // Push notification on proximity (respects soundEnabled)
     useEffect(() => {
         if (!nearbyAlert) return;
@@ -413,21 +420,22 @@ export default function MapScreen() {
                 />
             </MapView>
 
-            <MapTopBar
-                incidentCount={displayedIncidents.length}
-                pendingReportsCount={pendingReportsCount}
-                isManualMode={isManualMode}
-                isOnline={isOnline}
-                roadStatus={roadStatus}
-                activeRouteId={activeRouteId}
-                isRouteMode={isRouteMode}
-                onToggleRoute={toggleRouteMode}
-                navResult={navResult}
-                navLoading={navLoading}
-                onToggleNavigation={handleToggleNavigation}
-            />
-
-            <MapFilters filter={filter} onChange={setFilter} />
+            <View style={styles.topStack} pointerEvents="box-none">
+                <MapTopBar
+                    incidentCount={displayedIncidents.length}
+                    pendingReportsCount={pendingReportsCount}
+                    isManualMode={isManualMode}
+                    isOnline={isOnline}
+                    roadStatus={roadStatus}
+                    activeRouteId={activeRouteId}
+                    isRouteMode={isRouteMode}
+                    onToggleRoute={toggleRouteMode}
+                    navResult={navResult}
+                    navLoading={navLoading}
+                    onToggleNavigation={handleToggleNavigation}
+                />
+                <MapFilters filter={filter} onChange={setFilter} />
+            </View>
 
             {navResult && (
                 <NavigationCard
@@ -533,7 +541,11 @@ export default function MapScreen() {
 
             {/* FAB — Report or Owner panel; long-press = SOS */}
             <TouchableOpacity
-                style={[styles.fab, isManualMode && styles.fabManual]}
+                style={[
+                    styles.fab,
+                    isManualMode && styles.fabManual,
+                    !!navResult && styles.fabNavActive,
+                ]}
                 onPress={handleFabPress}
                 onLongPress={handleSOSLongPress}
                 delayLongPress={1500}
@@ -596,6 +608,13 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.bg.primary },
+    topStack: {
+        position: 'absolute',
+        top: 46,
+        left: Spacing.md,
+        right: Spacing.md,
+        gap: 8,
+    },
     map: { flex: 1 },
     loadingWrap: {
         flex: 1,
@@ -704,4 +723,5 @@ const styles = StyleSheet.create({
         ...Shadow.glow,
     },
     fabManual: { borderWidth: 2, borderColor: Colors.brand.glowStrong },
+    fabNavActive: { bottom: 210 },
 });

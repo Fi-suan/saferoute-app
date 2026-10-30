@@ -56,7 +56,7 @@ export default function NavigationCard({ navResult, navStepIdx, onStop }: Naviga
 
             {nextStep && (
                 <View style={styles.navNextStep}>
-                    <Text style={styles.navNextLabel}>Затем: </Text>
+                    <Text style={styles.navNextLabel}>{t('nav_then')} </Text>
                     <Text style={styles.navNextText} numberOfLines={1}>
                         {nextStep.instruction}
                     </Text>
