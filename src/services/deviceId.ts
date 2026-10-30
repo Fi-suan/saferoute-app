@@ -1,51 +1,61 @@
 /**
  * Device ID Service — SafeRoute / Sapa Jol
  *
- * Генерирует и сохраняет уникальный UUID для устройства в SecureStore.
- * UUID персистентен между перезапусками приложения.
- *
- * Почему НЕ используем IMEI/Android ID:
- * - IMEI: запрещён с Android 10+ / iOS без системных прав
- * - getAndroidId: меняется при factory reset, нет на iOS
- * - getIosIdForVendorAsync: меняется при удалении всех приложений вендора
- *
- * UUID + SecureStore — кроссплатформенное, стабильное, privacy-compliant решение.
+ * Уникальный UUID устройства. Хранение: SecureStore (основное) +
+ * AsyncStorage (фолбэк) — на некоторых устройствах SecureStore молча
+ * сбоит между перезапусками, и UUID генерился заново при каждом входе,
+ * ломая подтверждения инцидентов (unique device_id). Теперь: чтение из
+ * SecureStore → AsyncStorage → генерация; запись в оба хранилища.
  */
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE } from '../constants/storage';
 
 let _cachedDeviceId: string | null = null;
 
-/**
- * Возвращает уникальный ID устройства.
- * При первом вызове генерирует UUID и сохраняет в SecureStore.
- * Последующие вызовы возвращают кэшированное значение.
- */
 export async function getDeviceId(): Promise<string> {
     // Вернуть из памяти (быстро)
     if (_cachedDeviceId) return _cachedDeviceId;
 
+    // 1) SecureStore
     try {
-        // Попробовать прочитать из SecureStore
         const stored = await SecureStore.getItemAsync(STORAGE.DEVICE_ID);
         if (stored) {
             _cachedDeviceId = stored;
             return stored;
         }
     } catch {
-        // SecureStore недоступен — генерируем fallback
+        // SecureStore недоступен — идём дальше
     }
 
-    // Создать новый UUID
+    // 2) AsyncStorage фолбэк (переживает перезапуск даже без SecureStore)
+    try {
+        const stored = await AsyncStorage.getItem(STORAGE.DEVICE_ID);
+        if (stored) {
+            _cachedDeviceId = stored;
+            // Восстановить и в SecureStore
+            SecureStore.setItemAsync(STORAGE.DEVICE_ID, stored).catch(() => {});
+            return stored;
+        }
+    } catch {
+        /* ignore */
+    }
+
+    // 3) Генерация нового + запись в оба хранилища
     const newId = Crypto.randomUUID();
+    _cachedDeviceId = newId;
 
     try {
         await SecureStore.setItemAsync(STORAGE.DEVICE_ID, newId);
     } catch {
-        // Если SecureStore недоступен — используем только in-memory (пока сессия)
+        /* ignore */
+    }
+    try {
+        await AsyncStorage.setItem(STORAGE.DEVICE_ID, newId);
+    } catch {
+        /* ignore */
     }
 
-    _cachedDeviceId = newId;
     return newId;
 }

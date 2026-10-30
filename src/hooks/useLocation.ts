@@ -14,6 +14,9 @@ import { Incident } from '../constants/incidents';
 import { Config } from '../config';
 import { updateDeviceLocation } from '../services/api';
 import { getDeviceId } from '../services/deviceId';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const SEEN_STORAGE_KEY = 'saferoute:proximity:seen';
 
 export interface GeoPoint {
     lat: number;
@@ -70,9 +73,37 @@ export function useLocation(
     >('idle');
     const simulationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // Refs чтобы не триггерить proximity дважды для одного инцидента
+    // Refs чтобы не триггерить proximity дважды для одного инцидента.
+    // Персистим в AsyncStorage: без этого после перезапуска приложение
+    // снова спрашивало подтверждение по той же метке.
     const alertedIds = useRef<Set<number>>(new Set());
     const confirmIds = useRef<Set<number>>(new Set());
+
+    const persistSeen = useCallback((alerted: Set<number>, confirmed: Set<number>) => {
+        try {
+            AsyncStorage.setItem(
+                SEEN_STORAGE_KEY,
+                JSON.stringify({ alerted: [...alerted], confirmed: [...confirmed] }),
+            ).catch(() => {});
+        } catch {
+            /* ignore */
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            AsyncStorage.getItem(SEEN_STORAGE_KEY)
+                .then((raw) => {
+                    if (!raw) return;
+                    const parsed = JSON.parse(raw) as { alerted?: number[]; confirmed?: number[] };
+                    (parsed.alerted ?? []).forEach((id) => alertedIds.current.add(id));
+                    (parsed.confirmed ?? []).forEach((id) => confirmIds.current.add(id));
+                })
+                .catch(() => {});
+        } catch {
+            /* ignore */
+        }
+    }, []);
     const sub = useRef<Location.LocationSubscription | null>(null);
     const lastSentRef = useRef<number>(0);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,6 +207,7 @@ export function useLocation(
             // Алерт-баннер 2 км
             if (dist <= proximityRadiusKm && !alertedIds.current.has(inc.id)) {
                 alertedIds.current.add(inc.id);
+                persistSeen(alertedIds.current, confirmIds.current);
                 setNearbyAlert(inc);
                 const title = '⚠️ Абай болыңыз!';
                 const body = inc.description || inc.incident_type;
@@ -184,9 +216,14 @@ export function useLocation(
                 dismissTimerRef.current = setTimeout(() => setNearbyAlert(null), 8000);
             }
 
-            // Диалог подтверждения 0.5 км
-            if (dist <= 0.5 && !confirmIds.current.has(inc.id)) {
+            // Диалог подтверждения 0.5 км — автору свою метку не предлагаем
+            if (
+                dist <= 0.5 &&
+                !confirmIds.current.has(inc.id) &&
+                inc.reporter_device_id !== myDeviceIdRef.current
+            ) {
                 confirmIds.current.add(inc.id);
+                persistSeen(alertedIds.current, confirmIds.current);
                 setConfirmCandidate(inc);
             }
         }
