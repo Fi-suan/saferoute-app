@@ -6,7 +6,6 @@
  * - Начальную позицию
  * - watchPositionAsync (непрерывное отслеживание)
  * - Proximity detection с настраиваемым радиусом (2 км алерт, 500 м подтверждение)
- * - ДЕМО GPS Симулятор для презентации в помещении
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Location from 'expo-location';
@@ -30,16 +29,10 @@ interface UseLocationReturn {
     loading: boolean;
     /** Инцидент в радиусе предупреждения (2 км) */
     nearbyAlert: Incident | null;
-    /** Инцидент в радиусе подтверждения (0.5 км) — просит пользователя ответить */
+    /** Инцидент в радиусе подтверждения (0,5 км) — просит пользователя ответить */
     confirmCandidate: Incident | null;
     dismissNearbyAlert: () => void;
     dismissConfirmCandidate: () => void;
-    /** GPS Simulation for in-room presentations */
-    isSimulating: boolean;
-    simulationStage: 'idle' | 'approaching' | 'nearby' | 'passed';
-    startSimulation: (targetIncident?: Incident) => void;
-    stopSimulation: () => void;
-    triggerSimulationStep: (stage: 'nearby' | 'confirm') => void;
 }
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -65,13 +58,6 @@ export function useLocation(
     const [loading, setLoading] = useState(true);
     const [nearbyAlert, setNearbyAlert] = useState<Incident | null>(null);
     const [confirmCandidate, setConfirmCandidate] = useState<Incident | null>(null);
-
-    // Simulation states
-    const [isSimulating, setIsSimulating] = useState(false);
-    const [simulationStage, setSimulationStage] = useState<
-        'idle' | 'approaching' | 'nearby' | 'passed'
-    >('idle');
-    const simulationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Refs чтобы не триггерить proximity дважды для одного инцидента.
     // Персистим в AsyncStorage: без этого после перезапуска приложение
@@ -149,7 +135,7 @@ export function useLocation(
                         timeInterval: Config.LOCATION_INTERVAL_MS,
                     },
                     (newLoc) => {
-                        if (!cancelled && !isSimulating) {
+                        if (!cancelled) {
                             const lat = newLoc.coords.latitude;
                             const lon = newLoc.coords.longitude;
                             const heading = newLoc.coords.heading ?? null;
@@ -174,7 +160,7 @@ export function useLocation(
             cancelled = true;
             sub.current?.remove();
         };
-    }, [isSimulating]);
+    }, []);
 
     // Own device id for the author anti-spam cooldown below
     useEffect(() => {
@@ -239,83 +225,9 @@ export function useLocation(
 
     const dismissConfirmCandidate = useCallback(() => setConfirmCandidate(null), []);
 
-    // ── GPS Simulation Engine ──────────────────────────────────────────────
-    const startSimulation = useCallback(
-        (targetIncident?: Incident) => {
-            const target = targetIncident ||
-                incidents.find((i) => i.is_active) || {
-                    latitude: 52.2855,
-                    longitude: 76.9675,
-                    id: 99999,
-                    incident_type: 'animal' as const,
-                    severity: 3,
-                    description: 'Киіктер табыны / Стадо сайгаков',
-                    is_active: true,
-                    confirmations_count: 0,
-                    created_at: new Date().toISOString(),
-                };
-
-            // Reset alerted tracking so the banner and dialog trigger reliably
-            alertedIds.current.delete(target.id);
-            confirmIds.current.delete(target.id);
-
-            setIsSimulating(true);
-            setSimulationStage('approaching');
-
-            // Start at ~2.5 km south of incident (approx -0.0225 latitude)
-            setLocation({
-                lat: target.latitude - 0.0225,
-                lon: target.longitude,
-                heading: 0,
-            });
-        },
-        [incidents],
-    );
-
-    const stopSimulation = useCallback(() => {
-        setIsSimulating(false);
-        setSimulationStage('idle');
-        if (simulationTimerRef.current) {
-            clearInterval(simulationTimerRef.current);
-            simulationTimerRef.current = null;
-        }
-    }, []);
-
-    const triggerSimulationStep = useCallback(
-        (stage: 'nearby' | 'confirm') => {
-            const target = incidents.find((i) => i.is_active) || {
-                latitude: 52.2855,
-                longitude: 76.9675,
-                id: 99999,
-            };
-
-            if (stage === 'nearby') {
-                // Place at ~1.6 km (within 2 km proximity)
-                alertedIds.current.delete(target.id);
-                setSimulationStage('nearby');
-                setLocation({
-                    lat: target.latitude - 0.0145,
-                    lon: target.longitude,
-                    heading: 0,
-                });
-            } else if (stage === 'confirm') {
-                // Place at ~0.35 km (within 500m confirmation dialog)
-                confirmIds.current.delete(target.id);
-                setSimulationStage('passed');
-                setLocation({
-                    lat: target.latitude - 0.003,
-                    lon: target.longitude,
-                    heading: 0,
-                });
-            }
-        },
-        [incidents],
-    );
-
     useEffect(
         () => () => {
             if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-            if (simulationTimerRef.current) clearInterval(simulationTimerRef.current);
         },
         [],
     );
@@ -328,10 +240,5 @@ export function useLocation(
         confirmCandidate,
         dismissNearbyAlert,
         dismissConfirmCandidate,
-        isSimulating,
-        simulationStage,
-        startSimulation,
-        stopSimulation,
-        triggerSimulationStep,
     };
 }

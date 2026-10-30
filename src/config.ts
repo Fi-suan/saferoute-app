@@ -11,9 +11,6 @@ import Constants from 'expo-constants';
 const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
 
 export const Config = {
-    /** @deprecated FastAPI backend retired — Supabase is now the only backend. Kept for rollback. */
-    BACKEND_URL: extra.BACKEND_URL ?? 'http://192.168.8.252:8000',
-
     /** Supabase credentials for direct Realtime subscriptions */
     SUPABASE_URL: extra.SUPABASE_URL ?? 'https://iqgawigwaempfnwtqovy.supabase.co',
     SUPABASE_ANON_KEY: extra.SUPABASE_ANON_KEY ?? 'sb_publishable_mtjnCty0nl-EXsssgG0BUg_k0wZtT90',
