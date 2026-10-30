@@ -378,6 +378,8 @@ export async function loginWithPhone(phone: string, password: string): Promise<L
     const { data, error } = await supabase.rpc('login_device', {
         p_phone: digits,
         p_password_hashes: candidates,
+        // Легаси-аккаунт без пароля: введённый пароль становится постоянным
+        p_new_password_hash: candidates[0],
     });
     if (error || !data?.ok) return null;
     return {
