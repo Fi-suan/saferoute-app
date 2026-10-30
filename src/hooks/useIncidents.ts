@@ -64,6 +64,8 @@ export interface SubmitReportParams {
 
 interface QueuedReport extends SubmitReportParams {
     queuedAt: string;
+    /** id оптимистичной метки, чтобы убрать «призрак» после отправки */
+    optimisticId?: number;
 }
 
 interface UseIncidentsReturn {
@@ -110,26 +112,42 @@ async function saveQueue(queue: QueuedReport[]): Promise<void> {
     }
 }
 
+// flushQueue вызывается из refresh() каждого экрана — синглтон не даёт
+// двум экранам отправить одну очередь дважды (дубли строк в БД).
+let flushInFlight: Promise<void> | null = null;
+
 async function flushQueue(deviceId: string): Promise<void> {
-    const queue = await loadQueue();
-    if (queue.length === 0) return;
-    const failed: QueuedReport[] = [];
-    for (const report of queue) {
-        try {
-            await submitIncidentReport({
-                incident_type: report.incident_type,
-                description: report.description,
-                severity: report.severity,
-                latitude: report.latitude,
-                longitude: report.longitude,
-                reporter_device_id: deviceId,
-                route_id: report.route_id ?? null,
-            });
-        } catch {
-            failed.push(report);
+    if (flushInFlight) return flushInFlight;
+    flushInFlight = (async () => {
+        const queue = await loadQueue();
+        if (queue.length === 0) return;
+        const failed: QueuedReport[] = [];
+        for (const report of queue) {
+            try {
+                const created = await submitIncidentReport({
+                    incident_type: report.incident_type,
+                    description: report.description,
+                    severity: report.severity,
+                    latitude: report.latitude,
+                    longitude: report.longitude,
+                    reporter_device_id: deviceId,
+                    route_id: report.route_id ?? null,
+                });
+                // Отправлено — убираем «призрак» оптимистичной метки
+                if (created && report.optimisticId != null) {
+                    incidentStore.remove(report.optimisticId);
+                }
+            } catch {
+                failed.push(report);
+            }
         }
+        await saveQueue(failed);
+    })();
+    try {
+        await flushInFlight;
+    } finally {
+        flushInFlight = null;
     }
-    await saveQueue(failed);
 }
 
 export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsReturn {
@@ -238,7 +256,7 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
                 return { ok: true };
             } catch {
                 const queue = await loadQueue();
-                queue.push({ ...params, queuedAt: new Date().toISOString() });
+                queue.push({ ...params, queuedAt: new Date().toISOString(), optimisticId: optimistic.id });
                 await saveQueue(queue);
                 setPendingReportsCount(queue.length);
                 return { ok: true, queued: true };

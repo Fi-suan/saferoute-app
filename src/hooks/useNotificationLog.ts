@@ -22,6 +22,7 @@ export interface NotifEntry {
 interface UseNotificationLogReturn {
     log: NotifEntry[];
     addEntry: (entry: Omit<NotifEntry, 'id' | 'timestamp' | 'read'>) => Promise<void>;
+    reload: () => Promise<void>;
     markAllRead: () => Promise<void>;
     clearLog: () => Promise<void>;
     unreadCount: number;
@@ -31,11 +32,14 @@ export function useNotificationLog(): UseNotificationLogReturn {
     const [log, setLog] = useState<NotifEntry[]>([]);
 
     useEffect(() => {
-        AsyncStorage.getItem(KEY).then(raw => {
-            if (raw) {
-                try { setLog(JSON.parse(raw)); } catch { /* ignore */ }
-            }
-        });
+        reload();
+    }, []);
+
+    const reload = useCallback(async () => {
+        try {
+            const raw = await AsyncStorage.getItem(KEY);
+            setLog(raw ? JSON.parse(raw) : []);
+        } catch { /* ignore */ }
     }, []);
 
     const persist = useCallback(async (entries: NotifEntry[]) => {
@@ -50,19 +54,17 @@ export function useNotificationLog(): UseNotificationLogReturn {
             timestamp: Date.now(),
             read: false,
         };
-        // Compute next state based on the latest log via functional update,
-        // then persist outside the reducer so the write happens exactly once.
-        let next: NotifEntry[] = [];
-        setLog(prev => {
-            next = [entry, ...prev].slice(0, MAX);
-            return next;
-        });
+        // Read-modify-write через AsyncStorage: updater setLog выполняется
+        // React-ом позже (в render-фазе), поэтому считать «последний» лог
+        // из state в момент вызова нельзя — писался бы пустой массив.
         try {
-            await AsyncStorage.setItem(KEY, JSON.stringify(next));
+            const raw = await AsyncStorage.getItem(KEY);
+            const prev: NotifEntry[] = raw ? JSON.parse(raw) : [];
+            await persist([entry, ...prev].slice(0, MAX));
         } catch (err) {
             console.warn('[useNotificationLog] persist failed:', err);
         }
-    }, []);
+    }, [persist]);
 
     const markAllRead = useCallback(async () => {
         const updated = log.map(e => ({ ...e, read: true }));
@@ -75,5 +77,5 @@ export function useNotificationLog(): UseNotificationLogReturn {
 
     const unreadCount = log.filter(e => !e.read).length;
 
-    return { log, addEntry, markAllRead, clearLog, unreadCount };
+    return { log, addEntry, reload, markAllRead, clearLog, unreadCount };
 }

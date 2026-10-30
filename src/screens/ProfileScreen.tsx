@@ -41,7 +41,7 @@ import { useNotificationLog } from '../hooks/useNotificationLog';
 import IncidentCard from '../components/IncidentCard';
 import OnboardingIllustration from '../components/OnboardingIllustration';
 import { Incident } from '../constants/incidents';
-import { useNavigation, CompositeNavigationProp } from '@react-navigation/native';
+import { useNavigation, CompositeNavigationProp, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
@@ -115,6 +115,7 @@ export default function ProfileScreen() {
     const { incidents, isOnline } = useIncidents('all');
     const {
         log: notifLog,
+        reload: reloadNotifLog,
         markAllRead,
         clearLog: clearNotifLog,
         unreadCount,
@@ -135,6 +136,13 @@ export default function ProfileScreen() {
             if (id) setActiveRouteId(id);
         });
     }, []);
+
+    // Журнал уведомлений пишется из карты — перечитываем при возврате на таб
+    useFocusEffect(
+        React.useCallback(() => {
+            reloadNotifLog();
+        }, [reloadNotifLog]),
+    );
 
     const activeRoute = ROUTES.find((r) => r.id === activeRouteId) ?? ROUTES[0];
     const activeIncidents = incidents.filter((i) => i.is_active).length;

@@ -11,6 +11,7 @@ interface IncidentState {
     set: (data: Incident[]) => void;
     prepend: (incident: Incident) => void;
     update: (id: number, patch: Partial<Incident>) => void;
+    remove: (id: number) => void;
 }
 
 const useIncidentZustand = create<IncidentState>((set) => ({
@@ -20,6 +21,7 @@ const useIncidentZustand = create<IncidentState>((set) => ({
     update: (id, patch) => set((s) => ({
         incidents: s.incidents.map(i => i.id === id ? { ...i, ...patch } : i),
     })),
+    remove: (id) => set((s) => ({ incidents: s.incidents.filter(i => i.id !== id) })),
 }));
 
 // Backward-compatible API so useIncidents.ts doesn't need major refactor
@@ -35,6 +37,9 @@ export const incidentStore = {
     },
     update(id: number, patch: Partial<Incident>) {
         useIncidentZustand.getState().update(id, patch);
+    },
+    remove(id: number) {
+        useIncidentZustand.getState().remove(id);
     },
     subscribe(listener: (incidents: Incident[]) => void): () => void {
         return useIncidentZustand.subscribe((s) => listener(s.incidents));
