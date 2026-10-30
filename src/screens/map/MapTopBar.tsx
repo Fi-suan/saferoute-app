@@ -41,14 +41,18 @@ export default function MapTopBar({
     return (
         <View style={styles.topBar}>
             <View style={styles.topBarRow}>
-                <Ionicons name="shield-checkmark" size={20} color={Colors.brand.primary} />
+                <Ionicons name="shield-checkmark" size={22} color={Colors.brand.primary} />
                 <Text style={styles.topBarText}>Sapa Jol</Text>
                 <View style={styles.topBarBadge}>
                     <Text style={styles.topBarBadgeText}>{incidentCount}</Text>
                 </View>
                 {pendingReportsCount > 0 && (
                     <View style={styles.offlineQueue}>
-                        <Ionicons name="cloud-upload-outline" size={12} color={Colors.alert.medium} />
+                        <Ionicons
+                            name="cloud-upload-outline"
+                            size={12}
+                            color={Colors.alert.medium}
+                        />
                         <Text style={styles.offlineQueueText}>{pendingReportsCount}</Text>
                     </View>
                 )}
@@ -58,13 +62,23 @@ export default function MapTopBar({
                         <Text style={styles.manualModeBadgeText}>{t('herd_mode_badge')}</Text>
                     </View>
                 )}
-                <View style={[styles.liteTag, isOnline ? styles.liteTagOnline : styles.liteTagOffline]}>
+                <View
+                    style={[
+                        styles.liteTag,
+                        isOnline ? styles.liteTagOnline : styles.liteTagOffline,
+                    ]}
+                >
                     <Ionicons
                         name={isOnline ? 'wifi' : 'cloud-offline'}
                         size={12}
                         color={isOnline ? Colors.brand.primary : Colors.alert.medium}
                     />
-                    <Text style={[styles.liteTagText, { color: isOnline ? Colors.brand.primary : Colors.alert.medium }]}>
+                    <Text
+                        style={[
+                            styles.liteTagText,
+                            { color: isOnline ? Colors.brand.primary : Colors.alert.medium },
+                        ]}
+                    >
                         {isOnline ? t('online') : t('offline')}
                     </Text>
                 </View>
@@ -81,14 +95,18 @@ export default function MapTopBar({
                     onPress={onToggleNavigation}
                     disabled={navLoading}
                 >
-                    {navLoading
-                        ? <ActivityIndicator size="small" color={navResult ? Colors.bg.primary : Colors.brand.primary} />
-                        : <Ionicons
-                            name={navResult ? 'stop-circle' : 'arrow-redo'}
-                            size={14}
+                    {navLoading ? (
+                        <ActivityIndicator
+                            size="small"
                             color={navResult ? Colors.bg.primary : Colors.brand.primary}
-                          />
-                    }
+                        />
+                    ) : (
+                        <Ionicons
+                            name={navResult ? 'stop-circle' : 'arrow-redo'}
+                            size={16}
+                            color={navResult ? Colors.bg.primary : Colors.brand.primary}
+                        />
+                    )}
                     <Text style={[styles.navBtnText, navResult && styles.navBtnTextActive]}>
                         {navResult
                             ? `${navResult.totalDistance} · ${navResult.totalDuration}`
@@ -102,46 +120,84 @@ export default function MapTopBar({
 
 const styles = StyleSheet.create({
     topBar: {
-        position: 'absolute', top: 50, left: Spacing.md, right: Spacing.md,
-        backgroundColor: 'rgba(0,0,0,0.85)', borderRadius: Radius.md,
-        paddingVertical: 12, paddingHorizontal: Spacing.md,
-        borderWidth: 1, borderColor: Colors.border, ...Shadow.card, gap: 10,
+        position: 'absolute',
+        top: 50,
+        left: Spacing.md,
+        right: Spacing.md,
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        borderRadius: Radius.md,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        ...Shadow.card,
+        gap: 10,
     },
     topBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     topBarText: { fontSize: 17, fontWeight: '700', color: Colors.text.primary },
     topBarBadge: {
-        backgroundColor: Colors.brand.primary, borderRadius: Radius.full,
-        minWidth: 22, height: 22, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6,
+        backgroundColor: Colors.brand.primary,
+        borderRadius: Radius.full,
+        minWidth: 22,
+        height: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 6,
     },
-    topBarBadgeText: { fontSize: 12, fontWeight: '800', color: Colors.bg.primary },
+    topBarBadgeText: { fontSize: 13, fontWeight: '800', color: Colors.bg.primary },
     offlineQueue: {
-        flexDirection: 'row', alignItems: 'center', gap: 3,
-        backgroundColor: Colors.alert.medium + '20', paddingHorizontal: 6, paddingVertical: 3, borderRadius: Radius.full,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 3,
+        backgroundColor: Colors.alert.medium + '20',
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: Radius.full,
     },
     offlineQueueText: { fontSize: 10, fontWeight: '700', color: Colors.alert.medium },
     manualModeBadge: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
-        backgroundColor: Colors.brand.primary + '20', paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: Colors.brand.primary + '20',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: Radius.full,
     },
     manualModeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.brand.primary },
     manualModeBadgeText: { fontSize: 10, fontWeight: '700', color: Colors.brand.primary },
     liteTag: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
-        paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full, marginLeft: 'auto',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: Radius.full,
+        marginLeft: 'auto',
     },
     liteTagOnline: { backgroundColor: Colors.brand.primary + '20' },
     liteTagOffline: { backgroundColor: Colors.alert.medium + '20' },
-    liteTagText: { fontSize: 11, fontWeight: '700' },
-    statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 },
+    liteTagText: { fontSize: 12.5, fontWeight: '700' },
+    statusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
 
     navBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 5,
-        paddingHorizontal: 10, paddingVertical: 5,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
         borderRadius: Radius.full,
         backgroundColor: Colors.brand.primary + '15',
-        borderWidth: 1, borderColor: Colors.brand.primary + '40',
+        borderWidth: 1,
+        borderColor: Colors.brand.primary + '40',
     },
     navBtnActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
-    navBtnText: { fontSize: 11, fontWeight: '700', color: Colors.brand.primary },
+    navBtnText: { fontSize: 13, fontWeight: '700', color: Colors.brand.primary },
     navBtnTextActive: { color: Colors.bg.primary },
 });

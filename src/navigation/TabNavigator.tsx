@@ -28,8 +28,11 @@ import type { TranslationKey } from '../i18n/translations';
 const Tab = createBottomTabNavigator();
 
 // Wrap each screen so a crash isolates to that tab.
-const withBoundary = (Screen: React.ComponentType<any>) => (props: any) =>
-    <ErrorBoundary onError={reportError}><Screen {...props} /></ErrorBoundary>;
+const withBoundary = (Screen: React.ComponentType<any>) => (props: any) => (
+    <ErrorBoundary onError={reportError}>
+        <Screen {...props} />
+    </ErrorBoundary>
+);
 
 const MapScreenSafe = withBoundary(MapScreen);
 const AlertsScreenSafe = withBoundary(AlertsScreen);
@@ -54,7 +57,7 @@ function TabIcon({ name, focused, color }: { name: string; focused: boolean; col
         <View style={styles.iconContainer}>
             <Ionicons
                 name={focused ? (name as any) : (`${name}-outline` as any)}
-                size={24}
+                size={26}
                 color={color}
             />
             {/* 🎨 ANIMATION_SLOT: tab_dot — spring-bounce при появлении */}
@@ -71,7 +74,7 @@ export default function TabNavigator() {
                 headerShown: false,
                 tabBarStyle: styles.tabBar,
                 tabBarShowLabel: true,
-                tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginTop: -2 },
+                tabBarLabelStyle: { fontSize: 12, fontWeight: '600', marginTop: -2 },
                 tabBarActiveTintColor: Colors.brand.primary,
                 tabBarInactiveTintColor: Colors.text.muted,
             }}
@@ -98,7 +101,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.bg.secondary,
         borderTopWidth: 1,
         borderTopColor: Colors.border,
-        height: 72,
+        height: 78,
         paddingBottom: 8,
         paddingTop: 6,
     },

@@ -15,6 +15,37 @@ import { getDeviceId } from '../services/deviceId';
 import { incidentStore } from '../store/incidentStore';
 import { supabase } from '../services/supabase';
 
+/**
+ * Shared realtime subscription for incident_reports.
+ *
+ * supabase-js returns the SAME channel instance for a repeated
+ * `.channel(topic)` call, so mounting useIncidents in several screens
+ * must not call `.on(...)`/`.subscribe()` again — that throws
+ * "cannot add postgres_changes callbacks after subscribe()".
+ * One channel lives for the whole app; screens just add/remove listeners.
+ */
+const incidentRealtimeListeners = new Set<() => void>();
+let incidentChannel: ReturnType<typeof supabase.channel> | null = null;
+
+function subscribeIncidentChanges(cb: () => void): () => void {
+    if (!incidentChannel) {
+        incidentChannel = supabase
+            .channel('incident_reports_realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'incident_reports' },
+                () => {
+                    incidentRealtimeListeners.forEach((l) => l());
+                },
+            )
+            .subscribe();
+    }
+    incidentRealtimeListeners.add(cb);
+    return () => {
+        incidentRealtimeListeners.delete(cb);
+    };
+}
+
 export interface SubmitReportParams {
     incident_type: string;
     description: string;
@@ -137,20 +168,11 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
         const interval = setInterval(refresh, Config.INCIDENTS_POLL_INTERVAL_MS);
 
         // Supabase Realtime subscription for instantaneous cross-device sync
-        const channel = supabase
-            .channel('incident_reports_realtime')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'incident_reports' },
-                () => {
-                    refresh();
-                },
-            )
-            .subscribe();
+        const unsubscribeRealtime = subscribeIncidentChanges(refresh);
 
         return () => {
             clearInterval(interval);
-            supabase.removeChannel(channel);
+            unsubscribeRealtime();
         };
     }, [refresh]);
 
