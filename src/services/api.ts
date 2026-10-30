@@ -291,7 +291,7 @@ export async function submitIncidentReport(params: {
             route_id: params.route_id ?? null,
             photo_url: params.photo_url ?? null,
             ai_verified: false,
-            ai_analysis: 'AI тексеруі демо режимінде өшірілген — қоғамдастық растауын күтуде.',
+            ai_analysis: 'AI метканы тексеруде...',
             is_active: true,
             confirmations_count: 0,
         })
