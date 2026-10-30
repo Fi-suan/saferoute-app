@@ -86,9 +86,12 @@ end;
 $$;
 
 -- Server-side login: hash comparison happens here, hashes are never exposed.
+-- The client sends candidate hashes for every plausible phone format
+-- (+7…, 8…, 7…, bare digits) — the hash salt is the phone AS TYPED at
+-- registration, so format drift must not lock users out.
 create or replace function login_device(
     p_phone text,
-    p_password_hash text default null
+    p_password_hashes text[] default null
 ) returns jsonb
 language plpgsql
 security definer
@@ -118,7 +121,7 @@ begin
 
     -- Accounts without a hash are legacy/demo: still allowed in
     if v_row.password_hash is not null then
-        if p_password_hash is null or v_row.password_hash <> p_password_hash then
+        if p_password_hashes is null or not (v_row.password_hash = any(p_password_hashes)) then
             return jsonb_build_object('ok', false, 'reason', 'bad_password');
         end if;
     end if;

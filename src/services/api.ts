@@ -459,13 +459,19 @@ export interface LoginResult {
 
 /** Sign in an existing account by phone + password.
  *  Hash comparison happens server-side (login_device RPC); the devices table
- *  is not readable by clients at all. */
+ *  is not readable by clients at all. The hash salt is the phone as typed at
+ *  registration, so we send candidate hashes for every plausible format. */
 export async function loginWithPhone(phone: string, password: string): Promise<LoginResult | null> {
     const digits = phone.replace(/\s/g, '');
-    const candidate = await hashPassword(digits, password);
+    const tail = digits.slice(-10);
+    const salts = [...new Set([digits, `+7${tail}`, `8${tail}`, `7${tail}`, tail])];
+    const candidates: string[] = [];
+    for (const salt of salts) {
+        candidates.push(await hashPassword(salt, password));
+    }
     const { data, error } = await supabase.rpc('login_device', {
         p_phone: digits,
-        p_password_hash: candidate,
+        p_password_hashes: candidates,
     });
     if (error || !data?.ok) return null;
     return {
