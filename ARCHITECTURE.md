@@ -48,16 +48,18 @@ GPS каждые 5 с / 50 м · опрос сервера 4 с (Realtime зак
 - ✅ **Фото инцидентов**: Supabase Storage, публичное чтение, загрузка из
   приложения и из офлайн-очереди.
 - ✅ **Хардкод строк** вычищен из UI (кроме onboarding — свой словарь by design).
-- ✅ **Фоновые push (скаффолд)**: `supabase/functions/push-nearby` — готов к
-  деплою (см. шапку файла); токены уже пишутся в devices.fcm_token.
+- ✅ **Фоновые push**: `push-nearby` задеплоена + триггер (миграция 011).
+  Работает только в EAS-сборке (в Expo Go удалённого push нет by design).
+- ✅ **AI-проверка фото**: `verify-photo` задеплоена + триггер (миграция 010).
+  Pixtral (Mistral vision) проверяет фото, вердикт (ai_verified, уверенность,
+  казахский разбор, серьёзность) пишется в метку; приложение видит его через
+  realtime, бейдж AI — с уверенности ≥75%. Ключ — в секретах Supabase.
+  Проверено end-to-end: фото скота на дороге → verified=true, conf=0.95.
 - ✅ **Сид демо-данных**: `scripts/seed-demo.js` (идемпотентный).
 
 Осталось (по убыванию важности):
-1. **Деплой push-nearby**: `npx supabase functions deploy push-nearby
-   --project-ref iqgawigwaempfnwtqovy` + Webhook в Dashboard (INSERT
-   incident_reports). Работает только в EAS-сборке (не Expo Go).
+1. **Пересборка APK**: `npm run build:android` (EAS) — в APK заработают фоновые
+   push и все последние фиксы. hermesc OOM риск на 8 ГБ — закрыть браузер.
 2. **Полноценная аутентификация**: demo-модель «device_id = личность» живёт —
    мигрировать на Supabase Auth, тогда исчезнут RPC-костыли.
 3. **Модерация фото**: фото публичны — добавить отчёт «спам/неподходящее».
-4. **Пересборка APK**: последние фиксы только в Metro; перед выдачей APK —
-   `npm run build:android` (hermesc OOM риск на 8 ГБ).
