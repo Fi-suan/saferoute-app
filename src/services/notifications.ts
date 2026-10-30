@@ -12,7 +12,6 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { getDeviceId } from './deviceId';
 import { registerDevice } from './api';
-import { storeAuthToken } from './auth';
 
 // Флаг: поддерживаются ли уведомления в текущей среде
 let _notificationsSupported = true;
@@ -35,14 +34,11 @@ try {
 async function registerAndStoreToken(role: string, fcmToken?: string): Promise<void> {
     const deviceId = await getDeviceId();
     try {
-        const res = await registerDevice({
+        await registerDevice({
             device_id: deviceId,
             role,
             fcm_token: fcmToken,
         });
-        if (res?.token) {
-            await storeAuthToken(res.token);
-        }
     } catch (e) {
         console.warn('[Notifications] registerAndStoreToken failed:', e);
     }
@@ -52,7 +48,9 @@ async function registerAndStoreToken(role: string, fcmToken?: string): Promise<v
  * Запрашивает разрешение на локальные уведомления.
  * Remote push (FCM) в Expo Go SDK53+ не работают — не пытаемся их запросить.
  */
-export async function registerForPushNotifications(role: string = 'driver'): Promise<string | null> {
+export async function registerForPushNotifications(
+    role: string = 'driver',
+): Promise<string | null> {
     if (!_notificationsSupported) return null;
 
     try {
@@ -82,7 +80,9 @@ export async function registerForPushNotifications(role: string = 'driver'): Pro
 
         // Пытаемся получить Expo Push Token (только для dev builds)
         if (Constants.appOwnership === 'expo') {
-            console.log("[Notifications] Expo Go detected: bypassing remote push (SDK 53 limit). Local notifications work.");
+            console.log(
+                '[Notifications] Expo Go detected: bypassing remote push (SDK 53 limit). Local notifications work.',
+            );
             await registerAndStoreToken(role);
             return null;
         }
