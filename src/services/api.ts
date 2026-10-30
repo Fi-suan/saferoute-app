@@ -307,6 +307,49 @@ export async function getGeozonesGeoJSON(): Promise<{ type: string; features: un
 }
 
 // ── Incidents ──────────────────────────────────────────────────────────────────
+
+/** base64 → Uint8Array без atob (в RN его нет). */
+function base64ToBytes(b64: string): Uint8Array {
+    const lookup = new Uint8Array(256).fill(255);
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    for (let i = 0; i < chars.length; i++) lookup[chars.charCodeAt(i)] = i;
+    lookup['='.charCodeAt(0)] = 0;
+
+    let out = new Uint8Array(Math.floor((b64.length * 3) / 4));
+    let o = 0;
+    let buffer = 0;
+    let bits = 0;
+    for (let i = 0; i < b64.length; i++) {
+        const v = lookup[b64.charCodeAt(i)];
+        if (v === 255) continue;
+        buffer = (buffer << 6) | v;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            out[o++] = (buffer >> bits) & 0xff;
+        }
+    }
+    return o === out.length ? out : out.subarray(0, o);
+}
+
+/** Загружает фото отчёта в Supabase Storage, возвращает публичный URL. */
+export async function uploadIncidentPhoto(
+    base64: string,
+    deviceId: string,
+): Promise<string | null> {
+    try {
+        const path = `${deviceId}/${Date.now()}.jpg`;
+        const { error } = await supabase.storage
+            .from('incident-photos')
+            .upload(path, base64ToBytes(base64), { contentType: 'image/jpeg', upsert: false });
+        if (error) return null;
+        const { data } = supabase.storage.from('incident-photos').getPublicUrl(path);
+        return data.publicUrl ?? null;
+    } catch {
+        return null;
+    }
+}
+
 export async function fetchIncidents(tab: 'active' | 'all' = 'active'): Promise<Incident[]> {
     let q = supabase
         .from('incident_reports')
@@ -327,6 +370,7 @@ export async function submitIncidentReport(params: {
     longitude: number;
     reporter_device_id: string;
     route_id?: string | null;
+    photo_url?: string | null;
 }): Promise<Incident | null> {
     const type = params.incident_type.toLowerCase();
     const { data, error } = await supabase
@@ -339,6 +383,7 @@ export async function submitIncidentReport(params: {
             longitude: params.longitude,
             reporter_device_id: params.reporter_device_id,
             route_id: params.route_id ?? null,
+            photo_url: params.photo_url ?? null,
             ai_verified: false,
             ai_analysis: 'AI тексеруі демо режимінде өшірілген — қоғамдастық растауын күтуде.',
             is_active: true,

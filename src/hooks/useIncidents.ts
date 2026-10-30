@@ -7,7 +7,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchIncidents, submitIncidentReport, confirmIncidentOnServer } from '../services/api';
+import { fetchIncidents, submitIncidentReport, confirmIncidentOnServer, uploadIncidentPhoto } from '../services/api';
 import { Config } from '../config';
 import { STORAGE } from '../constants/storage';
 import { Incident } from '../constants/incidents';
@@ -124,6 +124,11 @@ async function flushQueue(deviceId: string): Promise<void> {
         const failed: QueuedReport[] = [];
         for (const report of queue) {
             try {
+                // Фото из офлайн-очереди загружаем перед отправкой
+                let photoUrl: string | null = null;
+                if (report.photo_base64) {
+                    photoUrl = await uploadIncidentPhoto(report.photo_base64, deviceId);
+                }
                 const created = await submitIncidentReport({
                     incident_type: report.incident_type,
                     description: report.description,
@@ -132,6 +137,7 @@ async function flushQueue(deviceId: string): Promise<void> {
                     longitude: report.longitude,
                     reporter_device_id: deviceId,
                     route_id: report.route_id ?? null,
+                    photo_url: photoUrl,
                 });
                 // Отправлено — убираем «призрак» оптимистичной метки
                 if (created && report.optimisticId != null) {
@@ -243,6 +249,11 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
             incidentStore.prepend(optimistic);
 
             try {
+                // Фото: если загрузка сорвалась — метка уходит без фото
+                let photoUrl: string | null = null;
+                if (params.photo_base64) {
+                    photoUrl = await uploadIncidentPhoto(params.photo_base64, deviceId);
+                }
                 const created = await submitIncidentReport({
                     incident_type: params.incident_type,
                     description: params.description,
@@ -251,6 +262,7 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
                     longitude: params.longitude,
                     reporter_device_id: deviceId,
                     route_id: routeId,
+                    photo_url: photoUrl,
                 });
                 if (created) {
                     incidentStore.update(optimistic.id, { ...created });
