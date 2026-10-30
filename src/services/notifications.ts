@@ -1,34 +1,56 @@
 /**
- * Push Notifications Service — SafeRoute / Sapa Jol
+ * Notifications Service — SafeRoute / Sapa Jol
  *
- * ВАЖНО: В Expo Go (SDK 53+) push-уведомления (remote) не работают.
- * Локальные уведомления (scheduleProximityNotification) — работают.
- * Для полноценных push нужен development build.
+ * expo-notifications is loaded LAZILY (on first use) so it never sits on the
+ * critical startup path. In Expo Go its import triggers a deprecation error
+ * about removed remote push (SDK 53+); local notifications still work, so we
+ * keep them and simply avoid the module until a notification is really needed.
  *
- * Реализован graceful fallback: все функции не кидают исключений.
+ * Remote push (FCM) only works in dev/production builds — never requested in Expo Go.
  */
 import Constants from 'expo-constants';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { getDeviceId } from './deviceId';
 import { registerDevice } from './api';
 
-// Флаг: поддерживаются ли уведомления в текущей среде
+type NotificationsModule = typeof import('expo-notifications');
+
+let _module: NotificationsModule | null = null;
+let _handlerReady = false;
 let _notificationsSupported = true;
 
-// Настройка показа уведомлений когда приложение ОТКРЫТО
-try {
-    Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-            shouldShowAlert: true,
-            shouldPlaySound: true,
-            shouldSetBadge: false,
-            shouldShowBanner: true,
-            shouldShowList: true,
-        }),
-    });
-} catch {
-    _notificationsSupported = false;
+/** Lazy-load expo-notifications and set the foreground handler once. */
+async function getNotifications(): Promise<NotificationsModule | null> {
+    if (!_notificationsSupported) return null;
+    if (!_module) {
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            _module = require('expo-notifications');
+        } catch {
+            _notificationsSupported = false;
+            return null;
+        }
+    }
+    if (!_handlerReady) {
+        _handlerReady = true;
+        try {
+            const mod = _module;
+            if (!mod) return null;
+            mod.setNotificationHandler({
+                handleNotification: async () => ({
+                    shouldShowAlert: true,
+                    shouldPlaySound: true,
+                    shouldSetBadge: false,
+                    shouldShowBanner: true,
+                    shouldShowList: true,
+                }),
+            });
+        } catch {
+            _notificationsSupported = false;
+            return null;
+        }
+    }
+    return _module;
 }
 
 async function registerAndStoreToken(role: string, fcmToken?: string): Promise<void> {
@@ -45,13 +67,14 @@ async function registerAndStoreToken(role: string, fcmToken?: string): Promise<v
 }
 
 /**
- * Запрашивает разрешение на локальные уведомления.
- * Remote push (FCM) в Expo Go SDK53+ не работают — не пытаемся их запросить.
+ * Requests local notification permission + (outside Expo Go) a push token.
+ * Safe to call in any environment — degrades to null silently.
  */
 export async function registerForPushNotifications(
     role: string = 'driver',
 ): Promise<string | null> {
-    if (!_notificationsSupported) return null;
+    const Notifications = await getNotifications();
+    if (!Notifications) return null;
 
     try {
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -67,7 +90,7 @@ export async function registerForPushNotifications(
             return null;
         }
 
-        // Для Android — создаём канал (нужен для локальных тоже)
+        // Android needs a channel for local notifications too
         if (Platform.OS === 'android') {
             await Notifications.setNotificationChannelAsync('saferoute-alerts', {
                 name: 'SafeRoute Alerts',
@@ -78,12 +101,8 @@ export async function registerForPushNotifications(
             });
         }
 
-        // Пытаемся получить Expo Push Token (только для dev builds)
+        // Expo Go: remote push removed since SDK 53 — keep local notifications only
         if (Constants.appOwnership === 'expo') {
-            console.log(
-                '[Notifications] Expo Go detected: bypassing remote push (SDK 53 limit). Local notifications work.',
-            );
-            await registerAndStoreToken(role);
             return null;
         }
 
@@ -92,7 +111,6 @@ export async function registerForPushNotifications(
             await registerAndStoreToken(role, pushToken.data);
             return pushToken.data;
         } catch {
-            // Expo Go без EAS — токен недоступен, но локальные уведомления работают
             return null;
         }
     } catch {
@@ -102,9 +120,8 @@ export async function registerForPushNotifications(
 }
 
 /**
- * Локальное уведомление о proximity-инциденте.
- * Работает В EXPO GO. Показывается немедленно.
- * Уважает настройки sound/vibration из AsyncStorage.
+ * Local notification about a proximity incident.
+ * Works in Expo Go. Shows immediately. Respects sound settings.
  */
 export async function scheduleProximityNotification(params: {
     title: string;
@@ -112,7 +129,8 @@ export async function scheduleProximityNotification(params: {
     incidentId: number;
     soundEnabled?: boolean;
 }): Promise<void> {
-    if (!_notificationsSupported) return;
+    const Notifications = await getNotifications();
+    if (!Notifications) return;
     const sound = params.soundEnabled !== false;
     try {
         await Notifications.scheduleNotificationAsync({
@@ -122,7 +140,7 @@ export async function scheduleProximityNotification(params: {
                 data: { incidentId: params.incidentId },
                 sound: sound ? 'default' : undefined,
             },
-            trigger: null, // Немедленно
+            trigger: null, // immediately
         });
     } catch (e) {
         console.warn('[Notifications] scheduleProximityNotification failed:', e);

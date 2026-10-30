@@ -1,3 +1,11 @@
+/**
+ * OnboardingScreen — Sapa Jol / SafeRoute
+ *
+ * Design: dark "road safety" aesthetic — strict typographic hierarchy
+ * (Swiss-inspired), road-marking dash motifs, one green functional accent.
+ * 4 info slides + 1 auth slide with two modes: register (Тіркелу) and
+ * login by phone (Кіру) for already-registered accounts.
+ */
 import React, { useRef, useState, useCallback } from 'react';
 import {
     View,
@@ -20,7 +28,7 @@ import * as Haptics from 'expo-haptics';
 import { Colors, Spacing, Radius } from '../constants/colors';
 import type { UserRole } from '../constants/livestock';
 import OnboardingIllustration from '../components/OnboardingIllustration';
-import { registerDevice } from '../services/api';
+import { registerDevice, loginWithPhone } from '../services/api';
 import { getDeviceId } from '../services/deviceId';
 
 const { width } = Dimensions.get('window');
@@ -52,34 +60,34 @@ const SLIDES_KK: Slide[] = [
     {
         illust: 'shield',
         title: 'Sapa Jol',
-        subtitle: 'Жол қауiпсiздiгi жүйесi',
-        desc: 'Қазақстан жолдарындағы жануарлар мен жүргiзушiлердi қорғайды.',
+        subtitle: 'Жол қауіпсіздігі жүйесі',
+        desc: 'Қазақстан жолдарындағы жануарлар мен жүргізушілерді қорғайды.',
         accent: Colors.brand.primary,
     },
     {
         illust: 'marker',
-        title: 'Белгi қою',
-        subtitle: 'нақты уақыттағы карта',
-        desc: 'Жүргiзушiлер жолдағы малдарды, шұңқырларды белгiлейдi. AI фотоны тексередi.',
+        title: 'Белгі қою',
+        subtitle: 'Нақты уақыттағы карта',
+        desc: 'Жүргізушілер жолдағы малдарды, шұңқырларды белгілейді. AI фотоны тексереді.',
         accent: Colors.alert.medium,
     },
     {
         illust: 'bell',
         title: 'Ақылды ескерту',
         subtitle: '2 км радиуста',
-        desc: 'Қауiптi аймаққа жақындасаңыз — қосымша алдын ала ескертедi.',
+        desc: 'Қауіпті аймаққа жақындасаңыз — қосымша алдын ала ескертеді.',
         accent: Colors.alert.high,
     },
     {
         illust: 'community',
-        title: 'Бiрге қауiпсiз',
-        subtitle: 'ұжымдық монитори',
-        desc: 'Белгiнi растаңыз. 3 растаудан кейiн белгi автоматты жойылады.',
+        title: 'Бірге қауіпсіз',
+        subtitle: 'Ұжымдық мониторинг',
+        desc: 'Белгіні растаңыз. 3 растаудан кейін белгі автоматты жойылады.',
         accent: Colors.alert.info,
     },
     {
         illust: 'profile',
-        title: 'Тiркелу',
+        title: 'Тіркелу',
         subtitle: '',
         desc: '',
         accent: Colors.brand.primary,
@@ -97,21 +105,21 @@ const SLIDES_RU: Slide[] = [
     {
         illust: 'marker',
         title: 'Метки',
-        subtitle: 'карта в реальном времени',
+        subtitle: 'Карта в реальном времени',
         desc: 'Водители отмечают животных, скот, ямы. AI проверяет каждое фото.',
         accent: Colors.alert.medium,
     },
     {
         illust: 'bell',
         title: 'Оповещения',
-        subtitle: 'в радиусе 2 км',
-        desc: 'При приближении к опасной зоне — приложение предупредит заранее.',
+        subtitle: 'В радиусе 2 км',
+        desc: 'При приближении к опасной зоне приложение предупредит заранее.',
         accent: Colors.alert.high,
     },
     {
         illust: 'community',
         title: 'Вместе безопаснее',
-        subtitle: 'коллективный мониторинг',
+        subtitle: 'Коллективный мониторинг',
         desc: 'Подтвердите метку. После 3 подтверждений метка удаляется.',
         accent: Colors.alert.info,
     },
@@ -126,25 +134,32 @@ const SLIDES_RU: Slide[] = [
 ];
 
 type Lang = 'kk' | 'ru';
+type AuthMode = 'register' | 'login';
+
 const L = {
     kk: {
-        nameLabel: 'АТЫ-ЖӨНI',
+        nameLabel: 'АТЫ-ЖӨНІ',
         nameErr: 'Мин. 2 таңба',
         namePh: 'Айбек',
         phoneLabel: 'ТЕЛЕФОН',
         phonePh: '+7 700 000 0000',
         phoneErr: 'Формат: +7XXXXXXXXXX',
-        roleLabel: 'РӨЛIҢIЗДI ТАҢДАҢЫЗ',
+        roleLabel: 'РӨЛІҢІЗДІ ТАҢДАҢЫЗ',
         roleErr: 'Рөл таңдаңыз',
-        driver: 'Жүргiзушi',
-        driverDesc: 'Жол ескертулерiн алады',
-        owner: 'Мал иесi',
-        ownerDesc: 'Малды тiркеу және қорғау',
-        next: 'Келесi',
+        driver: 'Жүргізуші',
+        driverDesc: 'Жол ескертулерін алады',
+        owner: 'Мал иесі',
+        ownerDesc: 'Малды тіркеу және қорғау',
+        next: 'Келесі',
         back: 'Артқа',
         start: 'Бастау',
-        skip: 'Өткiзу',
+        skip: 'Өткізу',
         langToggle: 'RU',
+        modeRegister: 'Тіркелу',
+        modeLogin: 'Кіру',
+        loginHint: 'Бұрын тіркелген телефон номеріңізді енгізіңіз',
+        loginNotFound: 'Осы номермен аккаунт табылмады',
+        loginBtn: 'Кіру',
     },
     ru: {
         nameLabel: 'ИМЯ',
@@ -164,6 +179,11 @@ const L = {
         start: 'Начать',
         skip: 'Пропустить',
         langToggle: 'ҚАЗ',
+        modeRegister: 'Регистрация',
+        modeLogin: 'Вход',
+        loginHint: 'Введите номер, указанный при регистрации',
+        loginNotFound: 'Аккаунт с этим номером не найден',
+        loginBtn: 'Войти',
     },
 };
 
@@ -175,6 +195,7 @@ export default function OnboardingScreen({
 }) {
     const [lang, setLang] = useState<Lang>('kk');
     const [slideIdx, setSlideIdx] = useState(0);
+    const [authMode, setAuthMode] = useState<AuthMode>('register');
     const [loading, setLoading] = useState(false);
 
     // Registration fields
@@ -217,7 +238,7 @@ export default function OnboardingScreen({
         }
     };
 
-    // ── Validate registration ────────────────────────────────────────
+    // ── Validate registration ────────────────────────────────
     const validateReg = (): boolean => {
         const e: Record<string, string> = {};
         if (name.trim().length < 2) e.name = ui.nameErr;
@@ -230,8 +251,8 @@ export default function OnboardingScreen({
         return Object.keys(e).length === 0;
     };
 
-    // ── Handle final submit ──────────────────────────────────────────
-    const handleFinish = useCallback(async () => {
+    // ── Register a new account ────────────────────────────────
+    const handleRegister = useCallback(async () => {
         if (!validateReg()) return;
         setLoading(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -245,7 +266,8 @@ export default function OnboardingScreen({
             await registerDevice({
                 device_id: deviceId,
                 role: role === 'livestock_owner' ? 'owner' : 'driver',
-                phone_number: profile.phone || undefined,
+                name: profile.name,
+                phone_number: profile.phone,
             });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onFinish(profile);
@@ -256,15 +278,58 @@ export default function OnboardingScreen({
         }
     }, [name, phone, role, lang, onFinish]);
 
+    // ── Sign in to an existing account ─────────────────────────
+    const handleLogin = useCallback(async () => {
+        const e: Record<string, string> = {};
+        if (!isValidPhone(phone)) e.phone = ui.phoneErr;
+        setErrors(e);
+        if (e.phone) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            return;
+        }
+        setLoading(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        try {
+            const account = await loginWithPhone(phone);
+            if (!account) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                setErrors({ login: ui.loginNotFound });
+                return;
+            }
+            // Keep this device in sync with the account role
+            const deviceId = await getDeviceId();
+            await registerDevice({
+                device_id: deviceId,
+                role: account.role === 'livestock_owner' ? 'owner' : 'driver',
+                name: account.name,
+                phone_number: account.phone,
+            });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            onFinish({
+                name: account.name,
+                phone: account.phone,
+                role: account.role as UserRole,
+            });
+        } catch (err: any) {
+            setErrors({ submit: err?.message ?? 'Error' });
+        } finally {
+            setLoading(false);
+        }
+    }, [phone, lang, onFinish]);
+
     const handleNext = () => {
         if (slideIdx < slides.length - 1) goToSlide(slideIdx + 1);
-        else handleFinish();
+        else if (authMode === 'login') handleLogin();
+        else handleRegister();
     };
 
     const currentSlide = slides[slideIdx];
 
     return (
         <SafeAreaView style={styles.root}>
+            {/* Road-marking motif top */}
+            <RoadDashes />
+
             {/* Language toggle */}
             <TouchableOpacity
                 style={styles.langBtn}
@@ -292,8 +357,14 @@ export default function OnboardingScreen({
                     {slides.map((s, i) => (
                         <View key={i} style={[styles.slide, { width }]}>
                             {s.isReg ? (
-                                <RegForm
+                                <AuthForm
                                     ui={ui}
+                                    mode={authMode}
+                                    setMode={(m) => {
+                                        Haptics.selectionAsync();
+                                        setAuthMode(m);
+                                        setErrors({});
+                                    }}
                                     name={name}
                                     setName={setName}
                                     phone={phone}
@@ -306,7 +377,7 @@ export default function OnboardingScreen({
                                     loading={loading}
                                 />
                             ) : (
-                                <InfoSlide slide={s} />
+                                <InfoSlide slide={s} index={i} total={slides.length} />
                             )}
                         </View>
                     ))}
@@ -317,11 +388,11 @@ export default function OnboardingScreen({
                     {slides.map((s, i) => {
                         const w = dotAnims[i].interpolate({
                             inputRange: [0, 1],
-                            outputRange: [6, 20],
+                            outputRange: [6, 24],
                         });
                         const op = dotAnims[i].interpolate({
                             inputRange: [0, 1],
-                            outputRange: [0.3, 1],
+                            outputRange: [0.25, 1],
                         });
                         return (
                             <Animated.View
@@ -362,7 +433,11 @@ export default function OnboardingScreen({
                         ) : (
                             <>
                                 <Text style={styles.nextBtnText}>
-                                    {slideIdx === slides.length - 1 ? ui.start : ui.next}
+                                    {slideIdx === slides.length - 1
+                                        ? authMode === 'login'
+                                            ? ui.loginBtn
+                                            : ui.start
+                                        : ui.next}
                                 </Text>
                                 {slideIdx < slides.length - 1 && (
                                     <Ionicons
@@ -376,7 +451,7 @@ export default function OnboardingScreen({
                     </TouchableOpacity>
                 </View>
 
-                {/* Skip to registration */}
+                {/* Skip to auth */}
                 {slideIdx < slides.length - 1 && (
                     <TouchableOpacity
                         style={styles.skipBtn}
@@ -392,21 +467,54 @@ export default function OnboardingScreen({
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function InfoSlide({ slide }: { slide: Slide }) {
+/** Road-marking motif: centered row of dashes (decorative, subtle) */
+function RoadDashes() {
+    return (
+        <View style={styles.roadDashes} pointerEvents="none">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+                <View key={i} style={[styles.roadDash, i === 2 && { opacity: 0.5 }]} />
+            ))}
+        </View>
+    );
+}
+
+function InfoSlide({ slide, index, total }: { slide: Slide; index: number; total: number }) {
     return (
         <View style={styles.infoSlide}>
-            <View style={[styles.illustWrap, { borderColor: slide.accent + '30' }]}>
-                <OnboardingIllustration type={slide.illust} size={100} color={slide.accent} />
+            {/* Slide index — Swiss-style metadata */}
+            <Text style={styles.slideIndex}>
+                {String(index + 1).padStart(2, '0')}
+                <Text style={styles.slideIndexTotal}> / {String(total).padStart(2, '0')}</Text>
+            </Text>
+
+            <View style={[styles.illustTile, { shadowColor: slide.accent }]}>
+                <OnboardingIllustration type={slide.illust} size={110} color={slide.accent} />
             </View>
+
             <Text style={[styles.slideTitle, { color: slide.accent }]}>{slide.title}</Text>
-            <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
+            <Text style={[styles.slideSubtitle, { color: Colors.text.primary }]}>
+                {slide.subtitle.toUpperCase()}
+            </Text>
+
+            {/* Road-marking divider under the subtitle */}
+            <View style={styles.roadDashes}>
+                {[0, 1, 2, 3, 4].map((i) => (
+                    <View
+                        key={i}
+                        style={[styles.roadDash, { backgroundColor: slide.accent, opacity: 0.35 }]}
+                    />
+                ))}
+            </View>
+
             <Text style={styles.slideDesc}>{slide.desc}</Text>
         </View>
     );
 }
 
-interface RegFormProps {
+interface AuthFormProps {
     ui: (typeof L)['kk'];
+    mode: AuthMode;
+    setMode: (m: AuthMode) => void;
     name: string;
     setName: (v: string) => void;
     phone: string;
@@ -419,8 +527,10 @@ interface RegFormProps {
     loading: boolean;
 }
 
-function RegForm({
+function AuthForm({
     ui,
+    mode,
+    setMode,
     name,
     setName,
     phone,
@@ -430,7 +540,7 @@ function RegForm({
     errors,
     setErrors,
     accent,
-}: RegFormProps) {
+}: AuthFormProps) {
     const clear = (k: string) => setErrors({ ...errors, [k]: '' });
     return (
         <ScrollView
@@ -438,66 +548,114 @@ function RegForm({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
         >
-            <Text style={[styles.slideTitle, { color: accent, marginBottom: Spacing.lg }]}>
-                {ui.nameLabel === 'ИМЯ' ? 'Регистрация' : 'Тiркелу'}
+            <Text style={[styles.authTitle]}>
+                {mode === 'login' ? ui.modeLogin : ui.modeRegister}
             </Text>
 
-            <Field
-                label={ui.nameLabel}
-                value={name}
-                onChange={(v) => {
-                    setName(v);
-                    clear('name');
-                }}
-                error={errors.name}
-                autoCapitalize="words"
-                placeholder={ui.namePh}
-                icon="person-outline"
-            />
-            <Field
-                label={ui.phoneLabel}
-                value={phone}
-                onChange={(v) => {
-                    setPhone(v);
-                    clear('phone');
-                }}
-                placeholder={ui.phonePh}
-                keyboardType="phone-pad"
-                error={errors.phone}
-                icon="call-outline"
-            />
+            {/* Mode switcher */}
+            <View style={styles.segRow}>
+                <TouchableOpacity
+                    style={[styles.segBtn, mode === 'register' && styles.segBtnActive]}
+                    onPress={() => setMode('register')}
+                    activeOpacity={0.8}
+                >
+                    <Text
+                        style={[styles.segBtnText, mode === 'register' && styles.segBtnTextActive]}
+                    >
+                        {ui.modeRegister}
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.segBtn, mode === 'login' && styles.segBtnActive]}
+                    onPress={() => setMode('login')}
+                    activeOpacity={0.8}
+                >
+                    <Text style={[styles.segBtnText, mode === 'login' && styles.segBtnTextActive]}>
+                        {ui.modeLogin}
+                    </Text>
+                </TouchableOpacity>
+            </View>
 
-            {/* Role */}
-            <Text
-                style={[styles.fieldLabel, errors.role ? { color: Colors.alert.critical } : null]}
-            >
-                {ui.roleLabel}
-            </Text>
-            {errors.role && <Text style={styles.fieldError}>{errors.role}</Text>}
-            <RoleCard
-                icon="car-sport-outline"
-                title={ui.driver}
-                desc={ui.driverDesc}
-                selected={role === 'driver'}
-                onPress={() => {
-                    Haptics.selectionAsync();
-                    setRole('driver');
-                    clear('role');
-                }}
-            />
-            <RoleCard
-                icon="paw-outline"
-                title={ui.owner}
-                desc={ui.ownerDesc}
-                selected={role === 'livestock_owner'}
-                onPress={() => {
-                    Haptics.selectionAsync();
-                    setRole('livestock_owner');
-                    clear('role');
-                }}
-            />
+            {mode === 'login' ? (
+                <>
+                    <Text style={styles.loginHint}>{ui.loginHint}</Text>
+                    <Field
+                        label={ui.phoneLabel}
+                        value={phone}
+                        onChange={(v) => {
+                            setPhone(v);
+                            clear('phone');
+                        }}
+                        placeholder={ui.phonePh}
+                        keyboardType="phone-pad"
+                        error={errors.phone}
+                        icon="call-outline"
+                    />
+                    {!!errors.login && <Text style={styles.formError}>{errors.login}</Text>}
+                </>
+            ) : (
+                <>
+                    <Field
+                        label={ui.nameLabel}
+                        value={name}
+                        onChange={(v) => {
+                            setName(v);
+                            clear('name');
+                        }}
+                        error={errors.name}
+                        autoCapitalize="words"
+                        placeholder={ui.namePh}
+                        icon="person-outline"
+                    />
+                    <Field
+                        label={ui.phoneLabel}
+                        value={phone}
+                        onChange={(v) => {
+                            setPhone(v);
+                            clear('phone');
+                        }}
+                        placeholder={ui.phonePh}
+                        keyboardType="phone-pad"
+                        error={errors.phone}
+                        icon="call-outline"
+                    />
 
-            {errors.submit && <Text style={styles.formError}>{errors.submit}</Text>}
+                    {/* Role */}
+                    <Text
+                        style={[
+                            styles.fieldLabel,
+                            errors.role ? { color: Colors.alert.critical } : null,
+                        ]}
+                    >
+                        {ui.roleLabel}
+                    </Text>
+                    {errors.role && <Text style={styles.fieldError}>{errors.role}</Text>}
+                    <RoleCard
+                        icon="car-sport-outline"
+                        title={ui.driver}
+                        desc={ui.driverDesc}
+                        selected={role === 'driver'}
+                        onPress={() => {
+                            Haptics.selectionAsync();
+                            setRole('driver');
+                            clear('role');
+                        }}
+                    />
+                    <RoleCard
+                        icon="paw-outline"
+                        title={ui.owner}
+                        desc={ui.ownerDesc}
+                        selected={role === 'livestock_owner'}
+                        onPress={() => {
+                            Haptics.selectionAsync();
+                            setRole('livestock_owner');
+                            clear('role');
+                        }}
+                    />
+                </>
+            )}
+
+            {!!errors.submit && <Text style={styles.formError}>{errors.submit}</Text>}
         </ScrollView>
     );
 }
@@ -524,7 +682,7 @@ function RoleCard({
             <View style={[styles.roleIconBox, selected && styles.roleIconBoxActive]}>
                 <Ionicons
                     name={icon as any}
-                    size={22}
+                    size={24}
                     color={selected ? Colors.bg.primary : Colors.brand.primary}
                 />
             </View>
@@ -532,11 +690,13 @@ function RoleCard({
                 <Text style={[styles.roleTitle, selected && { color: Colors.bg.primary }]}>
                     {title}
                 </Text>
-                <Text style={[styles.roleDesc, selected && { color: Colors.bg.tertiary }]}>
+                <Text style={[styles.roleDesc, selected && { color: 'rgba(0,0,0,0.55)' }]}>
                     {desc}
                 </Text>
             </View>
-            {selected && <Ionicons name="checkmark-circle" size={22} color={Colors.bg.primary} />}
+            <View style={[styles.radioOuter, selected && styles.radioOuterActive]}>
+                {selected && <View style={styles.radioInner} />}
+            </View>
         </TouchableOpacity>
     );
 }
@@ -568,12 +728,9 @@ function Field({
             <Text style={styles.fieldLabel}>{label}</Text>
             <View style={[styles.inputRow, error && styles.inputError]}>
                 {icon && (
-                    <Ionicons
-                        name={icon as any}
-                        size={18}
-                        color={Colors.text.muted}
-                        style={{ marginRight: 10 }}
-                    />
+                    <View style={styles.inputIconBox}>
+                        <Ionicons name={icon as any} size={18} color={Colors.brand.primary} />
+                    </View>
                 )}
                 <TextInput
                     style={styles.input}
@@ -595,6 +752,19 @@ function Field({
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
     root: { flex: 1, backgroundColor: Colors.bg.primary },
+
+    roadDashes: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    roadDash: {
+        width: 16,
+        height: 2,
+        borderRadius: 1,
+        backgroundColor: Colors.text.muted,
+        opacity: 0.5,
+    },
 
     langBtn: {
         position: 'absolute',
@@ -623,41 +793,83 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: Spacing.xl,
     },
-    illustWrap: {
-        width: 140,
-        height: 140,
-        borderRadius: 70,
+    slideIndex: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: Colors.text.muted,
+        letterSpacing: 3,
+        marginBottom: Spacing.lg,
+    },
+    slideIndexTotal: { color: Colors.text.muted, opacity: 0.5 },
+    illustTile: {
+        width: 180,
+        height: 180,
+        borderRadius: 44,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
         marginBottom: Spacing.xl,
         backgroundColor: Colors.bg.glass,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.25,
+        shadowRadius: 30,
+        elevation: 12,
     },
     slideTitle: {
-        fontSize: 32,
+        fontSize: 34,
         fontWeight: '900',
         letterSpacing: -1,
         textAlign: 'center',
-        marginBottom: 6,
+        marginBottom: 8,
     },
     slideSubtitle: {
-        fontSize: 14,
-        color: Colors.text.secondary,
+        fontSize: 12,
+        fontWeight: '800',
         textAlign: 'center',
-        letterSpacing: 1.5,
-        textTransform: 'uppercase',
+        letterSpacing: 2.5,
         marginBottom: Spacing.md,
     },
     slideDesc: {
         fontSize: 15,
         color: Colors.text.secondary,
         textAlign: 'center',
-        lineHeight: 22,
-        maxWidth: 300,
+        lineHeight: 23,
+        maxWidth: 310,
+        marginTop: Spacing.md,
     },
 
-    // ── Reg form ──
-    regContainer: { paddingHorizontal: Spacing.lg, paddingTop: 60, paddingBottom: Spacing.xl },
+    // ── Auth form ──
+    regContainer: { paddingHorizontal: Spacing.lg, paddingTop: 56, paddingBottom: Spacing.xl },
+    authTitle: {
+        fontSize: 28,
+        fontWeight: '900',
+        color: Colors.text.primary,
+        letterSpacing: -0.5,
+        marginBottom: Spacing.md,
+    },
+    segRow: {
+        flexDirection: 'row',
+        backgroundColor: Colors.bg.tertiary,
+        borderRadius: Radius.lg,
+        padding: 4,
+        marginBottom: Spacing.lg,
+    },
+    segBtn: {
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 10,
+        borderRadius: Radius.md,
+    },
+    segBtnActive: { backgroundColor: Colors.brand.primary },
+    segBtnText: { color: Colors.text.secondary, fontWeight: '700', fontSize: 14 },
+    segBtnTextActive: { color: Colors.bg.primary },
+    loginHint: {
+        fontSize: 13,
+        color: Colors.text.secondary,
+        lineHeight: 19,
+        marginBottom: Spacing.md,
+    },
     fieldGroup: { marginBottom: Spacing.md },
     fieldLabel: {
         fontSize: 10,
@@ -671,14 +883,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: Colors.bg.tertiary,
-        borderRadius: Radius.md,
-        paddingHorizontal: Spacing.md,
+        borderRadius: Radius.lg,
+        paddingLeft: 4,
         borderWidth: 1,
         borderColor: Colors.border,
+    },
+    inputIconBox: {
+        width: 40,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     input: {
         flex: 1,
         paddingVertical: 14,
+        paddingRight: Spacing.md,
         color: Colors.text.primary,
         fontSize: 15,
     },
@@ -686,9 +905,10 @@ const styles = StyleSheet.create({
     fieldError: { color: Colors.alert.critical, fontSize: 11, marginTop: 4 },
     formError: {
         color: Colors.alert.critical,
-        fontSize: 12,
+        fontSize: 13,
+        fontWeight: '600',
         textAlign: 'center',
-        marginVertical: 8,
+        marginTop: Spacing.sm,
     },
 
     roleCard: {
@@ -705,8 +925,8 @@ const styles = StyleSheet.create({
     },
     roleCardActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
     roleIconBox: {
-        width: 44,
-        height: 44,
+        width: 46,
+        height: 46,
         borderRadius: Radius.md,
         alignItems: 'center',
         justifyContent: 'center',
@@ -720,6 +940,17 @@ const styles = StyleSheet.create({
     },
     roleTitle: { fontSize: 16, fontWeight: '700', color: Colors.text.primary, marginBottom: 2 },
     roleDesc: { fontSize: 12, color: Colors.text.secondary },
+    radioOuter: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        borderWidth: 2,
+        borderColor: Colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    radioOuterActive: { borderColor: Colors.bg.primary },
+    radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.bg.primary },
 
     // ── Bottom nav ──
     dots: {

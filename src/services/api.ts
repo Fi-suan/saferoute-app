@@ -346,6 +346,7 @@ export async function confirmIncidentOnServer(
 export interface RegisterDeviceParams {
     device_id: string;
     role?: string;
+    name?: string;
     fcm_token?: string;
     phone_number?: string;
     latitude?: number;
@@ -358,8 +359,9 @@ export async function registerDevice(data: RegisterDeviceParams): Promise<{ ok: 
         {
             device_id: data.device_id,
             role: data.role === 'owner' ? 'OWNER' : 'DRIVER',
+            name: data.name ?? null,
             fcm_token: data.fcm_token ?? null,
-            phone_number: data.phone_number ?? null,
+            phone_number: data.phone_number?.replace(/\s/g, '') ?? null,
             latitude: data.latitude ?? null,
             longitude: data.longitude ?? null,
             is_active: true,
@@ -368,6 +370,43 @@ export async function registerDevice(data: RegisterDeviceParams): Promise<{ ok: 
         { onConflict: 'device_id' },
     );
     return { ok: !error };
+}
+
+export type AppRole = 'driver' | 'livestock_owner';
+
+export interface LoginResult {
+    name: string;
+    phone: string;
+    role: AppRole;
+}
+
+/** Sign in an existing account by phone number (demo-grade: no OTP). */
+export async function loginWithPhone(phone: string): Promise<LoginResult | null> {
+    const digits = phone.replace(/\s/g, '');
+    const exact = await supabase
+        .from('devices')
+        .select('name, phone_number, role')
+        .eq('phone_number', digits)
+        .order('last_seen', { ascending: false })
+        .limit(1);
+    let row = exact.data?.[0];
+    if (!row && digits.length >= 10) {
+        // Fallback: match by last 10 digits (covers 8… vs +7… entry variants)
+        const tail = digits.slice(-10);
+        const fuzzy = await supabase
+            .from('devices')
+            .select('name, phone_number, role')
+            .ilike('phone_number', `%${tail}`)
+            .order('last_seen', { ascending: false })
+            .limit(1);
+        row = fuzzy.data?.[0];
+    }
+    if (!row) return null;
+    return {
+        name: row.name ?? 'Пайдаланушы',
+        phone: row.phone_number ?? digits,
+        role: row.role?.toLowerCase() === 'owner' ? 'livestock_owner' : 'driver',
+    };
 }
 
 /** Kept for call-site compatibility — registration no longer returns a token */

@@ -26,106 +26,119 @@ SplashScreen.preventAutoHideAsync();
 // Initialize crash reporting before anything else
 initSentry();
 
+/**
+ * Device sync + push permission are NOT needed for first paint —
+ * run them after the UI is interactive so startup feels instant.
+ */
+function deferBackgroundInit(role: string, phone?: string): void {
+    setTimeout(() => {
+        ensureDeviceRegistered(role, phone).catch(() => {});
+        registerForPushNotifications(role).catch(() => {});
+    }, 1500);
+}
 
 export default function App() {
-  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+    const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
-  // Слушаем logout из ProfileScreen
-  useEffect(() => {
-    AppResetEvent.subscribe(() => {
-      clearUserContext();
-      setOnboardingDone(false);
-    });
-  }, []);
+    // Слушаем logout из ProfileScreen
+    useEffect(() => {
+        AppResetEvent.subscribe(() => {
+            clearUserContext();
+            setOnboardingDone(false);
+        });
+    }, []);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const deviceId = await getDeviceId();
-        const done = await AsyncStorage.getItem(STORAGE.ONBOARDING_DONE);
-        const profileRaw = await AsyncStorage.getItem(STORAGE.USER_PROFILE);
-        setOnboardingDone(done === 'true' && !!profileRaw);
-        if (profileRaw) {
-          try {
-            const profile: UserProfile = JSON.parse(profileRaw);
-            setUserContext({ deviceId, role: profile.role });
-            ensureDeviceRegistered(profile.role, profile.phone).catch(() => { });
-            registerForPushNotifications(profile.role).catch(() => { });
-          } catch { /* ignore */ }
-        } else {
-          ensureDeviceRegistered('driver').catch(() => { });
-        }
-      } catch {
-        setOnboardingDone(false);
-      } finally {
-        await SplashScreen.hideAsync();
-      }
-    })();
-  }, []);
+    useEffect(() => {
+        (async () => {
+            try {
+                const deviceId = await getDeviceId();
+                const done = await AsyncStorage.getItem(STORAGE.ONBOARDING_DONE);
+                const profileRaw = await AsyncStorage.getItem(STORAGE.USER_PROFILE);
+                setOnboardingDone(done === 'true' && !!profileRaw);
+                if (profileRaw) {
+                    try {
+                        const profile: UserProfile = JSON.parse(profileRaw);
+                        setUserContext({ deviceId, role: profile.role });
+                        deferBackgroundInit(profile.role, profile.phone);
+                    } catch {
+                        /* ignore */
+                    }
+                }
+            } catch {
+                setOnboardingDone(false);
+            } finally {
+                await SplashScreen.hideAsync();
+            }
+        })();
+    }, []);
 
-  const handleOnboardingFinish = useCallback(async (data: OnboardingResult) => {
-    // Формируем инициалы из имени
-    const profile: UserProfile = {
-      name: data.name || 'Пайдаланушы',
-      phone: data.phone,
-      role: data.role,
-      joinedAt: new Date().toISOString(),
-      totalReports: 0,
-      avatarInitials: deriveInitials(data.name),
-    };
+    const handleOnboardingFinish = useCallback(async (data: OnboardingResult) => {
+        // Формируем инициалы из имени
+        const profile: UserProfile = {
+            name: data.name || 'Пайдаланушы',
+            phone: data.phone,
+            role: data.role,
+            joinedAt: new Date().toISOString(),
+            totalReports: 0,
+            avatarInitials: deriveInitials(data.name),
+        };
 
-    await AsyncStorage.setItem(STORAGE.USER_PROFILE, JSON.stringify(profile));
-    await AsyncStorage.setItem(STORAGE.ONBOARDING_DONE, 'true');
-    setOnboardingDone(true);
-    ensureDeviceRegistered(data.role, data.phone).catch(() => { });
-    registerForPushNotifications(data.role).catch(() => { });
-  }, []);
+        await AsyncStorage.setItem(STORAGE.USER_PROFILE, JSON.stringify(profile));
+        await AsyncStorage.setItem(STORAGE.ONBOARDING_DONE, 'true');
+        setOnboardingDone(true);
+        deferBackgroundInit(data.role, data.phone);
+    }, []);
 
-  if (onboardingDone === null) {
+    if (onboardingDone === null) {
+        return (
+            <View style={styles.loadingWrap}>
+                <ActivityIndicator size="large" color={Colors.brand.primary} />
+            </View>
+        );
+    }
+
     return (
-      <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color={Colors.brand.primary} />
-      </View>
+        <ErrorBoundary onError={reportError}>
+            <GestureHandlerRootView style={styles.root}>
+                <SafeAreaProvider>
+                    <StatusBar style="light" backgroundColor={Colors.bg.primary} />
+                    {onboardingDone ? (
+                        <NavigationContainer
+                            theme={{
+                                dark: true,
+                                fonts: {
+                                    regular: { fontFamily: 'System', fontWeight: '400' },
+                                    medium: { fontFamily: 'System', fontWeight: '500' },
+                                    bold: { fontFamily: 'System', fontWeight: '700' },
+                                    heavy: { fontFamily: 'System', fontWeight: '900' },
+                                },
+                                colors: {
+                                    primary: Colors.brand.primary,
+                                    background: Colors.bg.primary,
+                                    card: Colors.bg.secondary,
+                                    text: Colors.text.primary,
+                                    border: Colors.border,
+                                    notification: Colors.alert.high,
+                                },
+                            }}
+                        >
+                            <RootNavigator />
+                        </NavigationContainer>
+                    ) : (
+                        <OnboardingScreen onFinish={handleOnboardingFinish} />
+                    )}
+                </SafeAreaProvider>
+            </GestureHandlerRootView>
+        </ErrorBoundary>
     );
-  }
-
-  return (
-    <ErrorBoundary onError={reportError}>
-      <GestureHandlerRootView style={styles.root}>
-        <SafeAreaProvider>
-          <StatusBar style="light" backgroundColor={Colors.bg.primary} />
-          {onboardingDone ? (
-            <NavigationContainer
-              theme={{
-                dark: true,
-                fonts: {
-                  regular: { fontFamily: 'System', fontWeight: '400' },
-                  medium: { fontFamily: 'System', fontWeight: '500' },
-                  bold: { fontFamily: 'System', fontWeight: '700' },
-                  heavy: { fontFamily: 'System', fontWeight: '900' },
-                },
-                colors: {
-                  primary: Colors.brand.primary,
-                  background: Colors.bg.primary,
-                  card: Colors.bg.secondary,
-                  text: Colors.text.primary,
-                  border: Colors.border,
-                  notification: Colors.alert.high,
-                },
-              }}
-            >
-              <RootNavigator />
-            </NavigationContainer>
-          ) : (
-            <OnboardingScreen onFinish={handleOnboardingFinish} />
-          )}
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    </ErrorBoundary>
-  );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bg.primary },
-  loadingWrap: { flex: 1, backgroundColor: Colors.bg.primary, alignItems: 'center', justifyContent: 'center' },
+    root: { flex: 1, backgroundColor: Colors.bg.primary },
+    loadingWrap: {
+        flex: 1,
+        backgroundColor: Colors.bg.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
 });
