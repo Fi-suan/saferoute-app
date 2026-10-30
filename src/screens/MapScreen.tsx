@@ -81,6 +81,7 @@ export default function MapScreen() {
     const [activeRouteId, setActiveRouteId] = useState<string>('a17');
     const [navResult, setNavResult] = useState<DirectionsResult | null>(null);
     const [navStepIdx, setNavStepIdx] = useState(0);
+    const [navProgress, setNavProgress] = useState(0);
     const [navLoading, setNavLoading] = useState(false);
     const dangerZoneAlertedRef = useRef(false);
 
@@ -98,10 +99,7 @@ export default function MapScreen() {
             addNotifEntry({ title, body, incidentId });
         });
 
-    const { isRouteMode, toggleRouteMode, routeIncidents, roadStatus } = useRoute(
-        incidents,
-        activeRouteId,
-    );
+    const { routeIncidents, roadStatus } = useRoute(incidents, activeRouteId);
     const cachedPolyline = useRoutePolyline(activeRouteId);
 
     const { livestock, activateManualMode, deactivateManualMode, isManualMode, dangerZoneAlert } =
@@ -122,6 +120,7 @@ export default function MapScreen() {
     useEffect(() => {
         setNavResult(null);
         setNavStepIdx(0);
+        setNavProgress(0);
         setNavLoading(false);
     }, [activeRouteId]);
 
@@ -175,6 +174,7 @@ export default function MapScreen() {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 setNavResult(null);
                 setNavStepIdx(0);
+            setNavProgress(0);
                 showDialog({
                     title: t('route_mode_label'),
                     message: t('nav_arrived'),
@@ -199,6 +199,32 @@ export default function MapScreen() {
             { duration: 600 },
         );
     }, [location?.lat, location?.lon, location?.heading, !!navResult]);
+
+    // Реальный прогресс навигации: пройденное расстояние вдоль полилинии
+    // до ближайшей к текущей позиции точки / общая длина маршрута
+    useEffect(() => {
+        if (!navResult || !location) return;
+        const coords = navResult.polyline;
+        if (coords.length < 2) return;
+        let best = 0;
+        let bestD = Infinity;
+        for (let i = 0; i < coords.length; i++) {
+            const d = haversineM(location.lat, location.lon, coords[i].latitude, coords[i].longitude);
+            if (d < bestD) {
+                bestD = d;
+                best = i;
+            }
+        }
+        let travelled = 0;
+        for (let i = 1; i <= best; i++) {
+            travelled += haversineM(coords[i - 1].latitude, coords[i - 1].longitude, coords[i].latitude, coords[i].longitude);
+        }
+        let total = travelled;
+        for (let i = best + 1; i < coords.length; i++) {
+            total += haversineM(coords[i - 1].latitude, coords[i - 1].longitude, coords[i].latitude, coords[i].longitude);
+        }
+        setNavProgress(total > 0 ? Math.min(100, (travelled / total) * 100) : 0);
+    }, [location?.lat, location?.lon, !!navResult]);
 
     // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -304,6 +330,7 @@ export default function MapScreen() {
         if (navResult) {
             setNavResult(null);
             setNavStepIdx(0);
+            setNavProgress(0);
             return;
         }
         if (!location) {
@@ -324,6 +351,7 @@ export default function MapScreen() {
         if (result) {
             setNavResult(result);
             setNavStepIdx(0);
+            setNavProgress(0);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } else {
             showDialog({
@@ -339,6 +367,7 @@ export default function MapScreen() {
     const handleStopNavigation = () => {
         setNavResult(null);
         setNavStepIdx(0);
+            setNavProgress(0);
     };
 
     const handleFabPress = () => {
@@ -349,7 +378,7 @@ export default function MapScreen() {
 
     // ── Derived ──────────────────────────────────────────────────────────────
 
-    const displayedIncidents = isRouteMode ? routeIncidents : incidents.filter((i) => i.is_active);
+    const displayedIncidents = routeIncidents.filter((i) => i.is_active);
     const showIncidents = filter === 'all' || filter === 'incidents';
     const showLivestock = filter === 'all' || filter === 'livestock';
     const routeCoords = navResult ? navResult.polyline : cachedPolyline;
@@ -426,8 +455,6 @@ export default function MapScreen() {
                     isOnline={isOnline}
                     roadStatus={roadStatus}
                     activeRouteId={activeRouteId}
-                    isRouteMode={isRouteMode}
-                    onToggleRoute={toggleRouteMode}
                     navResult={navResult}
                     navLoading={navLoading}
                     onToggleNavigation={handleToggleNavigation}
@@ -439,6 +466,7 @@ export default function MapScreen() {
                 <NavigationCard
                     navResult={navResult}
                     navStepIdx={navStepIdx}
+                    progressPct={navProgress}
                     onStop={handleStopNavigation}
                 />
             )}

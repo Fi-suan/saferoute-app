@@ -6,7 +6,7 @@
  * - useIncidents хук (единый источник данных)
  * - Навигация к IncidentDetailScreen при тапе на карточку
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +39,13 @@ export default function AlertsScreen() {
     const [activeRouteId, setActiveRouteId] = useState('a17');
     const { incidents, loading, refreshing, refresh, pendingReportsCount } =
         useIncidents(activeTab);
+
+    // «N мин бұрын» должно обновляться, пока экран открыт
+    const [, forceTick] = useState(0);
+    useEffect(() => {
+        const id = setInterval(() => forceTick((x) => x + 1), 30_000);
+        return () => clearInterval(id);
+    }, []);
 
     // Keep the corridor in sync with the route selected in Profile
     useFocusEffect(

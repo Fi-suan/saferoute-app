@@ -2,12 +2,9 @@
  * useRoute.ts — Режим маршрута (multi-route)
  *
  * Поддерживаемые маршруты: A-17, A-1, A-21, E-40
- * При активации режима маршрута — показываются только инциденты
- * вдоль выбранного коридора (bounding box с запасом 20–30 км).
+ * Режим маршрута ПОСТОЯНЕН и следует за маршрутом, выбранным в Профиле:
+ * на карте всегда показываются только инциденты выбранного коридора.
  */
-import { useState, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE } from '../constants/storage';
 import { Incident } from '../constants/incidents';
 
 /** Bounding box для каждого маршрута */
@@ -51,29 +48,14 @@ export function computeRoadStatus(incidents: Incident[]): RoadStatus {
 }
 
 export interface UseRouteReturn {
-    isRouteMode: boolean;
-    toggleRouteMode: () => Promise<void>;
     routeIncidents: Incident[];
     roadStatus: RoadStatus;
 }
 
 export function useRoute(allIncidents: Incident[], routeId: string = 'a17'): UseRouteReturn {
-    const [isRouteMode, setIsRouteMode] = useState(false);
-
-    const toggleRouteMode = useCallback(async () => {
-        const next = !isRouteMode;
-        setIsRouteMode(next);
-        try {
-            await AsyncStorage.setItem(STORAGE.ROUTE_MODE, next ? '1' : '0');
-        } catch { /* ignore */ }
-    }, [isRouteMode]);
-
     const routeIncidents = allIncidents.filter(
         i => matchesRoute(i, routeId),
     );
-
-    const src = isRouteMode ? routeIncidents : allIncidents;
-    const roadStatus = computeRoadStatus(src);
-
-    return { isRouteMode, toggleRouteMode, routeIncidents, roadStatus };
+    const roadStatus = computeRoadStatus(routeIncidents);
+    return { routeIncidents, roadStatus };
 }

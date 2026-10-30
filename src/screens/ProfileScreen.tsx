@@ -246,10 +246,15 @@ export default function ProfileScreen() {
                                 },
                             ]}
                         />
-                        <TouchableOpacity onPress={() => setNotifModal(true)}>
+                        <TouchableOpacity
+                            style={styles.bellBtn}
+                            onPress={() => setNotifModal(true)}
+                            activeOpacity={0.7}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
                             <Ionicons
                                 name="notifications-outline"
-                                size={22}
+                                size={21}
                                 color={Colors.text.secondary}
                             />
                             {unreadCount > 0 && (
@@ -347,17 +352,22 @@ export default function ProfileScreen() {
                             setMyIncidentsModal(true);
                         }}
                     />
+                    {/* Реальные данные вместо счётчика маршрутов */}
                     <StatCard
-                        value={ROUTES.length}
-                        label={t('stat_routes')}
-                        icon="map"
-                        color={Colors.alert.info}
+                        value={incidents.filter((i) => !i.is_active).length}
+                        label={t('stat_resolved')}
+                        icon="checkmark-done"
+                        color={Colors.brand.secondary}
                     />
                     <StatCard
-                        value="A-17"
-                        label={t('stat_main_road')}
-                        icon="navigate"
-                        color={Colors.brand.secondary}
+                        value={unreadCount}
+                        label={t('stat_unread')}
+                        icon="notifications"
+                        color={Colors.alert.info}
+                        onPress={() => {
+                            Haptics.selectionAsync();
+                            setNotifModal(true);
+                        }}
                     />
                 </View>
 
@@ -656,12 +666,14 @@ export default function ProfileScreen() {
                         </View>
                         <View style={styles.missionDivider} />
                         <View style={styles.missionStat}>
-                            <Text style={styles.missionStatValue}>{ROUTES.length}</Text>
-                            <Text style={styles.missionStatLabel}>{t('routes_stat')}</Text>
+                            <Text style={styles.missionStatValue}>
+                                {incidents.filter((i) => !i.is_active).length}
+                            </Text>
+                            <Text style={styles.missionStatLabel}>{t('stat_resolved')}</Text>
                         </View>
                         <View style={styles.missionDivider} />
                         <View style={styles.missionStat}>
-                            <Text style={styles.missionStatValue}>A-17</Text>
+                            <Text style={styles.missionStatValue}>{activeRoute.shortCode}</Text>
                             <Text style={styles.missionStatLabel}>{t('main_road')}</Text>
                         </View>
                     </View>
@@ -934,21 +946,32 @@ const styles = StyleSheet.create({
     langToggleText: { fontSize: 11, fontWeight: '800', color: Colors.text.secondary },
 
     // Bell badge
+    bellBtn: {
+        width: 36,
+        height: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 18,
+    },
     bellBadge: {
         position: 'absolute',
-        top: -4,
-        right: -6,
+        top: 1,
+        right: 1,
         minWidth: 16,
         height: 16,
         borderRadius: 8,
-        backgroundColor: Colors.alert.critical,
-        alignItems: 'center',
-        justifyContent: 'center',
         paddingHorizontal: 3,
+        backgroundColor: Colors.alert.critical,
         borderWidth: 1.5,
         borderColor: Colors.bg.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    bellBadgeText: { fontSize: 9, fontWeight: '800', color: Colors.white },
+    bellBadgeText: {
+        fontSize: 9,
+        fontWeight: '800',
+        color: Colors.white,
+    },
 
     // Notification modal
     notifModalCard: {

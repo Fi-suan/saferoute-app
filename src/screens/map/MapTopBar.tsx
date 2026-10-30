@@ -23,8 +23,6 @@ interface MapTopBarProps {
     isOnline: boolean;
     roadStatus: RoadStatus;
     activeRouteId: string;
-    isRouteMode: boolean;
-    onToggleRoute: () => void;
     navResult: { totalDistance: string; totalDuration: string } | null;
     navLoading: boolean;
     onToggleNavigation: () => void;
@@ -43,8 +41,6 @@ export default function MapTopBar({
     isOnline,
     roadStatus,
     activeRouteId,
-    isRouteMode,
-    onToggleRoute,
     navResult,
     navLoading,
     onToggleNavigation,
@@ -96,24 +92,17 @@ export default function MapTopBar({
                 </View>
             </View>
 
-            {/* Row 2 — route + status | navigation */}
+            {/* Row 2 — route (info, follows Profile selection) | navigation */}
             <View style={styles.row}>
-                <TouchableOpacity
-                    style={[styles.routePill, isRouteMode && styles.routePillActive]}
-                    onPress={onToggleRoute}
-                >
-                    <Ionicons
-                        name="navigate"
-                        size={15}
-                        color={isRouteMode ? Colors.bg.primary : Colors.text.secondary}
-                    />
-                    <Text style={[styles.routeText, isRouteMode && styles.routeTextActive]}>
+                <View style={styles.routePill}>
+                    <Ionicons name="navigate" size={15} color={Colors.brand.primary} />
+                    <Text style={styles.routeText}>
                         {ROUTE_NAMES[activeRouteId] ?? 'A-17'}
                     </Text>
                     <View style={styles.routeDivider} />
                     <View style={[styles.statusDot, { backgroundColor: STATUS_DOT[roadStatus] }]} />
                     <Text style={styles.statusText}>{statusLabel}</Text>
-                </TouchableOpacity>
+                </View>
 
                 <TouchableOpacity
                     style={[styles.navBtn, navResult && styles.navBtnActive]}
@@ -209,14 +198,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: Radius.full,
-        backgroundColor: Colors.bg.glass,
+        backgroundColor: Colors.brand.primary + '15',
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: Colors.brand.primary + '40',
         flexShrink: 1,
     },
-    routePillActive: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
-    routeText: { fontSize: 13, fontWeight: '800', color: Colors.text.primary },
-    routeTextActive: { color: Colors.bg.primary },
+    routeText: { fontSize: 13, fontWeight: '800', color: Colors.brand.primary },
     routeDivider: { width: 1, height: 12, backgroundColor: Colors.border },
     statusDot: { width: 8, height: 8, borderRadius: 4 },
     statusText: { fontSize: 12.5, fontWeight: '700', color: Colors.text.secondary },

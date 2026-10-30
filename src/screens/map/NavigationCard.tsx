@@ -13,14 +13,20 @@ import { useT } from '../../i18n';
 interface NavigationCardProps {
     navResult: DirectionsResult;
     navStepIdx: number;
+    /** Реальный прогресс: пройденное вдоль полилинии расстояние, % */
+    progressPct?: number;
     onStop: () => void;
 }
 
-export default function NavigationCard({ navResult, navStepIdx, onStop }: NavigationCardProps) {
+export default function NavigationCard({ navResult, navStepIdx, progressPct, onStop }: NavigationCardProps) {
     const t = useT();
     const currentStep = navResult.steps[navStepIdx];
     const nextStep = navResult.steps[navStepIdx + 1];
-    const progress = ((navStepIdx + 1) / navResult.steps.length) * 100;
+    // приоритет — фактическому прогрессу по GPS; фолбэк — по шагам
+    const progress =
+        progressPct !== undefined
+            ? progressPct
+            : ((navStepIdx + 1) / navResult.steps.length) * 100;
 
     const handleStop = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
