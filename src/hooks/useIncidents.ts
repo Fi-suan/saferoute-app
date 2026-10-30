@@ -229,6 +229,9 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
                 longitude: params.longitude,
                 is_active: true,
                 route_id: routeId,
+                // Чтобы анти-спам автора (3-мин тыныштық, өз растауын сұрамау)
+                // работал и для оптимистичных/офлайн меток
+                reporter_device_id: deviceId,
                 ai_verified: false,
                 ai_analysis: 'AI тексеруде...',
                 ai_confidence: undefined,

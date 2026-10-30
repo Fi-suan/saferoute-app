@@ -10,7 +10,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Location from 'expo-location';
-import { Incident } from '../constants/incidents';
+import { Incident, getIncidentMeta } from '../constants/incidents';
 import { Config } from '../config';
 import { updateDeviceLocation } from '../services/api';
 import { getDeviceId } from '../services/deviceId';
@@ -210,7 +210,7 @@ export function useLocation(
                 persistSeen(alertedIds.current, confirmIds.current);
                 setNearbyAlert(inc);
                 const title = '⚠️ Абай болыңыз!';
-                const body = inc.description || inc.incident_type;
+                const body = inc.description || getIncidentMeta(inc.incident_type).label;
                 onNearbyAlert?.(inc.id, title, body);
                 if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
                 dismissTimerRef.current = setTimeout(() => setNearbyAlert(null), 8000);

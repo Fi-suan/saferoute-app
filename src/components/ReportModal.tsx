@@ -53,6 +53,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
     const [severity, setSeverity] = useState(3);
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [descError, setDescError] = useState<string | null>(null);
     const { showDialog, DialogComponent } = useAppDialog();
 
     const pickPhoto = async () => {
@@ -95,6 +96,12 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
             });
             return;
         }
+        // Пустая метка бесполезна для других водителей
+        if (reportDesc.trim().length < 3) {
+            setDescError(t('report_desc_required'));
+            return;
+        }
+        setDescError(null);
         setSubmitting(true);
 
         // Resize + compress photo before base64 to avoid OOM on weak devices
@@ -279,10 +286,16 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
                             placeholder={t('report_desc_placeholder')}
                             placeholderTextColor={Colors.text.muted}
                             value={reportDesc}
-                            onChangeText={setReportDesc}
+                            onChangeText={(v) => {
+                                setReportDesc(v);
+                                if (descError) setDescError(null);
+                            }}
                             multiline
                             numberOfLines={3}
                         />
+                        {descError && (
+                            <Text style={styles.descError}>{descError}</Text>
+                        )}
 
                         {/* Фото */}
                         <Text style={styles.label}>Фото (AI үшін)</Text>
@@ -345,6 +358,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
 }
 
 const styles = StyleSheet.create({
+    descError: { color: Colors.alert.critical, fontSize: 12, marginTop: 4 },
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
     content: {
         backgroundColor: Colors.bg.secondary,
