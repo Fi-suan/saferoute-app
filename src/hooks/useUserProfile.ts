@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile, UserRole } from '../constants/livestock';
 import { STORAGE } from '../constants/storage';
+import { useT } from '../i18n';
 
 /**
  * Build avatar initials from a free-form name. Works for any script
@@ -28,15 +29,6 @@ export function deriveInitials(rawName: string | undefined): string {
     return words[0].slice(0, 2).toUpperCase();
 }
 
-const DEFAULT_PROFILE: UserProfile = {
-    name: 'Пайдаланушы',
-    phone: '',
-    role: 'driver',
-    joinedAt: new Date().toISOString(),
-    totalReports: 0,
-    avatarInitials: deriveInitials('Пайдаланушы'),
-};
-
 interface UseUserProfileReturn {
     profile: UserProfile;
     loaded: boolean;
@@ -45,7 +37,16 @@ interface UseUserProfileReturn {
 }
 
 export function useUserProfile(): UseUserProfileReturn {
-    const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+    const t = useT();
+    const defaultProfile = useCallback((): UserProfile => ({
+        name: t('profile_default_name'),
+        phone: '',
+        role: 'driver',
+        joinedAt: new Date().toISOString(),
+        totalReports: 0,
+        avatarInitials: deriveInitials(t('profile_default_name')),
+    }), [t]);
+    const [profile, setProfile] = useState<UserProfile>(defaultProfile);
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {

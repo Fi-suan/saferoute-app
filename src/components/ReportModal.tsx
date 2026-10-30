@@ -192,7 +192,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
             <View style={styles.overlay}>
                 <View style={styles.content}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Белгі қою</Text>
+                        <Text style={styles.title}>{t('report_btn')}</Text>
                         <TouchableOpacity onPress={onClose}>
                             <Ionicons name="close" size={24} color={Colors.text.secondary} />
                         </TouchableOpacity>
@@ -200,7 +200,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
 
                     <ScrollView showsVerticalScrollIndicator={false}>
                         {/* Тип инцидента */}
-                        <Text style={styles.label}>Инцидент түрі</Text>
+                        <Text style={styles.label}>{t('report_type_label')}</Text>
                         <View style={styles.typeRow}>
                             {INCIDENT_TYPES_LIST.map((t) => (
                                 <TouchableOpacity
@@ -280,7 +280,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
                         </View>
 
                         {/* Описание */}
-                        <Text style={styles.label}>Сипаттама</Text>
+                        <Text style={styles.label}>{t('report_desc_label')}</Text>
                         <TextInput
                             style={styles.textInput}
                             placeholder={t('report_desc_placeholder')}
@@ -298,20 +298,20 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
                         )}
 
                         {/* Фото */}
-                        <Text style={styles.label}>Фото (AI үшін)</Text>
+                        <Text style={styles.label}>{t('report_photo_label')}</Text>
                         <TouchableOpacity style={styles.photoBtn} onPress={pickPhoto}>
                             {photoUri ? (
                                 <Image source={{ uri: photoUri }} style={styles.photoPreview} />
                             ) : (
                                 <>
                                     <Ionicons name="camera" size={24} color={Colors.text.muted} />
-                                    <Text style={styles.photoBtnText}>Камера / Галерея</Text>
+                                    <Text style={styles.photoBtnText}>{t('report_photo_btn')}</Text>
                                 </>
                             )}
                         </TouchableOpacity>
                         {photoUri && (
                             <TouchableOpacity onPress={() => setPhotoUri(null)}>
-                                <Text style={styles.removePhoto}>Фотоны жою</Text>
+                                <Text style={styles.removePhoto}>{t('report_photo_remove')}</Text>
                             </TouchableOpacity>
                         )}
 
@@ -341,14 +341,12 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
                                         color={Colors.bg.primary}
                                     />
                                     <Text style={styles.submitBtnText}>
-                                        Белгі қою{photoUri ? ' (AI + фото)' : ' (AI тексереді)'}
+                                        {photoUri ? t('report_submit_photo') : t('report_submit')}
                                     </Text>
                                 </>
                             )}
                         </TouchableOpacity>
-                        <Text style={styles.aiNote}>
-                            AI сіздің хабарламаңызды жариялау алдында тексереді
-                        </Text>
+                        <Text style={styles.aiNote}>{t('report_ai_note')}</Text>
                     </ScrollView>
                 </View>
             </View>

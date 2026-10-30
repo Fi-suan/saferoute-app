@@ -16,6 +16,7 @@ import {
     insertHerdLocation,
     deactivateHerd,
 } from '../services/api';
+import { useT } from '../i18n';
 
 /** Расстояние в км между двумя точками */
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -104,14 +105,14 @@ function isNearAnyRoadSync(
     return { near: false, distM: 9999 };
 }
 
-function mapHerdToLivestock(herd: any): Livestock {
+function mapHerdToLivestock(herd: any, t: (k: any) => string): Livestock {
     const lat = herd.current_location?.latitude ?? herd.lat ?? 0;
     const lon = herd.current_location?.longitude ?? herd.lon ?? 0;
     const road = isNearAnyRoadSync(lat, lon);
     return {
         id: `ls-${herd.id}`,
         ownerId: String(herd.id),
-        ownerName: herd.owner_name ?? 'Белгісіз иесі',
+        ownerName: herd.owner_name ?? t('owner_unknown'),
         ownerPhone: '',
         type: herd.animal_type ?? 'horse',
         count: herd.estimated_count ?? 1,
@@ -126,11 +127,11 @@ function mapHerdToLivestock(herd: any): Livestock {
     };
 }
 
-async function fetchLivestockFromServer(): Promise<Livestock[]> {
+async function fetchLivestockFromServer(t: (k: any) => string): Promise<Livestock[]> {
     try {
         const herds = await getHerds();
         if (Array.isArray(herds) && herds.length > 0) {
-            return herds.map(mapHerdToLivestock);
+            return herds.map((h) => mapHerdToLivestock(h, t));
         }
     } catch {
         /* offline */
@@ -139,6 +140,7 @@ async function fetchLivestockFromServer(): Promise<Livestock[]> {
 }
 
 export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): UseLivestockReturn {
+    const t = useT();
     const [livestock, setLivestock] = useState<Livestock[]>([]);
     const [myLivestock, setMyLivestock] = useState<Livestock[]>([]);
     const [isManualMode, setIsManualMode] = useState(false);
@@ -155,7 +157,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
 
     const refreshLivestock = useCallback(async () => {
         await loadRoadZones();
-        const data = await fetchLivestockFromServer();
+        const data = await fetchLivestockFromServer(t);
         setLivestock(data);
     }, []);
 
@@ -172,7 +174,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
             const entry: Livestock = {
                 id: `manual-${Date.now()}`,
                 ownerId,
-                ownerName: 'Мен',
+                ownerName: t('owner_me'),
                 ownerPhone: '',
                 type,
                 count,

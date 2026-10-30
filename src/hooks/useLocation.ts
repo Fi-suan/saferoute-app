@@ -14,6 +14,7 @@ import { Config } from '../config';
 import { updateDeviceLocation } from '../services/api';
 import { getDeviceId } from '../services/deviceId';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useT } from '../i18n';
 
 const SEEN_STORAGE_KEY = 'saferoute:proximity:seen';
 
@@ -52,6 +53,7 @@ export function useLocation(
     proximityRadiusKm: number = Config.DEFAULT_PROXIMITY_RADIUS_KM,
     onNearbyAlert?: (incidentId: number, title: string, body: string) => void,
 ): UseLocationReturn {
+    const t = useT();
     const [location, setLocation] = useState<GeoPoint | null>(null);
     const myDeviceIdRef = useRef<string | null>(null);
     const [hasPermission, setHasPermission] = useState(false);
@@ -195,7 +197,7 @@ export function useLocation(
                 alertedIds.current.add(inc.id);
                 persistSeen(alertedIds.current, confirmIds.current);
                 setNearbyAlert(inc);
-                const title = '⚠️ Абай болыңыз!';
+                const title = t('notif_proximity_title');
                 const body = inc.description || getIncidentMeta(inc.incident_type).label;
                 onNearbyAlert?.(inc.id, title, body);
                 if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);

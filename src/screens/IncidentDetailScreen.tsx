@@ -93,7 +93,7 @@ export default function IncidentDetailScreen() {
             `\n🛡️ Sapa Jol қолданбасын жүктеп алыңыз — жол қауіпсіздігі үшін`;
 
         try {
-            await Share.share({ message: shareText, title: 'SafeRoute инцидент' });
+            await Share.share({ message: shareText, title: t('share_title') });
         } catch (e) {
             showDialog({
                 title: t('common_error'),

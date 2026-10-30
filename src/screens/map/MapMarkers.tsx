@@ -8,7 +8,7 @@ import { Marker, Circle } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Radius } from '../../constants/colors';
 import { getIncidentMeta, Incident } from '../../constants/incidents';
-import { LIVESTOCK_META, Livestock } from '../../constants/livestock';
+import { LIVESTOCK_META, Livestock, LivestockType } from '../../constants/livestock';
 
 interface IncidentMarkersProps {
     incidents: Incident[];
@@ -55,7 +55,13 @@ export function LivestockMarkers({ livestock }: LivestockMarkersProps) {
     return (
         <>
             {livestock.map((animal) => {
-                const meta = LIVESTOCK_META[animal.type] ?? { label: 'Жануар', color: Colors.brand.primary, emoji: '🐾' };
+                const meta = LIVESTOCK_META[animal.type as LivestockType] ?? {
+                    label: '—',
+                    labelKk: '—',
+                    icon: 'paw',
+                    color: Colors.brand.primary,
+                    emoji: '🐾',
+                };
                 const isDangerous = animal.isNearRoad && animal.distanceToRoadM < 300;
                 const markerColor = isDangerous ? Colors.alert.critical : meta.color;
                 return (

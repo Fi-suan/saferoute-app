@@ -13,21 +13,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { Incident, getIncidentMeta } from '../constants/incidents';
 import { Config } from '../config';
+import { useT } from '../i18n';
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: (k: any) => string): string {
     // Ensure UTC: backend may return with +00:00, Z suffix, or naive (assume UTC)
     let normalized = dateStr;
     if (!/Z$|[+-]\d{2}:\d{2}$/.test(dateStr)) {
         normalized = dateStr + 'Z';
     }
     const diff = Date.now() - new Date(normalized).getTime();
-    if (diff < 0) return 'жаңа ғана';
+    if (diff < 0) return t('time_just_now');
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'жаңа ғана';
-    if (mins < 60) return `${mins} мин бұрын`;
+    if (mins < 1) return t('time_just_now');
+    if (mins < 60) return `${mins} ${t('time_min_ago')}`;
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs} сағ бұрын`;
-    return `${Math.floor(hrs / 24)} күн бұрын`;
+    if (hrs < 24) return `${hrs} ${t('time_hour_ago')}`;
+    return `${Math.floor(hrs / 24)} ${t('time_day_ago')}`;
 }
 
 function SeverityDots({ level }: { level: number }) {
@@ -60,6 +61,7 @@ interface Props {
 }
 
 export default function IncidentCard({ item, onPress, compact }: Props) {
+    const t = useT();
     const meta = getIncidentMeta(item.incident_type);
     const photoUri = item.photo_uri || item.photo_url;
 
@@ -85,7 +87,7 @@ export default function IncidentCard({ item, onPress, compact }: Props) {
                 </View>
                 <View style={styles.cardHeaderText}>
                     <Text style={styles.cardTitle}>{meta.label}</Text>
-                    <Text style={styles.cardTime}>{timeAgo(item.created_at)}</Text>
+                    <Text style={styles.cardTime}>{timeAgo(item.created_at, t)}</Text>
                 </View>
 
                 {/* AI бейдж: только при верификации с уверенностью ≥75% */}
@@ -103,7 +105,7 @@ export default function IncidentCard({ item, onPress, compact }: Props) {
                 {!item.is_active && (
                     <View style={[styles.aiBadge, { backgroundColor: Colors.incident.resolved + '20' }]}>
                         <Ionicons name="checkmark-done" size={14} color={Colors.incident.resolved} />
-                        <Text style={[styles.aiBadgeText, { color: Colors.incident.resolved }]}>Шешілді</Text>
+                        <Text style={[styles.aiBadgeText, { color: Colors.incident.resolved }]}>{t('status_resolved')}</Text>
                     </View>
                 )}
             </View>

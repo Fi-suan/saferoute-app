@@ -133,7 +133,7 @@ export default function MapScreen() {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         }
         scheduleProximityNotification({
-            title: '⚠️ Абай болыңыз!',
+            title: t('notif_proximity_title'),
             body: `${meta.label}${nearbyAlert.description ? ` — ${nearbyAlert.description}` : ''}`,
             incidentId: nearbyAlert.id,
             soundEnabled: settings.soundEnabled,
@@ -247,7 +247,7 @@ export default function MapScreen() {
                         if (location) {
                             await submitReport({
                                 incident_type: 'crash',
-                                description: '🆘 SOS! Жедел жәрдем қажет.',
+                                description: t('sos_marker_desc'),
                                 severity: 5,
                                 latitude: location.lat,
                                 longitude: location.lon,

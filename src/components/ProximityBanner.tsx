@@ -55,11 +55,7 @@ export default function ProximityBanner({ incident, onDismiss, onViewDetail }: P
             <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={styles.title}>{t('banner_title')}</Text>
                 <Text style={styles.desc} numberOfLines={1}>
-                    {incident.incident_type === 'crash'
-                        ? 'ЖКО'
-                        : incident.incident_type === 'animal'
-                            ? t('banner_animal')
-                            : t('banner_hazard')}
+                    {meta.label}
                     {incident.description ? ` — ${incident.description}` : ''}
                 </Text>
             </View>
