@@ -385,24 +385,23 @@ export interface RegisterDeviceParams {
     longitude?: number;
 }
 
-/** Register/refresh device row in Supabase. No JWT anymore — RLS handles access. */
+/** Register/refresh device row via SECURITY DEFINER RPC.
+ *  Null поля не затирают существующие (в отличие от старого PostgREST upsert). */
 export async function registerDevice(data: RegisterDeviceParams): Promise<{ ok: boolean }> {
-    const { error } = await supabase.from('devices').upsert(
-        {
-            device_id: data.device_id,
-            role: data.role === 'owner' ? 'OWNER' : 'DRIVER',
-            name: data.name ?? null,
-            password_hash: data.password_hash ?? null,
-            fcm_token: data.fcm_token ?? null,
-            phone_number: data.phone_number?.replace(/\s/g, '') ?? null,
-            latitude: data.latitude ?? null,
-            longitude: data.longitude ?? null,
-            is_active: true,
-            last_seen: new Date().toISOString(),
-        },
-        { onConflict: 'device_id' },
-    );
+    const { error } = await supabase.rpc('register_device', {
+        p_device_id: data.device_id,
+        p_role: data.role === 'owner' ? 'OWNER' : 'DRIVER',
+        p_name: data.name ?? null,
+        p_password_hash: data.password_hash ?? null,
+        p_fcm_token: data.fcm_token ?? null,
+        p_phone_number: data.phone_number?.replace(/\s/g, '') ?? null,
+    });
     return { ok: !error };
+}
+
+/** Refresh FCM token without touching account fields. */
+export async function updateFcmToken(deviceId: string, fcmToken: string): Promise<void> {
+    await supabase.rpc('update_fcm_token', { p_device_id: deviceId, p_fcm_token: fcmToken });
 }
 
 export type AppRole = 'driver' | 'livestock_owner';
@@ -413,39 +412,21 @@ export interface LoginResult {
     role: AppRole;
 }
 
-/** Sign in an existing account by phone + password. */
+/** Sign in an existing account by phone + password.
+ *  Hash comparison happens server-side (login_device RPC); the devices table
+ *  is not readable by clients at all. */
 export async function loginWithPhone(phone: string, password: string): Promise<LoginResult | null> {
     const digits = phone.replace(/\s/g, '');
-    const selectCols = 'name, phone_number, role, password_hash';
-    const exact = await supabase
-        .from('devices')
-        .select(selectCols)
-        .eq('phone_number', digits)
-        .order('last_seen', { ascending: false })
-        .limit(1);
-    let row = exact.data?.[0];
-    if (!row && digits.length >= 10) {
-        // Fallback: match by last 10 digits (covers 8… vs +7… entry variants)
-        const tail = digits.slice(-10);
-        const fuzzy = await supabase
-            .from('devices')
-            .select(selectCols)
-            .ilike('phone_number', `%${tail}`)
-            .order('last_seen', { ascending: false })
-            .limit(1);
-        row = fuzzy.data?.[0];
-    }
-    if (!row) return null;
-
-    // Verify password (legacy accounts without a hash still sign in)
-    if (row.password_hash) {
-        const candidate = await hashPassword(row.phone_number ?? digits, password);
-        if (candidate !== row.password_hash) return null;
-    }
+    const candidate = await hashPassword(digits, password);
+    const { data, error } = await supabase.rpc('login_device', {
+        p_phone: digits,
+        p_password_hash: candidate,
+    });
+    if (error || !data?.ok) return null;
     return {
-        name: row.name ?? 'Пайдаланушы',
-        phone: row.phone_number ?? digits,
-        role: row.role?.toLowerCase() === 'owner' ? 'livestock_owner' : 'driver',
+        name: data.name || 'Пайдаланушы',
+        phone: data.phone ?? digits,
+        role: data.role?.toLowerCase?.() === 'owner' ? 'livestock_owner' : 'driver',
     };
 }
 
@@ -473,16 +454,11 @@ export async function updateDeviceLocation(
     latitude: number,
     longitude: number,
 ): Promise<void> {
-    await supabase.from('devices').upsert(
-        {
-            device_id,
-            latitude,
-            longitude,
-            last_seen: new Date().toISOString(),
-            is_active: true,
-        },
-        { onConflict: 'device_id' },
-    );
+    await supabase.rpc('touch_device_location', {
+        p_device_id: device_id,
+        p_latitude: latitude,
+        p_longitude: longitude,
+    });
 }
 
 // ── User Data Deletion (GDPR) ─────────────────────────────────────────────────

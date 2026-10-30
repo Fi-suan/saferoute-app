@@ -11,7 +11,7 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { getDeviceId } from './deviceId';
-import { registerDevice } from './api';
+import { updateFcmToken } from './api';
 
 type NotificationsModule = typeof import('expo-notifications');
 
@@ -54,13 +54,11 @@ async function getNotifications(): Promise<NotificationsModule | null> {
 }
 
 async function registerAndStoreToken(role: string, fcmToken?: string): Promise<void> {
+    // Только обновляем токен: роль/телефон/имя трогать нельзя (fix из миграции 007)
     const deviceId = await getDeviceId();
+    if (!fcmToken) return;
     try {
-        await registerDevice({
-            device_id: deviceId,
-            role,
-            fcm_token: fcmToken,
-        });
+        await updateFcmToken(deviceId, fcmToken);
     } catch (e) {
         console.warn('[Notifications] registerAndStoreToken failed:', e);
     }

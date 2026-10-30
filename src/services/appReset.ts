@@ -18,12 +18,6 @@ export const AppResetEvent = {
         return () => { _listeners.delete(fn); };
     },
     trigger: async () => {
-        // Clear auth token
-        try {
-            const { backendLogout } = await import('./auth');
-            await backendLogout();
-        } catch { /* ignore */ }
-
         // Clear local storage
         await AsyncStorage.multiRemove([
             STORAGE.ONBOARDING_DONE,
