@@ -13,6 +13,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { Colors } from './src/constants/colors';
 import { STORAGE } from './src/constants/storage';
 import { getDeviceId } from './src/services/deviceId';
+import { ensureDeviceRegistered } from './src/services/api';
 import { registerForPushNotifications } from './src/services/notifications';
 import { AppResetEvent } from './src/services/appReset';
 import { deriveInitials } from './src/hooks/useUserProfile';
@@ -48,8 +49,11 @@ export default function App() {
           try {
             const profile: UserProfile = JSON.parse(profileRaw);
             setUserContext({ deviceId, role: profile.role });
+            ensureDeviceRegistered(profile.role, profile.phone).catch(() => { });
             registerForPushNotifications(profile.role).catch(() => { });
           } catch { /* ignore */ }
+        } else {
+          ensureDeviceRegistered('driver').catch(() => { });
         }
       } catch {
         setOnboardingDone(false);
@@ -73,6 +77,7 @@ export default function App() {
     await AsyncStorage.setItem(STORAGE.USER_PROFILE, JSON.stringify(profile));
     await AsyncStorage.setItem(STORAGE.ONBOARDING_DONE, 'true');
     setOnboardingDone(true);
+    ensureDeviceRegistered(data.role, data.phone).catch(() => { });
     registerForPushNotifications(data.role).catch(() => { });
   }, []);
 

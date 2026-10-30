@@ -92,6 +92,27 @@ export const registerDevice = (data: {
     longitude?: number;
 }) => api.post('/auth/register', data).then(r => r.data);
 
+/** Ensure device is registered and has JWT auth token */
+export async function ensureDeviceRegistered(role: string = 'driver', phoneNumber?: string): Promise<string | null> {
+    try {
+        const { getDeviceId } = await import('./deviceId');
+        const { storeAuthToken } = await import('./auth');
+        const deviceId = await getDeviceId();
+        const res = await registerDevice({
+            device_id: deviceId,
+            role: role === 'livestock_owner' ? 'owner' : 'driver',
+            phone_number: phoneNumber,
+        });
+        if (res?.token) {
+            await storeAuthToken(res.token);
+            return res.token;
+        }
+    } catch (e) {
+        console.warn('[Auth] ensureDeviceRegistered error:', e);
+    }
+    return null;
+}
+
 export const updateDeviceLocation = (device_id: string, latitude: number, longitude: number) =>
     api.post('/devices/location', { device_id, latitude, longitude }).then(r => r.data);
 

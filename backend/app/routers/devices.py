@@ -36,18 +36,29 @@ def delete_device_data(
     if current.device_id != device_id:
         raise HTTPException(status_code=403, detail="Cannot delete another device's data")
 
-    # Delete incident confirmations
+    # Delete confirmations made on this device's reports first (FK cascade safety)
+    report_ids = [
+        r[0] for r in db.query(IncidentReport.id).filter(
+            IncidentReport.reporter_device_id == device_id
+        ).all()
+    ]
+    if report_ids:
+        db.query(IncidentConfirmation).filter(
+            IncidentConfirmation.incident_id.in_(report_ids)
+        ).delete(synchronize_session=False)
+
+    # Delete confirmations made by this device
     confirmations_deleted = db.query(IncidentConfirmation).filter(
         IncidentConfirmation.device_id == device_id
-    ).delete()
+    ).delete(synchronize_session=False)
 
-    # Delete incident reports
+    # Delete incident reports created by this device
     reports_deleted = db.query(IncidentReport).filter(
         IncidentReport.reporter_device_id == device_id
-    ).delete()
+    ).delete(synchronize_session=False)
 
     # Delete device record
-    device_deleted = db.query(Device).filter(Device.device_id == device_id).delete()
+    device_deleted = db.query(Device).filter(Device.device_id == device_id).delete(synchronize_session=False)
 
     db.commit()
     return {

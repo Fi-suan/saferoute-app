@@ -13,6 +13,7 @@ import { STORAGE } from '../constants/storage';
 import { Incident } from '../constants/incidents';
 import { getDeviceId } from '../services/deviceId';
 import { incidentStore } from '../store/incidentStore';
+import { supabase } from '../services/supabase';
 
 export interface SubmitReportParams {
     incident_type: string;
@@ -119,7 +120,23 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
         setLoading(true);
         refresh().finally(() => setLoading(false));
         const interval = setInterval(refresh, Config.INCIDENTS_POLL_INTERVAL_MS);
-        return () => clearInterval(interval);
+
+        // Supabase Realtime subscription for instantaneous cross-device sync
+        const channel = supabase
+            .channel('incident_reports_realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'incident_reports' },
+                () => {
+                    refresh();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            clearInterval(interval);
+            supabase.removeChannel(channel);
+        };
     }, [refresh]);
 
     useEffect(() => {

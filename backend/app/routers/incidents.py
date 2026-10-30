@@ -284,7 +284,8 @@ async def create_incident(
 
 
 @router.get("/active")
-def get_active_incidents(db: Session = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
+def get_active_incidents(request: Request, db: Session = Depends(get_db)):
     incidents = db.query(IncidentReport).filter(
         IncidentReport.is_active == True
     ).order_by(IncidentReport.created_at.desc()).all()
@@ -292,7 +293,8 @@ def get_active_incidents(db: Session = Depends(get_db)):
 
 
 @router.get("/nearby")
-def get_nearby_incidents(lat: float, lon: float, radius_km: float = 3.0, db: Session = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
+def get_nearby_incidents(request: Request, lat: float, lon: float, radius_km: float = 3.0, db: Session = Depends(get_db)):
     incidents = db.query(IncidentReport).filter(IncidentReport.is_active == True).all()
     nearby = []
     for inc in incidents:
@@ -306,7 +308,8 @@ def get_nearby_incidents(lat: float, lon: float, radius_km: float = 3.0, db: Ses
 
 
 @router.get("/feed")
-def get_incident_feed(limit: int = 50, offset: int = 0, db: Session = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
+def get_incident_feed(request: Request, limit: int = 50, offset: int = 0, db: Session = Depends(get_db)):
     incidents = db.query(IncidentReport).order_by(
         IncidentReport.created_at.desc()
     ).offset(offset).limit(min(limit, 200)).all()

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sapa Jol — Интеллектуалды жол қауіпсіздігі жүйесі</title>
+    <link rel="icon" href="./assets/image.png" type="image/png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0A0F1C;
+            --bg-secondary: #131B2E;
+            --brand-green: #2ECC71;
+            --brand-glow: rgba(46, 204, 113, 0.35);
+            --text-primary: #FFFFFF;
+            --text-secondary: #94A3B8;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --card-border: rgba(46, 204, 113, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'SF Pro Display', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(46, 204, 113, 0.15) 0%, transparent 60%),
+                radial-gradient(circle at 10% 90%, rgba(30, 41, 59, 0.5) 0%, transparent 40%);
+        }
+
+        .container {
+            max-width: 540px;
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 36px 28px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 40px var(--brand-glow);
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(20px);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(46, 204, 113, 0.12);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            color: var(--brand-green);
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .logo-wrap {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            margin: 0 auto 16px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 2px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 25px var(--brand-glow);
+            overflow: hidden;
+        }
+
+        .logo-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #FFFFFF 60%, var(--brand-green) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 28px;
+        }
+
+        /* QR Card */
+        .qr-card {
+            background: #FFFFFF;
+            border-radius: 20px;
+            padding: 20px;
+            width: 220px;
+            height: 220px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            border: 4px solid var(--brand-green);
+        }
+
+        .qr-card div {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .qr-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        /* Action Buttons */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 24px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--brand-green);
+            color: #0A0F1C;
+            box-shadow: 0 8px 24px var(--brand-glow);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(46, 204, 113, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        /* Instructions list */
+        .steps {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        .steps-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--brand-green);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .steps ol {
+            padding-left: 20px;
+            color: var(--text-secondary);
+            font-size: 13.5px;
+            line-height: 1.7;
+        }
+
+        .steps li::marker {
+            color: var(--brand-green);
+            font-weight: bold;
+        }
+
+        footer {
+            margin-top: 24px;
+            font-size: 12px;
+            color: #64748B;
+        }
+
+        footer a {
+            color: var(--brand-green);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="badge">
+            🌿 Үздік экологиялық бастама · NIS Pavlodar
+        </div>
+
+        <div class="logo-wrap">
+            <img src="./assets/image.png" alt="Sapa Jol Logo" onerror="this.src='./assets/icon.png'">
+        </div>
+
+        <h1>Sapa Jol</h1>
+        <p class="tagline">
+            Қазақстанның кең даласында жол қауіпсіздігі мен биоәртүрлілікті сақтауға арналған интеллектуалды жүйе
+        </p>
+
+        <!-- QR Code -->
+        <div class="qr-card">
+            <div id="qrcode"></div>
+        </div>
+
+        <p class="qr-label">
+            📱 Жюри мен қонақтарға: камерамен QR-кодты сканерлеңіз
+        </p>
+
+        <!-- Buttons -->
+        <div class="btn-group">
+            <a id="download-btn" href="#" class="btn btn-primary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
+                </svg>
+                Android APK жүктеу (Скачать)
+            </a>
+
+            <a id="expo-btn" href="https://expo.dev" target="_blank" class="btn btn-secondary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13H5.5L12 6.5z"/>
+                </svg>
+                Expo Go арқылы ашу
+            </a>
+        </div>
+
+        <!-- Instructions -->
+        <div class="steps">
+            <div class="steps-title">Орнату және көрсету нұсқаулығы:</div>
+            <ol>
+                <li>Телефон камерасын QR-кодқа бағыттаңыз немесе «Жүктеу» батырмасын басыңыз.</li>
+                <li>Файлды (.apk) орнатыңыз (Қауіпсіздік сұрауы шықса: <i>«Бәрібір орнату»</i>).</li>
+                <li>Қосымшаны ашып, <b>«Жүргізуші»</b> немесе <b>«Мал иесі»</b> рөлін таңдаңыз.</li>
+                <li>Картадан қауіпті аймақтар мен киіктер белгілерін бақылаңыз.</li>
+            </ol>
+        </div>
+
+        <footer>
+            Sapa Jol / SafeRoute © 2026 · <a href="./privacy.html">Құпиялылық саясаты</a>
+        </footer>
+    </div>
+
+    <script>
+        // Default target is current page URL so QR code points directly to this download portal on mobile
+        const currentUrl = window.location.href;
+        const apkUrl = currentUrl.endsWith('/') ? currentUrl + 'sapa-jol.apk' : currentUrl.replace(/[^/]*$/, 'sapa-jol.apk');
+
+        document.getElementById('download-btn').href = apkUrl;
+
+        // Render QR Code
+        new QRCode(document.getElementById("qrcode"), {
+            text: currentUrl,
+            width: 180,
+            height: 180,
+            colorDark : "#0A0F1C",
+            colorLight : "#FFFFFF",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    </script>
+</body>
+</html>

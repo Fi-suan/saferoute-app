@@ -12,11 +12,14 @@ const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
 
 export const Config = {
 
-    BACKEND_URL: extra.BACKEND_URL ?? 'https://saferoute-api-ce7l.onrender.com',
+    BACKEND_URL: extra.BACKEND_URL ?? 'http://192.168.8.252:8000',
 
+    /** Supabase credentials for direct Realtime subscriptions */
+    SUPABASE_URL: extra.SUPABASE_URL ?? 'https://iqgawigwaempfnwtqovy.supabase.co',
+    SUPABASE_ANON_KEY: extra.SUPABASE_ANON_KEY ?? 'sb_publishable_mtjnCty0nl-EXsssgG0BUg_k0wZtT90',
 
-    /** Polling interval for incidents (ms) */
-    INCIDENTS_POLL_INTERVAL_MS: 10_000,
+    /** Polling interval for incidents (ms) — 4s for contest demo */
+    INCIDENTS_POLL_INTERVAL_MS: 4_000,
 
     /** Default proximity alert radius (km) */
     DEFAULT_PROXIMITY_RADIUS_KM: 2.0,
