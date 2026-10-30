@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 """Generate Sapa-Jol contest results docx (Kazakh)."""
+import os
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ANN = os.path.join(BASE, 'shots', 'annotated')
 
 doc = Document()
 
@@ -184,6 +188,12 @@ captions = [
     'Хабарламалар журналы (П1): 1) әр белгіге шыққан «Абай болыңыз!» эскертулері; 2) нақты уақыт белгілері; 3) жүйе әр қауіпті тіркейді.',
 ]
 for i, c in enumerate(captions, 1):
+    # Аннотированный скриншот над подписью (если сгенерирован)
+    ann = os.path.join(ANN, f'fig{i}.png')
+    if os.path.exists(ann):
+        par = doc.add_paragraph()
+        par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        par.add_run().add_picture(ann, width=Cm(8.5))
     par = doc.add_paragraph()
     par.add_run(f'Сурет {i}. ').bold = True
     par.add_run(c)
