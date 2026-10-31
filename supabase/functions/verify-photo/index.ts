@@ -81,6 +81,10 @@ Deno.serve(async (req: Request) => {
 
         const confidence = typeof verdict.confidence === 'number' ? verdict.confidence : 0;
         const isValid = verdict.is_valid === true && confidence >= 0.75;
+        // Опасность оценивает AI, а не пользователь (продукт-решение):
+        // suggestion 1-5 пишется прямо в severity метки
+        const aiSeverity =
+            typeof verdict.severity === 'number' ? Math.max(1, Math.min(5, Math.round(verdict.severity))) : null;
 
         // Критерии мусора: модель уверенно говорит «это не дорожная опасность»
         // (is_valid=false и уверенность >= 0.6) — метка автоматически убирается
@@ -101,8 +105,9 @@ Deno.serve(async (req: Request) => {
                 ai_verified: isValid,
                 ai_confidence: Math.round(confidence * 100) / 100,
                 ai_analysis: verdict.analysis_kk ?? null,
-                ai_severity_suggestion:
-                    typeof verdict.severity === 'number' ? Math.max(1, Math.min(5, Math.round(verdict.severity))) : null,
+                ai_severity_suggestion: aiSeverity,
+                // severity перезаписывается оценкой AI (realtime донесёт до карты)
+                ...(aiSeverity != null ? { severity: aiSeverity } : {}),
                 ...(autoRejected ? { is_active: false, resolved_at: new Date().toISOString() } : {}),
             }),
         });

@@ -41,11 +41,10 @@ export type RoadStatus = 'open' | 'caution' | 'closed';
 
 export function computeRoadStatus(incidents: Incident[]): RoadStatus {
     const active = incidents.filter(i => i.is_active);
-    // Максимальная опасность любого типа (не только HAZARD): sev=5 —
-    // «стадо на дороге», «гололёд» и т.п. так же закрывают трассу, как
-    // «размытый мост». Раньше «Жол жабық» был практически недостижим.
-    if (active.some(i => i.severity >= 5)) return 'closed';
     const dangerous = active.filter(i => i.severity >= 4);
+    // Красная линия = одна максимальная опасность (sev 5) ИЛИ три серьёзных
+    // (sev 4+) одновременно: продукт-решение владельца.
+    if (active.some(i => i.severity >= 5) || dangerous.length >= 3) return 'closed';
     if (dangerous.length >= 2 || active.some(i => i.incident_type === 'crash' && i.severity >= 4)) return 'caution';
     return 'open';
 }

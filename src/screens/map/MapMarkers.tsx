@@ -130,7 +130,12 @@ export function LivestockMarkers({ livestock }: LivestockMarkersProps) {
                 };
                 const isDangerous = animal.isNearRoad && animal.distanceToRoadM < 300;
                 const color = isDangerous ? Colors.alert.critical : meta.color;
-                const feats = [ringFeature(animal.latitude, animal.longitude, 40, color, 0.73)];
+                // Табун — та же 2 км зона тревоги, что у меток инцидентов:
+                // водитель должен увидеть стадо заранее (Config.DEFAULT_PROXIMITY_RADIUS_KM)
+                const feats = [
+                    ringFeature(animal.latitude, animal.longitude, 40, color, 0.73),
+                    ringFeature(animal.latitude, animal.longitude, 2000, color, 0.06),
+                ];
                 if (isDangerous) {
                     feats.push(
                         ringFeature(
@@ -150,9 +155,30 @@ export function LivestockMarkers({ livestock }: LivestockMarkersProps) {
     const strokes = useMemo(
         () => ({
             type: 'FeatureCollection' as const,
-            features: livestock
-                .filter((a) => a.isNearRoad && a.distanceToRoadM < 300)
-                .map((a) => ringFeature(a.latitude, a.longitude, a.distanceToRoadM, Colors.alert.critical, 0.31)),
+            features: livestock.flatMap((animal) => {
+                const meta = LIVESTOCK_META[animal.type as LivestockType] ?? {
+                    label: '—',
+                    labelKk: '—',
+                    icon: 'paw',
+                    color: Colors.brand.primary,
+                    emoji: '🐾',
+                };
+                const isDangerous = animal.isNearRoad && animal.distanceToRoadM < 300;
+                const color = isDangerous ? Colors.alert.critical : meta.color;
+                const feats = [ringFeature(animal.latitude, animal.longitude, 2000, color, 0.25)];
+                if (isDangerous) {
+                    feats.push(
+                        ringFeature(
+                            animal.latitude,
+                            animal.longitude,
+                            animal.distanceToRoadM,
+                            Colors.alert.critical,
+                            0.31,
+                        ),
+                    );
+                }
+                return feats;
+            }),
         }),
         [livestock],
     );

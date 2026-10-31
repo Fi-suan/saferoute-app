@@ -264,9 +264,22 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
                             ))}
                         </View>
 
-                        {/* Тяжесть */}
-                        <Text style={styles.label}>{t('report_severity_label')}</Text>
-                        <View style={styles.severityRow}>
+                        {/* Тяжесть. С фото опасность оценивает AI — ручной выбор
+                            остаётся только для репортов без фото */}
+                        {photoUri ? (
+                            <>
+                                <Text style={styles.label}>{t('report_severity_label')}</Text>
+                                <View style={styles.aiSeverityNote}>
+                                    <Ionicons name="sparkles" size={16} color={Colors.brand.primary} />
+                                    <Text style={styles.aiSeverityNoteText}>
+                                        {t('ai_severity_note')}
+                                    </Text>
+                                </View>
+                            </>
+                        ) : (
+                            <>
+                                <Text style={styles.label}>{t('report_severity_label')}</Text>
+                                <View style={styles.severityRow}>
                             {(
                                 [
                                     { n: 1, label: t('sev_low'), color: Colors.alert.medium },
@@ -309,7 +322,9 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
                                     </Text>
                                 </TouchableOpacity>
                             ))}
-                        </View>
+                                </View>
+                            </>
+                        )}
 
                         {/* Описание */}
                         <Text style={styles.label}>{t('report_desc_label')}</Text>
@@ -432,6 +447,17 @@ const styles = StyleSheet.create({
     typeChipText: { fontSize: 13, fontWeight: '600', color: Colors.text.secondary },
     typeChipTextActive: { color: Colors.bg.primary },
     severityRow: { flexDirection: 'row', gap: 8 },
+    aiSeverityNote: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: Colors.brand.primary + '14',
+        borderWidth: 1,
+        borderColor: Colors.brand.primary + '40',
+        borderRadius: Radius.md,
+        padding: 10,
+    },
+    aiSeverityNoteText: { flex: 1, fontSize: 12, color: Colors.text.secondary },
     severityBtn: {
         flex: 1,
         height: 52,
