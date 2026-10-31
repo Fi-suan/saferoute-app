@@ -39,7 +39,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 (async () => {
     // ── A. Логин трёх аккаунтов ────────────────────────────────────────────
     for (const n of ['01', '02', '03']) {
-        const phone = `+77015500${n}`;
+        const phone = `+770155000${n}`;
         const password = `pass${n}`;
         const digits = phone.replace(/\s/g, '');
         const tail = digits.slice(-10);
@@ -58,7 +58,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     }
     // Негативный: неверный пароль не пускает
     {
-        const phone = '+7701550001';
+        const phone = '77015500001';
         const candidates = [hashPassword(phone, 'wrong-password')];
         const { data, error } = await sb.rpc('login_device', {
             p_phone: phone,

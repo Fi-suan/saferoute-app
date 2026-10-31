@@ -1,18 +1,18 @@
 {
-  "started": "2026-10-31T05:22:05.873Z",
+  "started": "2026-10-31T05:27:44.042Z",
   "checks": [
     {
-      "name": "login +7701550001",
+      "name": "login +77015500001",
       "ok": true,
       "detail": "name=Тестер 01"
     },
     {
-      "name": "login +7701550002",
+      "name": "login +77015500002",
       "ok": true,
       "detail": "name=Тестер 02"
     },
     {
-      "name": "login +7701550003",
+      "name": "login +77015500003",
       "ok": true,
       "detail": "name=Тестер 03"
     },
@@ -34,7 +34,7 @@
     {
       "name": "incidents along road (<300м)",
       "ok": true,
-      "detail": "13/13 вдоль"
+      "detail": "14/14 вдоль"
     },
     {
       "name": "touch_device_location x6",
@@ -44,46 +44,46 @@
     {
       "name": "confirm #mega-user-01",
       "ok": true,
-      "detail": "{\"status\":\"ok\",\"is_active\":true,\"confirmations\":2}"
+      "detail": "{\"status\":\"ok\",\"is_active\":true,\"confirmations\":1}"
     },
     {
       "name": "confirm #mega-user-02",
       "ok": true,
-      "detail": "{\"status\":\"ok\",\"is_active\":false,\"confirmations\":3}"
+      "detail": "{\"status\":\"ok\",\"is_active\":true,\"confirmations\":2}"
     },
     {
       "name": "confirm #mega-user-03",
       "ok": true,
-      "detail": "{\"status\":\"ok\",\"is_active\":false,\"confirmations\":4}"
+      "detail": "{\"status\":\"ok\",\"is_active\":false,\"confirmations\":3}"
     },
     {
       "name": "3 confirms → resolved",
       "ok": true,
-      "detail": "{\"confirmations_count\":4,\"is_active\":false}"
+      "detail": "{\"confirmations_count\":3,\"is_active\":false}"
     },
     {
       "name": "duplicate confirm ignored",
       "ok": true,
-      "detail": "count=4 (было 4), rpc={\"status\":\"already_confirmed\"}"
+      "detail": "count=3 (было 3), rpc={\"status\":\"already_confirmed\"}"
     },
     {
       "name": "rate-limit 10/5min enforced",
       "ok": true,
-      "detail": "ok=0, rate_limited=11"
+      "detail": "ok=10, rate_limited=1"
     },
     {
       "name": "final counts",
       "ok": true,
-      "detail": "active=12, resolved=3, photo=15, ai_verified=11"
+      "detail": "active=13, resolved=2, photo=15, ai_verified=11"
     }
   ],
   "bugs": [],
   "summary": {
     "total": 15,
-    "active": 12,
-    "resolved": 3,
+    "active": 13,
+    "resolved": 2,
     "withPhoto": 15,
     "aiVerified": 11
   },
-  "finished": "2026-10-31T05:22:20.063Z"
+  "finished": "2026-10-31T05:27:58.298Z"
 }

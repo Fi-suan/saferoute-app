@@ -62,30 +62,59 @@ export function useLocation(
     const [confirmCandidate, setConfirmCandidate] = useState<Incident | null>(null);
 
     // Refs чтобы не триггерить proximity дважды для одного инцидента.
-    // Персистим в AsyncStorage: без этого после перезапуска приложение
-    // снова спрашивало подтверждение по той же метке.
-    const alertedIds = useRef<Set<number>>(new Set());
-    const confirmIds = useRef<Set<number>>(new Set());
+    // Персистим в AsyncStorage с TTL 24 ч: метки дорог живут неделями, а
+    // водитель-маятниковик проезжает ту же метку каждый день — «один
+    // алерт НАВСЕГДА» лишал его предупреждений (найдено мега-тестом).
+    const alertedAt = useRef<Map<number, number>>(new Map());
+    const confirmedAt = useRef<Map<number, number>>(new Map());
 
-    const persistSeen = useCallback((alerted: Set<number>, confirmed: Set<number>) => {
+    const ALERT_TTL_MS = 24 * 60 * 60 * 1000;
+
+    const isFresh = (m: Map<number, number>, id: number): boolean => {
+        const ts = m.get(id);
+        return ts != null && Date.now() - ts < ALERT_TTL_MS;
+    };
+
+    const persistSeen = useCallback((alerted: Map<number, number>, confirmed: Map<number, number>) => {
         try {
             AsyncStorage.setItem(
                 SEEN_STORAGE_KEY,
-                JSON.stringify({ alerted: [...alerted], confirmed: [...confirmed] }),
+                JSON.stringify({
+                    alerted: [...alerted.entries()],
+                    confirmed: [...confirmed.entries()],
+                }),
             ).catch(() => {});
         } catch {
             /* ignore */
         }
     }, []);
 
+    const seenIds = (m: Map<number, number>): Set<number> =>
+        new Set([...m.entries()].filter(([, ts]) => Date.now() - ts < ALERT_TTL_MS).map(([id]) => id));
+
     useEffect(() => {
         try {
             AsyncStorage.getItem(SEEN_STORAGE_KEY)
                 .then((raw) => {
                     if (!raw) return;
-                    const parsed = JSON.parse(raw) as { alerted?: number[]; confirmed?: number[] };
-                    (parsed.alerted ?? []).forEach((id) => alertedIds.current.add(id));
-                    (parsed.confirmed ?? []).forEach((id) => confirmIds.current.add(id));
+                    const parsed = JSON.parse(raw) as {
+                        alerted?: Array<[number, number] | number>;
+                        confirmed?: Array<[number, number] | number>;
+                    };
+                    const toMap = (v: Array<[number, number] | number> | undefined) => {
+                        const m = new Map<number, number>();
+                        (v ?? []).forEach((e) => {
+                            if (Array.isArray(e)) m.set(e[0], e[1] ?? 0);
+                            else if (typeof e === 'number') m.set(e, 0);
+                        });
+                        // просроченные не переносим
+                        [...m.entries()].forEach(([id, ts]) => {
+                            if (Date.now() - ts >= ALERT_TTL_MS) m.delete(id);
+                        });
+                        return m;
+                    };
+                    toMap(parsed.alerted).forEach((ts, id) => alertedAt.current.set(id, ts));
+                    toMap(parsed.confirmed).forEach((ts, id) => confirmedAt.current.set(id, ts));
                 })
                 .catch(() => {});
         } catch {
@@ -194,9 +223,9 @@ export function useLocation(
             const dist = haversineKm(location.lat, location.lon, inc.latitude, inc.longitude);
 
             // Алерт-баннер 2 км
-            if (dist <= proximityRadiusKm && !alertedIds.current.has(inc.id)) {
-                alertedIds.current.add(inc.id);
-                persistSeen(alertedIds.current, confirmIds.current);
+            if (dist <= proximityRadiusKm && !isFresh(alertedAt.current, inc.id)) {
+                alertedAt.current.set(inc.id, Date.now());
+                persistSeen(alertedAt.current, confirmedAt.current);
                 setNearbyAlert(inc);
                 const title = t('notif_proximity_title');
                 const body = inc.description || getIncidentMeta(inc.incident_type).label;
@@ -208,11 +237,11 @@ export function useLocation(
             // Диалог подтверждения 0.5 км — автору свою метку не предлагаем
             if (
                 dist <= 0.5 &&
-                !confirmIds.current.has(inc.id) &&
+                !isFresh(confirmedAt.current, inc.id) &&
                 inc.reporter_device_id !== myDeviceIdRef.current
             ) {
-                confirmIds.current.add(inc.id);
-                persistSeen(alertedIds.current, confirmIds.current);
+                confirmedAt.current.set(inc.id, Date.now());
+                persistSeen(alertedAt.current, confirmedAt.current);
                 setConfirmCandidate(inc);
             }
         }

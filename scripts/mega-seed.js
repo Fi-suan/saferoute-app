@@ -27,7 +27,7 @@ const USERS = Array.from({ length: 12 }, (_, i) => {
     const n = String(i + 1).padStart(2, '0');
     return {
         device_id: `mega-user-${n}`,
-        phone: `+77015500${n}`, // +7701550001..0012
+        phone: `+770155000${n}`, // +77015500001..+77015500012 (11 цифр, как реальные KZ)
         password: `pass${n}`,
         name: `Тестер ${n}`,
         role: i % 4 === 3 ? 'owner' : 'driver',
@@ -48,7 +48,6 @@ const ROUTES = {
     e40: { start: [69.590, 42.320], end: [71.350, 42.900], count: 3 },  // Шымкент → Тараз
 };
 
-const PHOTO_POOL = Array.from({ length: 15 }, (_, i) => 33 + i); // inc-33..inc-47.jpg
 
 async function fetchRouteGeometry(start, end) {
     const url = `https://router.project-osrm.org/route/v1/driving/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson`;
