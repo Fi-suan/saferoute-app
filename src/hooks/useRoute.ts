@@ -10,7 +10,7 @@ import { Incident } from '../constants/incidents';
 /** Bounding box для каждого маршрута */
 const ROUTE_BOUNDS: Record<string, { latMin: number; latMax: number; lonMin: number; lonMax: number }> = {
     a17: { latMin: 51.0, latMax: 52.5, lonMin: 71.3, lonMax: 77.2 }, // Астана → Павлодар
-    a1:  { latMin: 43.0, latMax: 52.0, lonMin: 71.0, lonMax: 77.5 }, // Астана → Алматы
+    a1:  { latMin: 43.0, latMax: 51.3, lonMin: 71.0, lonMax: 77.5 }, // Астана → Алматы (верх сужен: bbox A-17 был вложен в A-1, старые метки без route_id попадали на оба коридора)
     a21: { latMin: 50.2, latMax: 52.0, lonMin: 75.0, lonMax: 80.8 }, // Екібастұз → Семей
     e40: { latMin: 42.0, latMax: 43.2, lonMin: 69.3, lonMax: 71.8 }, // Шымкент → Тараз
 };

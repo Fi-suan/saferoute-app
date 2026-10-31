@@ -3,6 +3,7 @@
  * Единый источник — вместо дублирования в MapScreen и AlertsScreen.
  */
 import { Colors } from './colors';
+import { useSettingsStore } from '../hooks/useSettings';
 
 export type IncidentType = 'animal' | 'crash' | 'hazard' | 'other';
 
@@ -47,9 +48,16 @@ export const INCIDENT_TYPES_LIST: { key: IncidentType; label: string; icon: stri
     { key: 'other', label: 'Басқа', icon: 'help-circle' },
 ];
 
-/** Возвращает meta для типа инцидента, с fallback на 'other' */
+/**
+ * Возвращает meta для типа инцидента, с fallback на 'other'.
+ * label выбирается по текущему языку приложения (глобальный zustand-стор
+ * настроек читается и вне React) — раньше русский labelRu был мёртвым кодом
+ * и ru-пользователь видел казахские названия типов во всём UI.
+ */
 export function getIncidentMeta(type: string): IncidentMeta {
-    return INCIDENT_META[type as IncidentType] ?? INCIDENT_META.other;
+    const meta = INCIDENT_META[type as IncidentType] ?? INCIDENT_META.other;
+    const lang = useSettingsStore.getState().settings.language;
+    return lang === 'ru' ? { ...meta, label: meta.labelRu } : meta;
 }
 
 /**

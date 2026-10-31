@@ -64,6 +64,13 @@ const translations = {
         photo_denied_title: 'Камераға рұқсат жоқ',
         photo_denied_msg: 'Фото тіркеу үшін параметрлерден камера мен фотоларға рұқсат беріңіз.',
         ai_severity_note: 'Қауіп деңгейін AI фото бойынша бағалайды — өзіңіз тауламаңыз.',
+        herd_word: 'табын',
+        share_cta: 'Sapa Jol қолданбасын жүктеп алыңыз — жол қауіпсіздігі үшін',
+        detail_photo_label: 'Фото (пайдаланушы)',
+        ai_severity_score: 'AI қауіптілік бағасы',
+        ai_pending_short: 'AI сараптама кезекте…',
+        delete_data_btn: 'Деректерімді жою',
+        delete_data_gdpr: 'GDPR — барлық деректер жойылады',
 
         // ─── SOS ─────────────────────────────────────────────
         sos_title: 'SOS — Жедел жәрдем',
@@ -215,7 +222,7 @@ const translations = {
         ai_section: 'AI ТЕКСЕРУ',
         sos_section: 'ЖЕДЕЛ БАЙЛАНЫС',
         ai_unverified_badge: 'Тексерілмеген',
-        ai_rejected: 'AI фотоны қабылдамады — метка картаған алынып тасталды',
+        ai_rejected: 'AI фотоны қабылдамады — белгі картадан алынды',
         ai_rejected_pending: 'AI фотоны растаған жоқ — шешімді қауымдастық қабылдайды',
         status_active: 'Белсенді',
         status_resolved: 'Шешілген',
@@ -328,6 +335,13 @@ const translations = {
         photo_denied_title: 'Нет доступа к камере',
         photo_denied_msg: 'Разрешите доступ к камере и фото в настройках, чтобы прикрепить снимок.',
         ai_severity_note: 'Уровень опасности оценит AI по фото — выбирать его вручную не нужно.',
+        herd_word: 'табун',
+        share_cta: 'Скачайте приложение Sapa Jol — для безопасности на дорогах',
+        detail_photo_label: 'Фото (пользователя)',
+        ai_severity_score: 'Оценка опасности AI',
+        ai_pending_short: 'AI-анализ выполняется…',
+        delete_data_btn: 'Удалить мои данные',
+        delete_data_gdpr: 'GDPR — все данные будут удалены',
 
         sos_title: 'SOS — Скорая помощь',
         sos_msg:

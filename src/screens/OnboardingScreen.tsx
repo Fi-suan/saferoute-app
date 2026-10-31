@@ -13,7 +13,7 @@ import {
     View,
     Text,
     StyleSheet,
-    Dimensions,
+    useWindowDimensions,
     TouchableOpacity,
     ScrollView,
     TextInput,
@@ -32,7 +32,6 @@ import OnboardingIllustration from '../components/OnboardingIllustration';
 import { registerDevice, loginWithPhone, hashPassword } from '../services/api';
 import { getDeviceId } from '../services/deviceId';
 
-const { width } = Dimensions.get('window');
 
 export interface OnboardingResult {
     name: string;
@@ -191,6 +190,7 @@ export default function OnboardingScreen({
 }: {
     onFinish: (d: OnboardingResult) => void;
 }) {
+    const { width } = useWindowDimensions();
     const [lang, setLang] = useState<Lang>('kk');
     const [phase, setPhase] = useState<'intro' | 'auth'>('intro');
     const [slideIdx, setSlideIdx] = useState(0);
@@ -258,11 +258,17 @@ export default function OnboardingScreen({
                     return;
                 }
                 const account = res.account;
+                // КРИТИЧНО: password_hash обязателен. Без него register_device
+                // по coalesce-семантике мог (а) оставить хэш ЧУЖОГО аккаунта на
+                // этом устройстве — верный пароль навсегда давал bad_password,
+                // (б) создать строку без хэша — «легаси», куда пускало с любым
+                // паролем. Соль — канонический телефон с сервера.
                 await registerDevice({
                     device_id: deviceId,
                     role: account.role === 'livestock_owner' ? 'owner' : 'driver',
                     name: account.name,
                     phone_number: account.phone,
+                    password_hash: await hashPassword(account.phone, password),
                 });
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 onFinish({

@@ -10,6 +10,7 @@
  */
 
 import type { LatLng } from '../hooks/useRoutePolyline';
+import { useSettingsStore } from '../hooks/useSettings';
 
 export interface DirectionsStep {
     instruction: string;
@@ -54,43 +55,110 @@ function decodePolyline(encoded: string): { latitude: number; longitude: number 
     return points;
 }
 
-function fmtDistance(meters: number): string {
-    if (meters >= 1000) return `${(meters / 1000).toFixed(meters < 10000 ? 1 : 0)} км`;
-    return `${Math.round(meters)} м`;
+/** Локализация манёвров: kk (по умолчанию) / ru — по языку из настроек */
+const L10N = {
+    kk: {
+        hours: 'сағ',
+        min: 'мин',
+        km: 'км',
+        m: 'м',
+        depart: (road: string) => (road ? `Бастау: ${road}` : 'Жолға шығыңыз'),
+        arrive: 'Мақсатқа жеттіңіз',
+        turn: {
+            left: 'Солға бұрылыңыз',
+            right: 'Оңға бұрылыңыз',
+            straight: 'Тура жүріңіз',
+            'slight left': 'Солға біртіндеп бұрылыңыз',
+            'slight right': 'Оңға біртіндеп бұрылыңыз',
+            'sharp left': 'Күшті солға бұрылыңыз',
+            'sharp right': 'Күшті оңға бұрылыңыз',
+            uturn: 'Кері бұрылыңыз',
+        },
+        roundabout: (side: string) => `Сақинада ${side} шығыңыз`,
+        merge: 'Қосылыңыз',
+        ramp: 'Айдау жолына',
+        fork: (side: string) => `${side} тармақты таңдаңыз`,
+        forkL: 'Сол',
+        forkR: 'Оң',
+        go: (road: string) => (road ? `Жүріңіз: ${road}` : 'Жалғастырыңыз'),
+    },
+    ru: {
+        hours: 'ч',
+        min: 'мин',
+        km: 'км',
+        m: 'м',
+        depart: (road: string) => (road ? `Старт: ${road}` : 'Выезжайте на дорогу'),
+        arrive: 'Вы прибыли',
+        turn: {
+            left: 'Поверните налево',
+            right: 'Поверните направо',
+            straight: 'Едьте прямо',
+            'slight left': 'Плавно налево',
+            'slight right': 'Плавно направо',
+            'sharp left': 'Резко налево',
+            'sharp right': 'Резко направо',
+            uturn: 'Развернитесь',
+        },
+        roundabout: (side: string) => `На круговом съезд ${side}`,
+        merge: 'Примыкание',
+        ramp: 'Заезд',
+        fork: (side: string) => `Выберите ${side} съезд`,
+        forkL: 'левый',
+        forkR: 'правый',
+        go: (road: string) => (road ? `Продолжайте: ${road}` : 'Продолжайте движение'),
+    },
+};
+type L = (typeof L10N)['kk'];
+
+function currentLoc(): L {
+    const lang = useSettingsStore.getState().settings.language;
+    return L10N[lang] ?? L10N.kk;
 }
 
-function fmtDuration(seconds: number): string {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.round((seconds % 3600) / 60);
-    if (h > 0) return `${h} сағ ${m} мин`;
-    return `${m} мин`;
+function fmtDistance(meters: number, loc: L): string {
+    if (meters >= 1000) return `${(meters / 1000).toFixed(meters < 10000 ? 1 : 0)} ${loc.km}`;
+    return `${Math.round(meters)} ${loc.m}`;
+}
+
+function fmtDuration(seconds: number, loc: L): string {
+    // Округляем общие минуты: иначе 4150 с рендерились как «1 сағ 60 мин»
+    const totalMin = Math.round(seconds / 60);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (h > 0) return `${h} ${loc.hours} ${m} ${loc.min}`;
+    return `${m} ${loc.min}`;
 }
 
 /** Human-readable instruction from OSRM maneuver + road name */
-function stepInstruction(step: any): string {
+function stepInstruction(step: any, loc: L): string {
     const road = step.name || '';
     const type = step.maneuver?.type ?? '';
     const modifier = step.maneuver?.modifier ?? '';
+    // «прямо», «плавно/резко», «разворот» — полноценные модификаторы OSRM;
+    // раньше всё, кроме left, становилось «поверните направо» (!)
+    const turnText =
+        loc.turn[modifier as keyof L['turn']] ?? loc.turn.straight;
+    const side = modifier.includes('left') ? loc.forkL : loc.forkR;
     switch (type) {
         case 'depart':
-            return road ? `Бастау: ${road}` : 'Жолға шығыңыз';
+            return loc.depart(road);
         case 'arrive':
-            return 'Мақсатқа жеттіңіз';
+            return loc.arrive;
         case 'turn':
         case 'end of road':
-            return `${modifier === 'left' ? 'Солға' : 'Оңға'} бұрылыңыз${road ? ` — ${road}` : ''}`;
+            return `${turnText}${road ? ` — ${road}` : ''}`;
         case 'roundabout':
         case 'rotary':
-            return `Сақинада ${modifier === 'left' ? 'солға' : 'оңға'} шығыңыз${road ? ` — ${road}` : ''}`;
+            return `${loc.roundabout(modifier.includes('left') ? loc.forkL.toLowerCase() : loc.forkR.toLowerCase())}${road ? ` — ${road}` : ''}`;
         case 'merge':
-            return `Қосылыңыз${road ? ` — ${road}` : ''}`;
+            return `${loc.merge}${road ? ` — ${road}` : ''}`;
         case 'on ramp':
         case 'off ramp':
-            return `${road || 'Айдау жолына'} кіріңіз`;
+            return `${road || loc.ramp} — ${loc.turn.straight}`;
         case 'fork':
-            return `${modifier === 'left' ? 'Сол' : 'Оң'} тармақты таңдаңыз`;
+            return loc.fork(side) + (road ? ` — ${road}` : '');
         default:
-            return road ? `Жүріңіз: ${road}` : 'Жалғастырыңыз';
+            return loc.go(road);
     }
 }
 
@@ -120,18 +188,19 @@ export async function fetchDirections(
         const leg = route.legs?.[0];
         const polyline = decodePolyline(route.geometry);
 
+        const loc = currentLoc();
         const steps: DirectionsStep[] = (leg?.steps ?? []).map((s: any) => ({
-            instruction: stepInstruction(s),
-            distance: fmtDistance(s.distance),
-            duration: fmtDuration(s.duration),
+            instruction: stepInstruction(s, loc),
+            distance: fmtDistance(s.distance, loc),
+            duration: fmtDuration(s.duration, loc),
             end: { latitude: s.maneuver.location[1], longitude: s.maneuver.location[0] },
         }));
 
         return {
             polyline,
             steps,
-            totalDistance: fmtDistance(route.distance),
-            totalDuration: fmtDuration(route.duration),
+            totalDistance: fmtDistance(route.distance, loc),
+            totalDuration: fmtDuration(route.duration, loc),
         };
     } catch {
         return null;

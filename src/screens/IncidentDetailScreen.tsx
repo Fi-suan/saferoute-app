@@ -91,9 +91,9 @@ export default function IncidentDetailScreen() {
                 ? `${meta.label} — ${ROUTE_NAMES[incident.route_id]}\n`
                 : `${meta.label}\n`) +
             `📍 ${coordStr}\n` +
-            `⚡ Қауіп деңгейі: ${t(sevCfg.key as any)}\n` +
+            `⚡ ${t('report_severity_label')}: ${t(sevCfg.key as any)}\n` +
             `${incident.description ? `💬 ${incident.description}\n` : ''}` +
-            `\n🛡️ Sapa Jol қолданбасын жүктеп алыңыз — жол қауіпсіздігі үшін`;
+            `\n🛡️ ${t('share_cta')}`;
 
         try {
             await Share.share({ message: shareText, title: t('share_title') });
@@ -133,7 +133,7 @@ export default function IncidentDetailScreen() {
                         <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
                         <View style={styles.photoBadge}>
                             <Ionicons name="camera" size={12} color={Colors.white} />
-                            <Text style={styles.photoBadgeText}>Фото (пайдаланушы)</Text>
+                            <Text style={styles.photoBadgeText}>{t('detail_photo_label')}</Text>
                         </View>
                     </TouchableOpacity>
                 )}
@@ -266,14 +266,13 @@ export default function IncidentDetailScreen() {
                                         color={Colors.text.secondary}
                                     />
                                     <Text style={styles.aiSeverityText}>
-                                        AI қауiптiлiк бағасы: {incident.ai_severity_suggestion}/5
+                                        {t('ai_severity_score')}: {incident.ai_severity_suggestion}/5
                                     </Text>
                                 </View>
                             )}
                         {!incident.ai_verified && !incident.ai_analysis && (
                             <Text style={styles.aiAnalysisText}>
-                                AI сараптамасы кезегiнде. Қауымдастық растауы болғаннан кейiн
-                                жарияланады.
+                                {t('ai_pending_short')}
                             </Text>
                         )}
                     </View>

@@ -131,6 +131,10 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
         // skipPhoto: путь «Отправить без фото» — стейт ещё мог не обновиться.
         let photo_base64: string | undefined;
         let photoFailed = false;
+        // В офлайн-очередь должен уходить СЖАТЫЙ файл (800px/JPEG), а не
+        // оригинал из галереи — иначе flush читает мегабайтный файл и роняет
+        // слабые устройства (ровно тот OOM, ради которого resize добавлен)
+        let queuedPhotoUri: string | undefined;
         if (photoUri && !skipPhoto) {
             try {
                 const resized = await ImageManipulator.manipulateAsync(
@@ -138,6 +142,7 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
                     [{ resize: { width: 800 } }],
                     { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG },
                 );
+                queuedPhotoUri = resized.uri;
                 const base64Data = await FileSystem.readAsStringAsync(resized.uri, {
                     encoding: 'base64',
                 });
@@ -184,7 +189,9 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
             severity,
             latitude: location.lat,
             longitude: location.lon,
-            photo_uri: photoUri ?? undefined,
+            // skipPhoto=true («Отправить без фото»): стейт photoUri ещё старый
+            // в замыкании — явно не тянем фото, которого на сервере не будет
+            photo_uri: skipPhoto ? undefined : (queuedPhotoUri ?? photoUri) ?? undefined,
             photo_base64,
         });
         setSubmitting(false);

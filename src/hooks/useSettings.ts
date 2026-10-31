@@ -30,7 +30,8 @@ interface SettingsStore {
     setLoaded: (v: boolean) => void;
 }
 
-const useSettingsStore = create<SettingsStore>(set => ({
+/** Глобальный стор (zustand): читается и из не-React кода (incidents.ts) */
+export const useSettingsStore = create<SettingsStore>(set => ({
     settings: DEFAULTS,
     loaded: false,
     setSettings: settings => set({ settings }),

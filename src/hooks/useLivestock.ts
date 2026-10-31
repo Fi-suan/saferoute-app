@@ -146,8 +146,15 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
     const [myLivestock, setMyLivestock] = useState<Livestock[]>([]);
     const [isManualMode, setIsManualMode] = useState(false);
     const [manualEntry, setManualEntry] = useState<Livestock | null>(null);
+    /** Зеркало manualEntry для не-React чтения из refreshLivestock */
+    const manualEntryRef = useRef<Livestock | null>(null);
+    useEffect(() => {
+        manualEntryRef.current = manualEntry;
+    }, [manualEntry]);
     /** Backend herd ID for the active manual mode session */
     const backendHerdIdRef = useRef<number | null>(null);
+    /** Зеркало isManualMode: activate/deactivate — асинхронная гонка, см. ниже */
+    const isManualModeRef = useRef(false);
     const lastLocationSentRef = useRef<number>(0);
 
     useEffect(() => {
@@ -161,7 +168,13 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
         // призрачные manual-стада (приложение владельца умерло) убираем
         cleanupStaleManualHerds().catch(() => {});
         const data = await fetchLivestockFromServer(t);
-        setLivestock(data);
+        // НЕ затираем свой manual-маркер: пока createHerd офлайн/не дошёл,
+        // серверного стада нет — полная замена стирала метку с карты владельца
+        setLivestock((prev) => {
+            const mine = manualEntryRef.current;
+            if (mine && isManualModeRef.current) return [mine, ...data.filter((l) => l.id !== mine.id)];
+            return data;
+        });
     }, []);
 
     useEffect(() => {
@@ -173,6 +186,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
     const activateManualMode = useCallback(
         async (type: Livestock['type'], count: number, name: string) => {
             if (!userLocation) return;
+            await loadRoadZones(); // кэш дорог мог ещё не загрузиться — иначе isNearRoad по пустому кэшу
             const road = isNearAnyRoadSync(userLocation.lat, userLocation.lon);
             const entry: Livestock = {
                 id: `manual-${Date.now()}`,
@@ -192,6 +206,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
             };
             setManualEntry(entry);
             setIsManualMode(true);
+            isManualModeRef.current = true;
             setLivestock((prev) => [entry, ...prev]);
 
             // Create herd on backend so other users see it
@@ -202,6 +217,13 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
                     estimated_count: count,
                     owner_name: 'manual',
                 });
+                // Гонка activate→deactivate: если владелец успел нажать
+                // «Остановить», пока createHerd был в полёте — стадо создаётся,
+                // но НИКТО его больше не деактивирует (30 мин фантома).
+                if (!isManualModeRef.current) {
+                    if (herdId) await deactivateHerd(herdId).catch(() => {});
+                    return;
+                }
                 if (herdId) {
                     backendHerdIdRef.current = herdId;
                     // Send initial location
@@ -249,6 +271,7 @@ export function useLivestock(userLocation: GeoPoint | null, ownerId = 'me'): Use
 
     const deactivateManualMode = useCallback(async () => {
         setIsManualMode(false);
+        isManualModeRef.current = false;
         if (manualEntry) {
             setLivestock((prev) => prev.filter((l) => l.id !== manualEntry.id));
         }

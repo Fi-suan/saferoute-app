@@ -101,7 +101,7 @@ export default function MapScreen() {
 
     const t = useT();
     const { showToast, ToastComponent } = useToast();
-    const { profile } = useUserProfile();
+    const { profile, loaded: profileLoaded } = useUserProfile();
     const { showDialog, DialogComponent } = useAppDialog();
     const { settings } = useSettings();
     const { addEntry: addNotifEntry } = useNotificationLog();
@@ -160,7 +160,7 @@ export default function MapScreen() {
 
     // Danger Zone — 3+ herds within 500m (drivers only)
     useEffect(() => {
-        if (dangerZoneAlert && !dangerZoneAlertedRef.current && profile.role === 'driver') {
+        if (dangerZoneAlert && !dangerZoneAlertedRef.current && profileLoaded && profile.role === 'driver') {
             dangerZoneAlertedRef.current = true;
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showDialog({
@@ -172,9 +172,11 @@ export default function MapScreen() {
             });
         }
         if (!dangerZoneAlert) dangerZoneAlertedRef.current = false;
-    }, [dangerZoneAlert, profile.role]);
+    }, [dangerZoneAlert, profile.role, profileLoaded]);
 
-    // Advance navigation step when within 80m of step endpoint
+    // Advance navigation step when within 80m of step endpoint.
+    // deps включают navResult/navStepIdx: GPS-подписка обновляется только
+    // при сдвиге ≥50 м — стоя у поворота, эффект без этих deps не сработал бы
     useEffect(() => {
         if (!navResult || !location) return;
         const step = navResult.steps[navStepIdx];
@@ -198,7 +200,7 @@ export default function MapScreen() {
                 });
             }
         }
-    }, [location?.lat, location?.lon]);
+    }, [location?.lat, location?.lon, !!navResult, navStepIdx]);
 
     // Camera follows location with tilt and heading during navigation
     useEffect(() => {
@@ -356,7 +358,7 @@ export default function MapScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         const key = `livestock_${selectedType}` as any;
         const label = t(key) || selectedType;
-        activateManualMode(selectedType, livestockCount, `${label} табуны`);
+        activateManualMode(selectedType, livestockCount, `${label} — ${t('herd_word')}`);
         setShowOwnerPanel(false);
     };
 
@@ -392,8 +394,8 @@ export default function MapScreen() {
         }
         if (!location) {
             showDialog({
-                title: t('report_error_no_location'),
-                message: '',
+                title: t('route_mode_label'),
+                message: t('report_error_no_location'),
                 icon: 'warning',
                 iconColor: Colors.alert.high,
                 buttons: [{ text: t('understand'), style: 'default' }],
@@ -468,6 +470,20 @@ export default function MapScreen() {
             ? { center: [location.lon, location.lat], zoom: 12.5 }
             : { center: [74.2, 51.96], zoom: 6.5 };
     }
+
+    // Если на монте карты GPS-фикса ещё не было (fallback-вид «вся страна»),
+    // при первом фиксируемом position один раз перелетаем на пользователя
+    const didInitialFlyRef = useRef(false);
+    useEffect(() => {
+        if (didInitialFlyRef.current || !location) return;
+        didInitialFlyRef.current = true;
+        if (initialCamRef.current!.center[0] !== 74.2) return; // уже на юзере
+        cameraRef.current?.flyTo({
+            center: [location.lon, location.lat],
+            zoom: 12.5,
+            duration: 1500,
+        });
+    }, [location?.lat]);
 
     // Полилиния маршрута → GeoJSON (MapLibre: [lng, lat])
     const routeGeoJSON = useMemo(

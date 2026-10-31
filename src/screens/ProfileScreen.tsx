@@ -33,7 +33,7 @@ import { useIncidents } from '../hooks/useIncidents';
 import { Config } from '../config';
 import { getDeviceId } from '../services/deviceId';
 import { AppResetEvent } from '../services/appReset';
-import { deleteUserData } from '../services/api';
+import { deleteUserData, registerDevice } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE } from '../constants/storage';
 import { useT } from '../i18n';
@@ -172,6 +172,15 @@ export default function ProfileScreen() {
         // смена номера локально навсегда ломает вход
         setEditError(null);
         await updateProfile({ name });
+        // Имя живёт и на сервере: иначе после переустановки/повторного входа
+        // App.tsx перезапишет профиль серверным старым именем
+        const deviceId = await getDeviceId();
+        await registerDevice({
+            device_id: deviceId,
+            role: profile.role === 'livestock_owner' ? 'owner' : 'driver',
+            name,
+            phone_number: profile.phone,
+        });
         setEditModal(false);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
@@ -216,7 +225,7 @@ export default function ProfileScreen() {
                     <TouchableOpacity style={styles.avatarWrap} onPress={openEdit}>
                         {/* 🎨 ANIMATION_SLOT: avatar_glow */}
                         <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>{profile.avatarInitials || 'ПА'}</Text>
+                            <Text style={styles.avatarText}>{profile.avatarInitials || '👤'}</Text>
                         </View>
                         <View style={styles.avatarEditBadge}>
                             <Ionicons name="pencil" size={10} color={Colors.bg.primary} />
@@ -598,9 +607,9 @@ export default function ProfileScreen() {
                         </View>
                         <View style={styles.rowBody}>
                             <Text style={[styles.rowLabel, { color: Colors.alert.critical }]}>
-                                Деректерімді жою
+                                {t('delete_data_btn')}
                             </Text>
-                            <Text style={styles.rowValue}>GDPR — барлық деректер жойылады</Text>
+                            <Text style={styles.rowValue}>{t('delete_data_gdpr')}</Text>
                         </View>
                     </TouchableOpacity>
                     <View style={styles.rowDivider} />

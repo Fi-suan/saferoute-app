@@ -69,10 +69,18 @@ export function useLocation(
     const confirmedAt = useRef<Map<number, number>>(new Map());
 
     const ALERT_TTL_MS = 24 * 60 * 60 * 1000;
+    // Диалог подтверждения: случайный свайп не должен блокировать метку на
+    // сутки — подтверждение это механизм самоочистки, переспрос через 5 мин
+    const CONFIRM_TTL_MS = 5 * 60 * 1000;
 
     const isFresh = (m: Map<number, number>, id: number): boolean => {
         const ts = m.get(id);
         return ts != null && Date.now() - ts < ALERT_TTL_MS;
+    };
+
+    const isFreshWith = (m: Map<number, number>, id: number, ttlMs: number): boolean => {
+        const ts = m.get(id);
+        return ts != null && Date.now() - ts < ttlMs;
     };
 
     const persistSeen = useCallback((alerted: Map<number, number>, confirmed: Map<number, number>) => {
@@ -183,6 +191,13 @@ export function useLocation(
                         }
                     },
                 );
+                // Утечка: подписка создаётся ПОСЛЕ await; если экран размонтирован
+                // во время запроса разрешений/GPS-фикса, cleanup уже отработал
+                // по null — и watcher жил бы вечно (батарея, GPS-индикатор)
+                if (cancelled) {
+                    sub.current?.remove();
+                    sub.current = null;
+                }
             } catch {
                 /* watch unavailable */
             }
@@ -234,10 +249,11 @@ export function useLocation(
                 dismissTimerRef.current = setTimeout(() => setNearbyAlert(null), 8000);
             }
 
-            // Диалог подтверждения 0.5 км — автору свою метку не предлагаем
+            // Диалог подтверждения 0.5 км — автору свою метку не предлагаем;
+            // TTL короткий (5 мин): подтверждение — механизм самоочистки
             if (
                 dist <= 0.5 &&
-                !isFresh(confirmedAt.current, inc.id) &&
+                !isFreshWith(confirmedAt.current, inc.id, CONFIRM_TTL_MS) &&
                 inc.reporter_device_id !== myDeviceIdRef.current
             ) {
                 confirmedAt.current.set(inc.id, Date.now());

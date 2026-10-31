@@ -27,7 +27,9 @@ const ROUTE_ENDPOINTS: Record<string, { start: LatLng; end: LatLng }> = {
         end:   { latitude: 43.240, longitude: 76.910 }, // Алматы
     },
     a21: {
-        start: { latitude: 51.180, longitude: 71.446 }, // Астана
+        // Екібастұз → Семей: раньше стартовал из АСТАНЫ — линия шла за 350 км
+        // от реального коридора (найдено ревью)
+        start: { latitude: 51.780, longitude: 75.320 }, // Екібастұз
         end:   { latitude: 50.420, longitude: 80.250 }, // Семей
     },
     e40: {
@@ -72,11 +74,11 @@ export const STATIC_WAYPOINTS: Record<string, LatLng[]> = {
         { latitude: 43.240, longitude: 76.910 },  // Алматы
     ],
     a21: [
-        { latitude: 51.180, longitude: 71.446 },
-        { latitude: 51.300, longitude: 73.000 },
-        { latitude: 51.500, longitude: 75.000 },
-        { latitude: 51.200, longitude: 77.000 },
-        { latitude: 50.800, longitude: 79.000 },
+        { latitude: 51.780, longitude: 75.320 }, // Екібастұз
+        { latitude: 51.600, longitude: 76.200 },
+        { latitude: 51.300, longitude: 77.000 },
+        { latitude: 50.900, longitude: 78.200 },
+        { latitude: 50.600, longitude: 79.400 },
         { latitude: 50.420, longitude: 80.250 },
     ],
     e40: [

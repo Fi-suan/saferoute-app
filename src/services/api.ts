@@ -155,8 +155,10 @@ export async function createHerd(params: {
     estimated_count: number;
     owner_name?: string | null;
 }): Promise<number | null> {
-    const KNOWN: AnimalType[] = ['saiga', 'horse', 'camel'];
-    const raw = params.animal_type.toLowerCase() as AnimalType;
+    // Полный набор типов из UI OwnerPanel — раньше cow/sheep/goat молча
+    // превращались в OTHER и маркер владельца «терял» животное
+    const KNOWN: string[] = ['saiga', 'horse', 'camel', 'cow', 'sheep', 'goat'];
+    const raw = params.animal_type.toLowerCase();
     const animalType = KNOWN.includes(raw) ? raw : 'other';
     const { data, error } = await supabase
         .from('herds')
@@ -224,7 +226,9 @@ function base64ToBytes(b64: string): Uint8Array {
     const lookup = new Uint8Array(256).fill(255);
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
     for (let i = 0; i < chars.length; i++) lookup[chars.charCodeAt(i)] = i;
-    lookup['='.charCodeAt(0)] = 0;
+    // '=' (padding) — НЕ нулевые биты, а маркер конца: декодируем его в 255
+    // (символ пропускается), иначе каждый файл получает 1-2 лишних нулевых байта
+    lookup['='.charCodeAt(0)] = 255;
 
     let out = new Uint8Array(Math.floor((b64.length * 3) / 4));
     let o = 0;

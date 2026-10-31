@@ -126,8 +126,12 @@ async function flushQueue(deviceId: string): Promise<void> {
     flushInFlight = (async () => {
         const queue = await loadQueue();
         if (queue.length === 0) return;
-        const failed: QueuedReport[] = [];
+        const sentKeys = new Set<string>();
         for (const report of queue) {
+            // Уникальный ключ записи: за время долгого flush (загрузка фото —
+            // секунды) submitReport мог добавить в очередь новые отчёты,
+            // и слепой saveQueue(failed) в конце их бы СТЁР
+            const key = `${report.queuedAt}|${report.optimisticId ?? ''}|${report.latitude}`;
             try {
                 // Фото из офлайн-очереди: base64 НЕ хранится в очереди
                 // (квота AsyncStorage ~6 МБ) — читаем файл в момент отправки
@@ -154,19 +158,25 @@ async function flushQueue(deviceId: string): Promise<void> {
                     photo_url: photoUrl,
                 });
                 // created === null — сервер ответил ошибкой: НЕ теряем отчёт
-                if (!created) {
-                    failed.push(report);
-                    continue;
-                }
+                if (!created) continue; // ошибка сервера — остаётся в очереди
+                sentKeys.add(key);
                 // Отправлено — убираем «призрак» оптимистичной метки
                 if (report.optimisticId != null) {
                     incidentStore.remove(report.optimisticId);
                 }
             } catch {
-                failed.push(report);
+                /* сеть — остаётся в очереди */
             }
         }
-        await saveQueue(failed);
+        // Мердж: удаляем ТОЛЬКО отправленные записи, всё добавленное
+        // параллельным submitReport сохраняем
+        const current = await loadQueue();
+        const remaining = current.filter(
+            (r) => !sentKeys.has(`${r.queuedAt}|${r.optimisticId ?? ''}|${r.latitude}`),
+        );
+        if (remaining.length !== current.length) {
+            await saveQueue(remaining);
+        }
     })();
     try {
         await flushInFlight;
@@ -220,7 +230,9 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
     }, [tab]);
 
     useEffect(() => {
-        setLoading(true);
+        // Скелетон только при ПЕРВОЙ пустой загрузке: смена таба не должна
+        // мигать скелетоном поверх уже готовых данных из store
+        if (incidentStore.get().length === 0) setLoading(true);
         refresh().finally(() => setLoading(false));
         const interval = setInterval(refresh, Config.INCIDENTS_POLL_INTERVAL_MS);
 
@@ -336,7 +348,10 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
             if (!res.ok) {
                 // Сервер не принял (rate-limit/офлайн/RLS) — откатываем
                 // оптимистичное подтверждение, иначе «Рахмет» врёт.
-                if (current) {
+                // Откат только если store ещё держит НАШИ optimistic-значения:
+                // realtime мог уже принести свежие серверные данные.
+                const now = incidentStore.get().find((i) => i.id === id);
+                if (now && current && now.confirmations_count === current.confirmations_count + 1) {
                     incidentStore.update(id, {
                         confirmations_count: current.confirmations_count,
                         is_active: current.is_active,
