@@ -84,8 +84,13 @@ export default function MapScreen() {
     const [navLoading, setNavLoading] = useState(false);
     // Fabric + react-native-maps: рендер детей карты (тайлы/маркеры/полилинии)
     // до инициализации нативной карты = нативные краши в release (rn-maps#5699,
-    // #5759, #5816). Рисуем детей только после onMapReady.
+    // #5759, #5816). Рисуем детей только после onMapReady. НО onMapReady в
+    // release на Fabric может не прийти — страховочный таймаут снимает гейт.
     const [mapReady, setMapReady] = useState(false);
+    useEffect(() => {
+        const t = setTimeout(() => setMapReady(true), 2000);
+        return () => clearTimeout(t);
+    }, []);
     const dangerZoneAlertedRef = useRef(false);
 
     const t = useT();
@@ -448,12 +453,12 @@ export default function MapScreen() {
                             zIndex={-1}
                         />
                         {showIncidents && (
-                            // Ремоунт слоя ТОЛЬКО при смене фильтра: на каждое realtime-
-                            // событие пересоздавать все маркеры нельзя (джанк/гонки).
-                            // Добавление/удаление отдельных маркеров обрабатывают
-                            // внутренние key={`inc-${inc.id}`}.
+                            // Ремоунт слоя при изменении НАБОРА меток: динамическое
+                            // добавление/удаление отдельных маркеров на Fabric
+                            // крашит ("child already has a parent", rn-maps addFeature).
+                            // Полный ремоунт слоя — проверенный безопасный паттерн.
                             <IncidentMarkers
-                                key={`layer-${filter}`}
+                                key={`inc-${displayedIncidents.map((i) => i.id).join(',')}`}
                                 incidents={displayedIncidents}
                                 onCalloutPress={goToDetail}
                             />
