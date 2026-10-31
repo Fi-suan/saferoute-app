@@ -447,10 +447,6 @@ export default function MapScreen() {
                             maximumZ={19}
                             zIndex={-1}
                         />
-                        {/* Атрибуция обязательна по лицензии CARTO/OSM */}
-                        <View style={styles.tileAttribution} pointerEvents="none">
-                            <Text style={styles.tileAttributionText}>© OpenStreetMap · CARTO</Text>
-                        </View>
                         {showIncidents && (
                             // Ремоунт слоя ТОЛЬКО при смене фильтра: на каждое realtime-
                             // событие пересоздавать все маркеры нельзя (джанк/гонки).
@@ -481,6 +477,13 @@ export default function MapScreen() {
                     </>
                 )}
             </MapView>
+
+            {/* Атрибуция CARTO/OSM (обязательна по лицензии). ВАЖНО: снаружи
+                MapView — обычный View внутри MapView на Fabric = нативный краш
+                "child already has a parent" (документированная причина). */}
+            <View style={styles.tileAttribution} pointerEvents="none">
+                <Text style={styles.tileAttributionText}>© OpenStreetMap · CARTO</Text>
+            </View>
 
             <View style={styles.topStack} pointerEvents="box-none">
                 <MapTopBar
