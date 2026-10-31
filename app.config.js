@@ -58,8 +58,24 @@ module.exports = {
     extra: {
       googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
       sentryDsn: process.env.SENTRY_DSN,
+      eas: {
+        projectId: 'a70c8ef6-0258-4fff-9c1f-682d7a28b833',
+      },
     },
     plugins: [
+      // SDK 58 включает R8-минификацию в release по умолчанию — она вырезает
+      // конструктор WorkDatabase_Impl (WorkManager/Room от react-native-maps),
+      // и приложение крашится НА СТАРТЕ до запуска JS (expo/expo#51337,
+      // react-native-maps#6044). Отключаем минификацию.
+      [
+        'expo-build-properties',
+        {
+          android: {
+            enableMinifyInReleaseBuilds: false,
+            enableShrinkResourcesInReleaseBuilds: false,
+          },
+        },
+      ],
       [
         'expo-location',
         {
