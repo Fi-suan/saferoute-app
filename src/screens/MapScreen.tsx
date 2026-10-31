@@ -588,8 +588,9 @@ export default function MapScreen() {
                 />
             )}
 
-            {/* Right buttons: compass + locate */}
-            <View style={styles.rightBtns}>
+            {/* Right buttons: compass + locate. В режиме навигации FAB уезжает
+                наверх (bottom: 210) и перекрывал эти кнопки — поднимаем и их. */}
+            <View style={[styles.rightBtns, !!navResult && styles.rightBtnsNav]}>
                 <TouchableOpacity style={styles.mapBtn} onPress={handleNorthReset}>
                     <Ionicons name="compass-outline" size={20} color={Colors.text.secondary} />
                 </TouchableOpacity>
@@ -710,6 +711,8 @@ const styles = StyleSheet.create({
         right: Spacing.md,
         gap: 8,
     },
+    // FAB в режиме навигации: bottom 210 + высота 60 → кнопки выше 286
+    rightBtnsNav: { bottom: 292 },
     mapBtn: {
         backgroundColor: Colors.bg.secondary,
         borderRadius: Radius.full,
