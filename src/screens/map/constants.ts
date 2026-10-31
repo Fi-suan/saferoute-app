@@ -4,27 +4,12 @@
  */
 import { LivestockType } from '../../constants/livestock';
 
-/** Nothing Phone dark map — readability-tuned. */
-export const DARK_MAP_STYLE = [
-    { elementType: 'geometry',                                                   stylers: [{ color: '#0A0A0A' }] },
-    { elementType: 'labels.text.stroke',                                         stylers: [{ color: '#000000' }] },
-    { elementType: 'labels.text.fill',                                           stylers: [{ color: '#888888' }] },
-    { featureType: 'administrative.locality',  elementType: 'labels.text.fill', stylers: [{ color: '#BBBBBB' }] },
-    { featureType: 'road',                     elementType: 'geometry',         stylers: [{ color: '#3A3A3A' }] },
-    { featureType: 'road',                     elementType: 'geometry.stroke',  stylers: [{ color: '#222222' }] },
-    { featureType: 'road',                     elementType: 'labels.text.fill', stylers: [{ color: '#A0A0A0' }] },
-    { featureType: 'road.highway',             elementType: 'geometry',         stylers: [{ color: '#4A4A4A' }] },
-    { featureType: 'road.highway',             elementType: 'geometry.stroke',  stylers: [{ color: '#2ECC7155' }] },
-    { featureType: 'road.highway',             elementType: 'labels.text.fill', stylers: [{ color: '#2ECC71' }] },
-    { featureType: 'road.arterial',            elementType: 'geometry',         stylers: [{ color: '#3F3F3F' }] },
-    { featureType: 'transit',                  elementType: 'geometry',         stylers: [{ color: '#1A1A1A' }] },
-    { featureType: 'water',                    elementType: 'geometry',         stylers: [{ color: '#050505' }] },
-    { featureType: 'water',                    elementType: 'labels.text.fill', stylers: [{ color: '#2A2A2A' }] },
-    { featureType: 'poi',                      elementType: 'geometry',         stylers: [{ color: '#111111' }] },
-    { featureType: 'poi',                      elementType: 'labels.text.fill', stylers: [{ color: '#555555' }] },
-    { featureType: 'poi.park',                 elementType: 'geometry',         stylers: [{ color: '#0A0A0A' }] },
-    { featureType: 'landscape',                elementType: 'geometry',         stylers: [{ color: '#0A0A0A' }] },
-];
+/**
+ * Тёмная векторная карта OpenFreeMap (OSM-данные, без ключей и аккаунтов).
+ * Альтернативы: https://tiles.openfreemap.org/styles/positron (светлая),
+ * /liberty (классическая).
+ */
+export const OPENFREEMAP_DARK_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 
 /** Отображаемые названия маршрутов */
 export const ROUTE_NAMES: Record<string, string> = {

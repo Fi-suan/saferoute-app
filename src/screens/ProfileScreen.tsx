@@ -125,9 +125,16 @@ export default function ProfileScreen() {
     const [editPhone, setEditPhone] = useState('');
     const [editError, setEditError] = useState<string | null>(null);
     const [activeRouteId, setActiveRouteId] = useState<string>('a17');
-    const [deviceId, setDeviceId] = useState(t('device_id_loading'));
+    const [deviceId, setDeviceId] = useState('');
     const [myIncidentsModal, setMyIncidentsModal] = useState(false);
     const [showDeviceId, setShowDeviceId] = useState(false);
+
+    // Device ID нужен сразу: счётчик «Мои метки» сравнивает reporter_device_id.
+    // Раньше ID подгружался только по тапу на строку — у новых пользователей
+    // счётчик вечно показывал 0.
+    React.useEffect(() => {
+        getDeviceId().then((id) => setDeviceId(id));
+    }, []);
 
     // Загружаем сохранённый маршрут
     React.useEffect(() => {

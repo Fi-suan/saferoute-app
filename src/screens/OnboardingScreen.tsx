@@ -245,12 +245,19 @@ export default function OnboardingScreen({
             const deviceId = await getDeviceId();
 
             if (mode === 'login') {
-                const account = await loginWithPhone(phone, password);
-                if (!account) {
+                const res = await loginWithPhone(phone, password);
+                if ('network' in res) {
+                    // Сеть/сервер: НЕ «неверный пароль» — честное сообщение
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                    setErrors({ submit: ui.networkErr });
+                    return;
+                }
+                if (!('account' in res)) {
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                     setErrors({ login: ui.loginWrong });
                     return;
                 }
+                const account = res.account;
                 await registerDevice({
                     device_id: deviceId,
                     role: account.role === 'livestock_owner' ? 'owner' : 'driver',
@@ -284,8 +291,10 @@ export default function OnboardingScreen({
             }
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onFinish(profile);
-        } catch (err: any) {
-            setErrors({ submit: err?.message ?? 'Error' });
+        } catch {
+            // Сырой err.message (английский «Error»/текст Supabase) пользователю
+            // не показываем — честное сообщение о сети/сервере
+            setErrors({ submit: ui.networkErr });
         } finally {
             setLoading(false);
         }

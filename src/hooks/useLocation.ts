@@ -104,8 +104,10 @@ export function useLocation(
             setHasPermission(status === 'granted');
 
             if (status !== 'granted') {
-                // Default fallback coords (Pavlodar)
-                setLocation({ lat: 52.2855, lon: 76.9675, heading: 0 });
+                // Отказ в GPS: НЕ подставляем фейковые координаты Павлодара —
+                // иначе метки/алерты считались бы от чужой точки, а карта
+                // врала «вы здесь». location остаётся null, UI честно просит
+                // включить геолокацию (диалог с кнопкой «Открыть настройки»).
                 setLoading(false);
                 return;
             }
@@ -123,10 +125,9 @@ export function useLocation(
                     setLoading(false);
                 }
             } catch {
-                if (!cancelled) {
-                    setLocation({ lat: 52.2855, lon: 76.9675, heading: 0 });
-                    setLoading(false);
-                }
+                // GPS ещё не поймал спутники — оставляем null, wait-позиция
+                // придёт из watchPositionAsync ниже
+                if (!cancelled) setLoading(false);
             }
 
             try {

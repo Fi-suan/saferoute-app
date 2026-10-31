@@ -269,7 +269,9 @@ export async function fetchIncidents(tab: 'active' | 'all' = 'active'): Promise<
         .limit(200);
     if (tab === 'active') q = q.eq('is_active', true);
     const { data, error } = await q;
-    if (error || !data) return [];
+    // Ошибка сервера ≠ «меток нет». Бросаем исключение, чтобы вызывающий код
+    // мог ОТЛИЧИТЬ пустой список от сбоя и не стирал существующие метки.
+    if (error || !data) throw new Error(error?.message ?? 'fetch_incidents_failed');
     return (data as IncidentRow[]).map(normalizeIncident);
 }
 
@@ -324,12 +326,16 @@ export async function confirmIncidentOnServer(
     incidentId: number,
     deviceId: string,
     isResolved: boolean,
-): Promise<void> {
-    await supabase.rpc('confirm_incident', {
+): Promise<{ ok: boolean; error?: string }> {
+    // supabase-js НЕ бросает исключение при RPC-ошибке (rate-limit, RLS,
+    // офлайн) — проверяем error явно, иначе подтверждение теряется молча.
+    const { error } = await supabase.rpc('confirm_incident', {
         p_incident_id: incidentId,
         p_device_id: deviceId,
         p_is_resolved: isResolved,
     });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
 }
 
 // ── Devices ────────────────────────────────────────────────────────────────────
@@ -375,7 +381,10 @@ export interface LoginResult {
  *  Hash comparison happens server-side (login_device RPC); the devices table
  *  is not readable by clients at all. The hash salt is the phone as typed at
  *  registration, so we send candidate hashes for every plausible format. */
-export async function loginWithPhone(phone: string, password: string): Promise<LoginResult | null> {
+export async function loginWithPhone(
+    phone: string,
+    password: string,
+): Promise<{ account: LoginResult } | { network: true; wrong: false } | { wrong: true }> {
     const digits = phone.replace(/\s/g, '');
     const tail = digits.slice(-10);
     const salts = [...new Set([digits, `+7${tail}`, `8${tail}`, `7${tail}`, tail])];
@@ -389,11 +398,16 @@ export async function loginWithPhone(phone: string, password: string): Promise<L
         // Легаси-аккаунт без пароля: введённый пароль становится постоянным
         p_new_password_hash: candidates[0],
     });
-    if (error || !data?.ok) return null;
+    // Различаем «неверный пароль» и «сервер недоступен»: офлайн-пользователь
+    // не должен часами «подбирать пароль».
+    if (error) return { network: true, wrong: false };
+    if (!data?.ok) return { wrong: true };
     return {
-        name: data.name || 'Пайдаланушы',
-        phone: data.phone ?? digits,
-        role: data.role?.toLowerCase?.() === 'owner' ? 'livestock_owner' : 'driver',
+        account: {
+            name: data.name || 'Пайдаланушы',
+            phone: data.phone ?? digits,
+            role: data.role?.toLowerCase?.() === 'owner' ? 'livestock_owner' : 'driver',
+        },
     };
 }
 

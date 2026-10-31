@@ -18,6 +18,7 @@ import {
     ScrollView,
     ActivityIndicator,
     Image,
+    Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -74,7 +75,26 @@ export default function ReportModal({ visible, onClose, location, onSubmit, onSu
         }
         // Галерея
         const lib = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!lib.granted) return;
+        if (!lib.granted) {
+            // Раньше здесь был молчаливый return — тап «не работал». Честно
+            // объясняем и даём путь в настройки.
+            showDialog({
+                title: t('photo_denied_title'),
+                message: t('photo_denied_msg'),
+                icon: 'camera',
+                iconColor: Colors.alert.high,
+                buttons: [
+                    {
+                        text: t('open_settings'),
+                        icon: 'settings',
+                        style: 'default',
+                        onPress: () => Linking.openSettings().catch(() => undefined),
+                    },
+                    { text: t('understand'), style: 'cancel' },
+                ],
+            });
+            return;
+        }
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: 'images' as const,
             quality: 0.6,

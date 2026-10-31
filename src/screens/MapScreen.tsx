@@ -4,9 +4,17 @@
  * Orchestrator-уровень: хуки, state, эффекты, обработчики.
  * Вся UI-разметка вынесена в src/screens/map/* (sub-components).
  */
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Vibration } from 'react-native';
-import MapView, { Polyline, Camera, UrlTile } from 'react-native-maps';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Vibration, Linking } from 'react-native';
+import {
+    Map as MGLMapView,
+    Camera as MGLCamera,
+    GeoJSONSource,
+    Layer,
+    UserLocation,
+    MapRef,
+    CameraRef,
+} from '@maplibre/maplibre-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -41,6 +49,7 @@ import {
     ROUTE_ENDPOINTS,
     ROUTE_WAYPOINTS,
     ROAD_STATUS_COLOR,
+    OPENFREEMAP_DARK_STYLE,
     FilterType,
 } from './map/constants';
 import { IncidentMarkers, LivestockMarkers } from './map/MapMarkers';
@@ -54,6 +63,11 @@ type NavProp = CompositeNavigationProp<
     BottomTabNavigationProp<Record<string, undefined>>,
     NativeStackNavigationProp<RootStackParamList>
 >;
+
+/** Открывает системные настройки приложения (разрешения GPS/камеры) */
+function openAppSettings() {
+    Linking.openSettings().catch(() => undefined);
+}
 
 /** Haversine distance in meters (для шагов навигации) */
 function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -70,7 +84,8 @@ function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): num
 
 export default function MapScreen() {
     const navigation = useNavigation<NavProp>();
-    const mapRef = useRef<MapView>(null);
+    const mapRef = useRef<MapRef>(null);
+    const cameraRef = useRef<CameraRef>(null);
     const [filter, setFilter] = useState<FilterType>('all');
     const [showReport, setShowReport] = useState(false);
     const [showOwnerPanel, setShowOwnerPanel] = useState(false);
@@ -82,15 +97,6 @@ export default function MapScreen() {
     const [navStepIdx, setNavStepIdx] = useState(0);
     const [navProgress, setNavProgress] = useState(0);
     const [navLoading, setNavLoading] = useState(false);
-    // Fabric + react-native-maps: рендер детей карты (тайлы/маркеры/полилинии)
-    // до инициализации нативной карты = нативные краши в release (rn-maps#5699,
-    // #5759, #5816). Рисуем детей только после onMapReady. НО onMapReady в
-    // release на Fabric может не прийти — страховочный таймаут снимает гейт.
-    const [mapReady, setMapReady] = useState(false);
-    useEffect(() => {
-        const t = setTimeout(() => setMapReady(true), 2000);
-        return () => clearTimeout(t);
-    }, []);
     const dangerZoneAlertedRef = useRef(false);
 
     const t = useT();
@@ -199,15 +205,13 @@ export default function MapScreen() {
         if (!navResult || !location) return;
         // Android отдаёт heading = -1 («нет данных») — не дёргаем камеру им
         const heading = location.heading != null && location.heading >= 0 ? location.heading : 0;
-        mapRef.current?.animateCamera(
-            {
-                center: { latitude: location.lat, longitude: location.lon },
-                zoom: 16,
-                pitch: 45,
-                heading,
-            } as Camera,
-            { duration: 600 },
-        );
+        cameraRef.current?.easeTo({
+            center: [location.lon, location.lat],
+            zoom: 16,
+            pitch: 45,
+            bearing: heading,
+            duration: 600,
+        });
     }, [location?.lat, location?.lon, location?.heading, !!navResult]);
 
     // Реальный прогресс навигации: пройденное расстояние вдоль полилинии
@@ -249,7 +253,19 @@ export default function MapScreen() {
         const incident = confirmDialog;
         setConfirmDialog(null);
         dismissConfirmCandidate();
-        await confirmIncident(incident.id, isResolved);
+        const ok = await confirmIncident(incident.id, isResolved);
+        if (!ok) {
+            // Сервер не принял (офлайн/rate-limit) — честно сообщаем, оптимистичный
+            // счётчик уже откачен хуком
+            showDialog({
+                title: t('confirm_failed'),
+                message: t('confirm_failed_msg'),
+                icon: 'cloud-offline',
+                iconColor: Colors.alert.medium,
+                buttons: [{ text: t('understand'), style: 'default' }],
+            });
+            return;
+        }
         if (isResolved)
             showDialog({
                 title: t('confirm_thanks'),
@@ -269,6 +285,21 @@ export default function MapScreen() {
 
     const handleSOSLongPress = () => {
         Vibration.vibrate([0, 100, 80, 200, 80, 400, 80, 600]);
+        // Без GPS-разрешения координаты — фолбэк-точка: SOS-метка «ДТП» там
+        // была бы ложью и спамила бы чужой район. Требуем честную геолокацию.
+        if (!hasPermission) {
+            showDialog({
+                title: t('gps_denied_title'),
+                message: t('gps_denied_msg'),
+                icon: 'location',
+                iconColor: Colors.alert.high,
+                buttons: [
+                    { text: t('open_settings'), icon: 'settings', style: 'default', onPress: openAppSettings },
+                    { text: t('understand'), style: 'cancel' },
+                ],
+            });
+            return;
+        }
         showDialog({
             title: t('sos_title'),
             message: t('sos_msg'),
@@ -280,14 +311,32 @@ export default function MapScreen() {
                     icon: 'location',
                     style: 'default',
                     onPress: async () => {
-                        if (location) {
-                            await submitReport({
-                                incident_type: 'crash',
-                                description: t('sos_marker_desc'),
-                                severity: 5,
-                                latitude: location.lat,
-                                longitude: location.lon,
+                        if (!location) {
+                            showDialog({
+                                title: t('sos_failed'),
+                                message: t('report_error_no_location'),
+                                icon: 'warning',
+                                iconColor: Colors.alert.high,
+                                buttons: [{ text: t('understand'), style: 'default' }],
                             });
+                            return;
+                        }
+                        const res = await submitReport({
+                            incident_type: 'crash',
+                            description: t('sos_marker_desc'),
+                            severity: 5,
+                            latitude: location.lat,
+                            longitude: location.lon,
+                        });
+                        if (!res.ok) {
+                            showDialog({
+                                title: t('sos_failed'),
+                                message: t('sos_failed_msg'),
+                                icon: 'warning',
+                                iconColor: Colors.alert.high,
+                                buttons: [{ text: t('understand'), style: 'default' }],
+                            });
+                            return;
                         }
                         showDialog({
                             title: t('sos_placed'),
@@ -317,23 +366,21 @@ export default function MapScreen() {
         setShowOwnerPanel(false);
     };
 
-    const handleNorthReset = () => {
+    const handleNorthReset = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        mapRef.current?.animateCamera({ heading: 0, pitch: 0 } as Camera, { duration: 300 });
+        const center = await mapRef.current?.getCenter();
+        if (!center) return;
+        cameraRef.current?.easeTo({ center, bearing: 0, pitch: 0, duration: 300 });
     };
 
     const handleLocateMe = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         if (!location) return;
-        mapRef.current?.animateToRegion(
-            {
-                latitude: location.lat,
-                longitude: location.lon,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-            },
-            500,
-        );
+        cameraRef.current?.easeTo({
+            center: [location.lon, location.lat],
+            zoom: 13,
+            duration: 500,
+        });
     };
 
     const handleToggleNavigation = async () => {
@@ -390,7 +437,15 @@ export default function MapScreen() {
                 message: t('gps_denied_msg'),
                 icon: 'location',
                 iconColor: Colors.alert.high,
-                buttons: [{ text: t('understand'), style: 'default' }],
+                buttons: [
+                    {
+                        text: t('open_settings'),
+                        icon: 'settings',
+                        style: 'default',
+                        onPress: openAppSettings,
+                    },
+                    { text: t('understand'), style: 'cancel' },
+                ],
             });
             return;
         }
@@ -405,14 +460,34 @@ export default function MapScreen() {
     const showLivestock = filter === 'all' || filter === 'livestock';
     const routeCoords = navResult ? navResult.polyline : cachedPolyline;
 
-    const initialRegion = location
-        ? {
-              latitude: location.lat,
-              longitude: location.lon,
-              latitudeDelta: 0.05,
-              longitudeDelta: 0.05,
-          }
-        : { latitude: 51.96, longitude: 74.2, latitudeDelta: 2.5, longitudeDelta: 4 };
+    // Начальный вид камеры фиксируем один раз при монтировании карты (MapLibre
+    // Camera — управляемый компонент: пропсы обновляли бы центр на каждый GPS-фикс).
+    const initialCamRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+    if (initialCamRef.current === null) {
+        initialCamRef.current = location
+            ? { center: [location.lon, location.lat], zoom: 12.5 }
+            : { center: [74.2, 51.96], zoom: 6.5 };
+    }
+
+    // Полилиния маршрута → GeoJSON (MapLibre: [lng, lat])
+    const routeGeoJSON = useMemo(
+        () => ({
+            type: 'FeatureCollection' as const,
+            features: [
+                {
+                    type: 'Feature' as const,
+                    properties: { color: ROAD_STATUS_COLOR[roadStatus] },
+                    geometry: {
+                        type: 'LineString' as const,
+                        coordinates: routeCoords.map(
+                            (c) => [c.longitude, c.latitude] as [number, number],
+                        ),
+                    },
+                },
+            ],
+        }),
+        [routeCoords, roadStatus],
+    );
 
     // ── Render ────────────────────────────────────────────────────────────────
 
@@ -432,62 +507,61 @@ export default function MapScreen() {
 
     return (
         <View style={styles.container}>
-            <MapView
+            {/* MapLibre + OpenFreeMap: тёмная карта на OSM-данных, БЕЗ Google
+                SDK и ключей (react-native-maps на Android без Google-ключа
+                рендерит только чёрный экран — UrlTile не на чём рисовать). */}
+            <MGLMapView
                 ref={mapRef}
                 style={styles.map}
-                initialRegion={initialRegion}
-                showsUserLocation
-                showsMyLocationButton={false}
-                showsCompass={false}
-                userInterfaceStyle="dark"
-                /* Бесплатные открытые карты вместо Google-тайлов (без биллинга):
-                   пустая подложка + наложение тёмных тайлов CARTO на OSM-данных. */
-                mapType="none"
-                onMapReady={() => setMapReady(true)}
+                mapStyle={OPENFREEMAP_DARK_STYLE}
+                attribution={false}
+                logo={false}
+                compass={false}
+                scaleBar={false}
             >
-                {mapReady && (
-                    <>
-                        <UrlTile
-                            urlTemplate="https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-                            maximumZ={19}
-                            zIndex={-1}
-                        />
-                        {showIncidents && (
-                            // Ремоунт слоя при изменении НАБОРА меток: динамическое
-                            // добавление/удаление отдельных маркеров на Fabric
-                            // крашит ("child already has a parent", rn-maps addFeature).
-                            // Полный ремоунт слоя — проверенный безопасный паттерн.
-                            <IncidentMarkers
-                                key={`inc-${displayedIncidents.map((i) => i.id).join(',')}`}
-                                incidents={displayedIncidents}
-                                onCalloutPress={goToDetail}
-                            />
-                        )}
-                        {showLivestock && <LivestockMarkers livestock={livestock} />}
+                <MGLCamera
+                    ref={cameraRef}
+                    center={initialCamRef.current.center}
+                    zoom={initialCamRef.current.zoom}
+                    duration={0}
+                />
+                <UserLocation />
 
-                {/* Route polyline (white backing layer for clarity) */}
-                <Polyline
-                    coordinates={routeCoords}
-                    strokeColor="rgba(255,255,255,0.12)"
-                    strokeWidth={8}
-                    geodesic
-                />
-                <Polyline
-                    coordinates={routeCoords}
-                    strokeColor={ROAD_STATUS_COLOR[roadStatus]}
-                    strokeWidth={4}
-                    lineDashPattern={roadStatus === 'closed' ? [10, 6] : undefined}
-                    geodesic
-                />
-                    </>
+                {showIncidents && (
+                    <IncidentMarkers incidents={displayedIncidents} onCalloutPress={goToDetail} />
                 )}
-            </MapView>
+                {showLivestock && <LivestockMarkers livestock={livestock} />}
 
-            {/* Атрибуция CARTO/OSM (обязательна по лицензии). ВАЖНО: снаружи
-                MapView — обычный View внутри MapView на Fabric = нативный краш
-                "child already has a parent" (документированная причина). */}
+                {/* Route polyline: белая подложка + цветной слой по статусу дороги */}
+                <GeoJSONSource id="route-src" data={routeGeoJSON}>
+                    <Layer
+                        id="route-backing"
+                        type="line"
+                        style={{
+                            lineColor: 'rgba(255,255,255,0.12)',
+                            lineWidth: 8,
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                        }}
+                    />
+                    <Layer
+                        id="route-main"
+                        type="line"
+                        style={{
+                            lineColor: ['get', 'color'],
+                            lineWidth: 4,
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                            ...(roadStatus === 'closed' ? { lineDasharray: [2.5, 1.5] } : {}),
+                        }}
+                    />
+                </GeoJSONSource>
+            </MGLMapView>
+
+            {/* Атрибуция OSM обязательна по лицензии (OpenFreeMap — OSM-данные).
+                ВАЖНО: снаружи MapView, не как ребёнь карты. */}
             <View style={styles.tileAttribution} pointerEvents="none">
-                <Text style={styles.tileAttributionText}>© OpenStreetMap · CARTO</Text>
+                <Text style={styles.tileAttributionText}>© OpenStreetMap contributors</Text>
             </View>
 
             <View style={styles.topStack} pointerEvents="box-none">

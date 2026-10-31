@@ -77,20 +77,22 @@ interface UseIncidentsReturn {
     submitReport: (
         params: SubmitReportParams,
     ) => Promise<{ ok: boolean; error?: string; queued?: boolean }>;
-    confirmIncident: (id: number, isResolved: boolean) => Promise<void>;
+    confirmIncident: (id: number, isResolved: boolean) => Promise<boolean>;
     pendingReportsCount: number;
 }
 
-async function fetchFromServer(
-    tab: 'active' | 'all',
-): Promise<{ data: Incident[]; online: boolean }> {
+async function fetchFromServer(): Promise<{ data: Incident[]; online: boolean }> {
     try {
-        const data = await fetchIncidents(tab);
+        // ВСЕГДА фетчим полный список: MapScreen ('active') и ProfileScreen
+        // ('all') делят один store — фетч по табу каждым экраном заставлял
+        // store «мигать» активным/полным набором каждые 15 с (гонка табов).
+        // Фильтрация active/all — в потребителях (подписка на store ниже).
+        const data = await fetchIncidents('all');
         if (Array.isArray(data)) {
             return { data, online: true };
         }
     } catch {
-        /* offline — вернём пустой список */
+        /* offline / серверная ошибка — вернём online:false, store не трогаем */
     }
     return { data: [], online: false };
 }
@@ -104,11 +106,14 @@ async function loadQueue(): Promise<QueuedReport[]> {
     }
 }
 
-async function saveQueue(queue: QueuedReport[]): Promise<void> {
+async function saveQueue(queue: QueuedReport[]): Promise<boolean> {
     try {
         await AsyncStorage.setItem(STORAGE.REPORT_QUEUE, JSON.stringify(queue));
+        return true;
     } catch {
-        /* ignore */
+        // Переполнение квоты и т.п.: молча глотать нельзя — репорт «в очереди»
+        // на самом деле не сохранён и исчезнет при перезапуске.
+        return false;
     }
 }
 
@@ -197,7 +202,7 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
 
     const refresh = useCallback(async () => {
         const seq = ++refreshSeq.current;
-        const { data, online } = await fetchFromServer(tab);
+        const { data, online } = await fetchFromServer();
         if (seq !== refreshSeq.current) return; // уже приземлился более свежий refresh
         setIsOnline(online);
         // Сетевой сбой: НЕ стираем существующие метки (иначе при любом
@@ -292,13 +297,24 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
                 // base64 не храним (квота AsyncStorage), при flush прочитаем файл
                 const { photo_base64, ...queueParams } = params;
                 queue.push({ ...queueParams, queuedAt: new Date().toISOString(), optimisticId: optimistic.id });
-                await saveQueue(queue);
+                const saved = await saveQueue(queue);
+                if (!saved) {
+                    incidentStore.remove(optimistic.id);
+                    return { ok: false, error: 'queue_save_failed' };
+                }
                 setPendingReportsCount(queue.length);
                 return { ok: true, queued: true };
             } catch {
                 const queue = await loadQueue();
-                queue.push({ ...params, queuedAt: new Date().toISOString(), optimisticId: optimistic.id });
-                await saveQueue(queue);
+                // base64 вырезаем и здесь: мегабайтные записи переполняют квоту
+                // AsyncStorage (~6 МБ); flush перечитает файл по photo_uri
+                const { photo_base64, ...queueParams } = params;
+                queue.push({ ...queueParams, queuedAt: new Date().toISOString(), optimisticId: optimistic.id });
+                const saved = await saveQueue(queue);
+                if (!saved) {
+                    incidentStore.remove(optimistic.id);
+                    return { ok: false, error: 'queue_save_failed' };
+                }
                 setPendingReportsCount(queue.length);
                 return { ok: true, queued: true };
             }
@@ -307,7 +323,7 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
     );
 
     const confirmIncident = useCallback(
-        async (id: number, isResolved: boolean) => {
+        async (id: number, isResolved: boolean): Promise<boolean> => {
             const deviceId = await getDeviceId();
             const current = incidentStore.get().find((i) => i.id === id);
             if (current) {
@@ -316,12 +332,20 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
                     is_active: isResolved ? current.confirmations_count + 1 < 3 : true,
                 });
             }
-            try {
-                await confirmIncidentOnServer(id, deviceId, isResolved);
-                await refresh();
-            } catch {
-                /* store уже обновлён оптимистично */
+            const res = await confirmIncidentOnServer(id, deviceId, isResolved);
+            if (!res.ok) {
+                // Сервер не принял (rate-limit/офлайн/RLS) — откатываем
+                // оптимистичное подтверждение, иначе «Рахмет» врёт.
+                if (current) {
+                    incidentStore.update(id, {
+                        confirmations_count: current.confirmations_count,
+                        is_active: current.is_active,
+                    });
+                }
+                return false;
             }
+            await refresh();
+            return true;
         },
         [refresh],
     );

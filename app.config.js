@@ -6,7 +6,7 @@ module.exports = {
   expo: {
     name: 'Sapa Jol',
     slug: 'saferoute-app',
-    version: '1.1.0',
+    version: '1.2.0',
     orientation: 'portrait',
     icon: './assets/image.png',
     userInterfaceStyle: 'dark',
@@ -45,28 +45,23 @@ module.exports = {
         'VIBRATE',
         'POST_NOTIFICATIONS',
       ],
-      config: {
-        googleMaps: {
-          apiKey: process.env.GOOGLE_MAPS_API_KEY,
-        },
-      },
+      // react-native-maps удалён (Google SDK без биллинга = чёрная карта);
+      // ключ Google Maps больше не нужен — карты MapLibre/OpenFreeMap.
       privacyPolicyUrl: 'https://github.com/Fi-suan/saferoute-app/blob/master/privacy.html',
     },
     web: {
       favicon: './assets/image.png',
     },
     extra: {
-      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
       sentryDsn: process.env.SENTRY_DSN,
       eas: {
         projectId: 'a70c8ef6-0258-4fff-9c1f-682d7a28b833',
       },
     },
     plugins: [
-      // SDK 58 включает R8-минификацию в release по умолчанию — она вырезает
-      // конструктор WorkDatabase_Impl (WorkManager/Room от react-native-maps),
-      // и приложение крашится НА СТАРТЕ до запуска JS (expo/expo#51337,
-      // react-native-maps#6044). Отключаем минификацию.
+      // SDK 58 включает R8-минификацию в release по умолчанию; при поиске
+      // крашей на старте (rn-maps#6044) она была отключена. Пока держим off —
+      // стабильность важнее размера APK для тестеров.
       [
         'expo-build-properties',
         {
@@ -93,6 +88,9 @@ module.exports = {
         },
       ],
       'expo-secure-store',
+      // Карты: MapLibre (new-arch native), тайлы OpenFreeMap — Google SDK и
+      // ключи не нужны (react-native-maps на Android без Google-ключа мёртв).
+      '@maplibre/maplibre-react-native',
     ],
   },
 };

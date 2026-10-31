@@ -30,6 +30,7 @@ import { useNavigation, useRoute as useNavRoute } from '@react-navigation/native
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Spacing, Radius, Shadow } from '../constants/colors';
 import { getIncidentMeta, Incident } from '../constants/incidents';
+import { ROUTE_NAMES } from './map/constants';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { useAppDialog } from '../components/AppDialog';
 import { useState, useEffect, useCallback } from 'react';
@@ -86,7 +87,9 @@ export default function IncidentDetailScreen() {
         const coordStr = `${incident.latitude.toFixed(4)}°N, ${incident.longitude.toFixed(4)}°E`;
         const shareText =
             `⚠️ SafeRoute / Sapa Jol\n` +
-            `${meta.label} — A-17 трассасы\n` +
+            (incident.route_id && ROUTE_NAMES[incident.route_id]
+                ? `${meta.label} — ${ROUTE_NAMES[incident.route_id]}\n`
+                : `${meta.label}\n`) +
             `📍 ${coordStr}\n` +
             `⚡ Қауіп деңгейі: ${t(sevCfg.key as any)}\n` +
             `${incident.description ? `💬 ${incident.description}\n` : ''}` +
@@ -115,7 +118,7 @@ export default function IncidentDetailScreen() {
                 >
                     <Ionicons name="arrow-back" size={20} color={Colors.text.primary} />
                 </TouchableOpacity>
-                <Text style={styles.navTitle}>Инцидент</Text>
+                <Text style={styles.navTitle}>{t('incident_title')}</Text>
                 {/* Фича 5: Кнопка Share */}
                 <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
                     <Ionicons name="share-social-outline" size={20} color={Colors.brand.primary} />
@@ -169,14 +172,14 @@ export default function IncidentDetailScreen() {
                 {/* Описание */}
                 {incident.description && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>СИПАТТАМА</Text>
+                        <Text style={styles.sectionLabel}>{t('section_desc')}</Text>
                         <Text style={styles.descText}>{incident.description}</Text>
                     </View>
                 )}
 
                 {/* Координаты */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>ОРНАЛАСУ</Text>
+                    <Text style={styles.sectionLabel}>{t('section_location')}</Text>
                     <TouchableOpacity
                         style={styles.coordRow}
                         onPress={() =>
@@ -281,7 +284,7 @@ export default function IncidentDetailScreen() {
                     <View style={styles.statCard}>
                         <Ionicons name="people" size={20} color={Colors.brand.primary} />
                         <Text style={styles.statValue}>{incident.confirmations_count}</Text>
-                        <Text style={styles.statLabel}>Растама</Text>
+                        <Text style={styles.statLabel}>{t('stat_confirms')}</Text>
                     </View>
                     <View style={styles.statCard}>
                         <Ionicons name="time" size={20} color={Colors.alert.high} />
@@ -289,9 +292,9 @@ export default function IncidentDetailScreen() {
                             {Math.round(
                                 (Date.now() - new Date(incident.created_at).getTime()) / 60000,
                             )}{' '}
-                            мин
+                            {t('stat_minutes')}
                         </Text>
-                        <Text style={styles.statLabel}>Бұрын</Text>
+                        <Text style={styles.statLabel}>{t('stat_ago')}</Text>
                     </View>
                     <View style={styles.statCard}>
                         <Ionicons
@@ -304,7 +307,7 @@ export default function IncidentDetailScreen() {
                         <Text style={styles.statValue}>
                             {incident.is_active ? t('status_active') : t('status_resolved')}
                         </Text>
-                        <Text style={styles.statLabel}>Күй</Text>
+                        <Text style={styles.statLabel}>{t('stat_status')}</Text>
                     </View>
                 </View>
 
@@ -312,7 +315,7 @@ export default function IncidentDetailScreen() {
                 <View style={styles.actionRow}>
                     <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
                         <Ionicons name="share-social" size={18} color={Colors.brand.primary} />
-                        <Text style={styles.actionBtnText}>Бөлісу</Text>
+                        <Text style={styles.actionBtnText}>{t('action_share')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.actionBtn}
@@ -323,7 +326,7 @@ export default function IncidentDetailScreen() {
                         }
                     >
                         <Ionicons name="map" size={18} color={Colors.brand.primary} />
-                        <Text style={styles.actionBtnText}>Картада</Text>
+                        <Text style={styles.actionBtnText}>{t('action_map')}</Text>
                     </TouchableOpacity>
                 </View>
 
