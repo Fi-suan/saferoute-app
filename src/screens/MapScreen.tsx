@@ -6,7 +6,7 @@
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Vibration } from 'react-native';
-import MapView, { Polyline, Camera } from 'react-native-maps';
+import MapView, { Polyline, Camera, UrlTile } from 'react-native-maps';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -38,7 +38,6 @@ import { useNotificationLog } from '../hooks/useNotificationLog';
 import { useSettings } from '../hooks/useSettings';
 
 import {
-    DARK_MAP_STYLE,
     ROUTE_ENDPOINTS,
     ROUTE_WAYPOINTS,
     ROAD_STATUS_COLOR,
@@ -418,8 +417,19 @@ export default function MapScreen() {
                 showsMyLocationButton={false}
                 showsCompass={false}
                 userInterfaceStyle="dark"
-                customMapStyle={DARK_MAP_STYLE}
+                /* Бесплатные открытые карты вместо Google-тайлов (без биллинга):
+                   пустая подложка + наложение тёмных тайлов CARTO на OSM-данных. */
+                mapType="none"
             >
+                <UrlTile
+                    urlTemplate="https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+                    maximumZ={19}
+                    zIndex={-1}
+                />
+                {/* Атрибуция обязательна по лицензии CARTO/OSM */}
+                <View style={styles.tileAttribution} pointerEvents="none">
+                    <Text style={styles.tileAttributionText}>© OpenStreetMap · CARTO</Text>
+                </View>
                 {showIncidents && (
                     // key: react-native-maps на Android не всегда удаляет маркеры
                     // (tracksViewChanges=false) — ремоунт слоя гарантирует удаление.
@@ -569,6 +579,16 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     map: { flex: 1 },
+    tileAttribution: {
+        position: 'absolute',
+        bottom: 4,
+        right: 8,
+        backgroundColor: 'rgba(8, 10, 14, 0.55)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    tileAttributionText: { fontSize: 9, color: Colors.text.muted },
     loadingWrap: {
         flex: 1,
         alignItems: 'center',
