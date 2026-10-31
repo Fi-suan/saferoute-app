@@ -19,6 +19,12 @@ Realtime-обновления приходят в `store/incidentStore.ts` (Zust
 | `components/` | Переиспользуемые куски UI: ReportModal, IncidentCard, тосты, диалоги | UI |
 | `constants/` + `config.ts` | Тексты (`i18n/`), цвета, типы инцидентов, `config.ts` — все числа (радиус 2 км, пороги, интервалы) | Настройки |
 
+**Карты:** `@maplibre/maplibre-react-native` + стиль OpenFreeMap dark
+(`OPENFREEMAP_DARK_STYLE` в `screens/map/constants.ts`). Никаких Google-ключей:
+react-native-maps на Android — это Google Maps SDK, без биллинга он рендерит
+только чёрный экран (урок v1.1.0). Маркеры — `Marker` (RN-дети), зоны —
+GeoJSON-полигоны, маршрут — `GeoJSONSource` + `LineLayer`.
+
 **Порядок чтения новичку:** `config.ts` → `services/api.ts` → `hooks/useIncidents.ts` → `screens/MapScreen.tsx`.
 
 ## Корень
