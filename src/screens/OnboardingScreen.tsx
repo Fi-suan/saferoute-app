@@ -43,6 +43,14 @@ export interface OnboardingResult {
 const KZ_PHONE_RE = /^(\+7|8)\d{10}$/;
 const isValidPhone = (p: string) => KZ_PHONE_RE.test(p.replace(/\s/g, ''));
 
+/** Канонический формат +7XXXXXXXXXX — единая «соль» пароля при регистрации
+ *  и входе. Раньше телефон солился «как введено»: пробелы/формат ломали вход. */
+export function normalizePhone(raw: string): string {
+    const digits = raw.replace(/\D/g, '');
+    const tail = digits.length >= 10 ? digits.slice(-10) : digits;
+    return `+7${tail}`;
+}
+
 type Lang = 'kk' | 'ru';
 type AuthMode = 'register' | 'login';
 
@@ -256,7 +264,8 @@ export default function OnboardingScreen({
                 return;
             }
 
-            const profile = { name: name.trim(), phone: phone.trim(), role: role! };
+            // Регистрация: телефон нормализуем — соль пароля каноническая
+            const profile = { name: name.trim(), phone: normalizePhone(phone), role: role! };
             await registerDevice({
                 device_id: deviceId,
                 role: role === 'livestock_owner' ? 'owner' : 'driver',
@@ -416,7 +425,8 @@ export default function OnboardingScreen({
                             label={ui.passwordLabel}
                             value={password}
                             onChange={(v) => {
-                                setPassword(v);
+                                // обрезаем пробелы на лету — иначе хэш не совпадёт при входе
+                                setPassword(v.trim());
                                 clear('password');
                             }}
                             placeholder={ui.passwordPh}
