@@ -151,6 +151,7 @@ const L = {
         ownerDesc: 'Малды тіркеу және қорғау',
         loginHint: 'Бұрын тіркелген телефон номеріңіз бен құпиясөзіңізді енгізіңіз',
         loginWrong: 'Телефон немесе құпиясөз қате',
+        networkErr: 'Интернет байланысын тексеріңіз және қайта байқап көріңіз',
         start: 'Бастау',
         loginBtn: 'Кіру',
     },
@@ -178,6 +179,7 @@ const L = {
         ownerDesc: 'Регистрация и защита скота',
         loginHint: 'Введите телефон и пароль, указанные при регистрации',
         loginWrong: 'Неверный телефон или пароль',
+        networkErr: 'Проверьте интернет и попробуйте ещё раз',
         start: 'Начать',
         loginBtn: 'Войти',
     },
@@ -264,15 +266,22 @@ export default function OnboardingScreen({
                 return;
             }
 
-            // Регистрация: телефон нормализуем — соль пароля каноническая
+            // Регистрация: телефон нормализуем — соль пароля каноническая.
+            // Проверяем результат: при сбое НЕ пускаем внутрь — иначе «аккаунт-призрак»
+            // и вечный «неверный пароль» при следующем входе.
             const profile = { name: name.trim(), phone: normalizePhone(phone), role: role! };
-            await registerDevice({
+            const res = await registerDevice({
                 device_id: deviceId,
                 role: role === 'livestock_owner' ? 'owner' : 'driver',
                 name: profile.name,
                 phone_number: profile.phone,
                 password_hash: await hashPassword(profile.phone, password),
             });
+            if (!res?.ok) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                setErrors({ submit: ui.networkErr });
+                return;
+            }
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onFinish(profile);
         } catch (err: any) {

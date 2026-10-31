@@ -103,8 +103,15 @@ export async function fetchDirections(
         `${origin.lon},${origin.lat};${destination.longitude},${destination.latitude}` +
         '?overview=full&geometries=polyline&steps=true';
 
+    // Публичный OSRM бывает медленным: без таймаута navLoading зависает навсегда
+    const TIMEOUT_MS = 12_000;
     try {
-        const res = await fetch(url);
+        const res = await Promise.race([
+            fetch(url),
+            new Promise<never>((_, rej) =>
+                setTimeout(() => rej(new Error('osrm-timeout')), TIMEOUT_MS),
+            ),
+        ]);
         if (!res.ok) return null;
         const data: any = await res.json();
         const route = data?.routes?.[0];

@@ -15,8 +15,9 @@ export const Config = {
     SUPABASE_URL: extra.SUPABASE_URL ?? 'https://iqgawigwaempfnwtqovy.supabase.co',
     SUPABASE_ANON_KEY: extra.SUPABASE_ANON_KEY ?? 'sb_publishable_mtjnCty0nl-EXsssgG0BUg_k0wZtT90',
 
-    /** Polling interval for incidents (ms) — 4s for contest demo */
-    INCIDENTS_POLL_INTERVAL_MS: 4_000,
+    /** Polling interval for incidents (ms) — realtime даёт мгновенную
+     *  синхронизацию, polling только страховка */
+    INCIDENTS_POLL_INTERVAL_MS: 15_000,
 
     /** Default proximity alert radius (km) */
     DEFAULT_PROXIMITY_RADIUS_KM: 2.0,

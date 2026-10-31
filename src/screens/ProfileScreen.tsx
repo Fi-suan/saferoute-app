@@ -156,19 +156,15 @@ export default function ProfileScreen() {
 
     const saveEdit = async () => {
         const name = editName.trim();
-        const phone = editPhone.trim();
         if (name.length < 2) {
             setEditError(t('profile_name_err') || 'Мин. 2 таңба');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             return;
         }
-        if (phone && !isValidPhone(phone)) {
-            setEditError(t('profile_phone_err') || 'Формат: +7XXXXXXXXXX');
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            return;
-        }
+        // Телефон НЕ редактируем: пароль на сервере просолен текущим номером,
+        // смена номера локально навсегда ломает вход
         setEditError(null);
-        await updateProfile({ name, phone });
+        await updateProfile({ name });
         setEditModal(false);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     };
@@ -752,13 +748,12 @@ export default function ProfileScreen() {
                         />
 
                         <Text style={styles.inputLabel}>{t('profile_phone_label')}</Text>
+                        {/* Телефон не редактируется: пароль просолен номером на
+                            сервере — смена номера локально ломает вход */}
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, styles.inputDisabled]}
                             value={editPhone}
-                            onChangeText={(v) => {
-                                setEditPhone(v);
-                                if (editError) setEditError(null);
-                            }}
+                            editable={false}
                             placeholder="+7 700 000 0000"
                             placeholderTextColor={Colors.text.muted}
                             keyboardType="phone-pad"
@@ -1247,6 +1242,9 @@ const styles = StyleSheet.create({
         fontSize: 15,
         borderWidth: 1,
         borderColor: Colors.border,
+    },
+    inputDisabled: {
+        opacity: 0.5,
     },
     modalButtons: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.lg },
     modalBtn: { flex: 1, padding: 14, borderRadius: Radius.lg, alignItems: 'center' },

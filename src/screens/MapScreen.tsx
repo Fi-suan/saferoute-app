@@ -93,7 +93,7 @@ export default function MapScreen() {
 
     const { incidents, isOnline, loading, submitReport, confirmIncident, pendingReportsCount } =
         useIncidents('active');
-    const { location, nearbyAlert, confirmCandidate, dismissNearbyAlert, dismissConfirmCandidate } =
+    const { location, hasPermission, nearbyAlert, confirmCandidate, dismissNearbyAlert, dismissConfirmCandidate } =
         useLocation(incidents, Config.DEFAULT_PROXIMITY_RADIUS_KM, (incidentId, title, body) => {
             addNotifEntry({ title, body, incidentId });
         });
@@ -188,12 +188,14 @@ export default function MapScreen() {
     // Camera follows location with tilt and heading during navigation
     useEffect(() => {
         if (!navResult || !location) return;
+        // Android отдаёт heading = -1 («нет данных») — не дёргаем камеру им
+        const heading = location.heading != null && location.heading >= 0 ? location.heading : 0;
         mapRef.current?.animateCamera(
             {
                 center: { latitude: location.lat, longitude: location.lon },
                 zoom: 16,
                 pitch: 45,
-                heading: location.heading ?? 0,
+                heading,
             } as Camera,
             { duration: 600 },
         );
@@ -371,6 +373,18 @@ export default function MapScreen() {
 
     const handleFabPress = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        // Без GPS-разрешения «локация» — это фолбэк-координаты: метки по ним
+        // ставить нельзя (ложные данные). Честно просим включить геолокацию.
+        if (!hasPermission) {
+            showDialog({
+                title: t('gps_denied_title'),
+                message: t('gps_denied_msg'),
+                icon: 'location',
+                iconColor: Colors.alert.high,
+                buttons: [{ text: t('understand'), style: 'default' }],
+            });
+            return;
+        }
         if (profile.role === 'livestock_owner') setShowOwnerPanel(true);
         else setShowReport(true);
     };
@@ -431,10 +445,12 @@ export default function MapScreen() {
                     <Text style={styles.tileAttributionText}>© OpenStreetMap · CARTO</Text>
                 </View>
                 {showIncidents && (
-                    // key: react-native-maps на Android не всегда удаляет маркеры
-                    // (tracksViewChanges=false) — ремоунт слоя гарантирует удаление.
+                    // Ремоунт слоя ТОЛЬКО при смене фильтра: на каждое realtime-
+                    // событие пересоздавать все маркеры нельзя (джанк/гонки).
+                    // Добавление/удаление отдельных маркеров обрабатывают
+                    // внутренние key={`inc-${inc.id}`}.
                     <IncidentMarkers
-                        key={`inc-${displayedIncidents.map((i) => i.id).join(',')}`}
+                        key={`layer-${filter}`}
                         incidents={displayedIncidents}
                         onCalloutPress={goToDetail}
                     />

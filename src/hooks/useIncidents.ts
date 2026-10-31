@@ -124,10 +124,19 @@ async function flushQueue(deviceId: string): Promise<void> {
         const failed: QueuedReport[] = [];
         for (const report of queue) {
             try {
-                // Фото из офлайн-очереди загружаем перед отправкой
+                // Фото из офлайн-очереди: base64 НЕ хранится в очереди
+                // (квота AsyncStorage ~6 МБ) — читаем файл в момент отправки
                 let photoUrl: string | null = null;
-                if (report.photo_base64) {
-                    photoUrl = await uploadIncidentPhoto(report.photo_base64, deviceId);
+                if (report.photo_uri) {
+                    try {
+                        const { readAsStringAsync } = await import('expo-file-system/legacy');
+                        const b64 = await readAsStringAsync(report.photo_uri, {
+                            encoding: 'base64',
+                        });
+                        photoUrl = await uploadIncidentPhoto(b64, deviceId);
+                    } catch {
+                        // файл мог быть вычищен системой — отправляем без фото
+                    }
                 }
                 const created = await submitIncidentReport({
                     incident_type: report.incident_type,
@@ -139,8 +148,13 @@ async function flushQueue(deviceId: string): Promise<void> {
                     route_id: report.route_id ?? null,
                     photo_url: photoUrl,
                 });
+                // created === null — сервер ответил ошибкой: НЕ теряем отчёт
+                if (!created) {
+                    failed.push(report);
+                    continue;
+                }
                 // Отправлено — убираем «призрак» оптимистичной метки
-                if (created && report.optimisticId != null) {
+                if (report.optimisticId != null) {
                     incidentStore.remove(report.optimisticId);
                 }
             } catch {
@@ -185,18 +199,19 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
         const seq = ++refreshSeq.current;
         const { data, online } = await fetchFromServer(tab);
         if (seq !== refreshSeq.current) return; // уже приземлился более свежий refresh
+        setIsOnline(online);
+        // Сетевой сбой: НЕ стираем существующие метки (иначе при любом
+        // анонимном hiccup карта «опустела» до следующего успешного фетча)
+        if (!online) return;
         const currentOptimistic = incidentStore
             .get()
             .filter((i) => !data.find((d) => d.id === i.id));
         incidentStore.set([...currentOptimistic, ...data]);
-        setIsOnline(online);
 
-        if (online) {
-            const deviceId = await getDeviceId();
-            await flushQueue(deviceId);
-            const queue = await loadQueue();
-            setPendingReportsCount(queue.length);
-        }
+        const deviceId = await getDeviceId();
+        await flushQueue(deviceId);
+        const queue = await loadQueue();
+        setPendingReportsCount(queue.length);
     }, [tab]);
 
     useEffect(() => {
@@ -268,9 +283,18 @@ export function useIncidents(tab: 'active' | 'all' = 'active'): UseIncidentsRetu
                 });
                 if (created) {
                     incidentStore.update(optimistic.id, { ...created });
+                    await refresh();
+                    return { ok: true };
                 }
-                await refresh();
-                return { ok: true };
+                // Сервер ответил ошибкой (RLS/сбой): НЕ теряем отчёт — в очередь,
+                // призрак уберётся после успешной отправки
+                const queue = await loadQueue();
+                // base64 не храним (квота AsyncStorage), при flush прочитаем файл
+                const { photo_base64, ...queueParams } = params;
+                queue.push({ ...queueParams, queuedAt: new Date().toISOString(), optimisticId: optimistic.id });
+                await saveQueue(queue);
+                setPendingReportsCount(queue.length);
+                return { ok: true, queued: true };
             } catch {
                 const queue = await loadQueue();
                 queue.push({ ...params, queuedAt: new Date().toISOString(), optimisticId: optimistic.id });
