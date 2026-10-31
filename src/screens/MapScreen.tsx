@@ -82,6 +82,10 @@ export default function MapScreen() {
     const [navStepIdx, setNavStepIdx] = useState(0);
     const [navProgress, setNavProgress] = useState(0);
     const [navLoading, setNavLoading] = useState(false);
+    // Fabric + react-native-maps: рендер детей карты (тайлы/маркеры/полилинии)
+    // до инициализации нативной карты = нативные краши в release (rn-maps#5699,
+    // #5759, #5816). Рисуем детей только после onMapReady.
+    const [mapReady, setMapReady] = useState(false);
     const dangerZoneAlertedRef = useRef(false);
 
     const t = useT();
@@ -434,28 +438,31 @@ export default function MapScreen() {
                 /* Бесплатные открытые карты вместо Google-тайлов (без биллинга):
                    пустая подложка + наложение тёмных тайлов CARTO на OSM-данных. */
                 mapType="none"
+                onMapReady={() => setMapReady(true)}
             >
-                <UrlTile
-                    urlTemplate="https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-                    maximumZ={19}
-                    zIndex={-1}
-                />
-                {/* Атрибуция обязательна по лицензии CARTO/OSM */}
-                <View style={styles.tileAttribution} pointerEvents="none">
-                    <Text style={styles.tileAttributionText}>© OpenStreetMap · CARTO</Text>
-                </View>
-                {showIncidents && (
-                    // Ремоунт слоя ТОЛЬКО при смене фильтра: на каждое realtime-
-                    // событие пересоздавать все маркеры нельзя (джанк/гонки).
-                    // Добавление/удаление отдельных маркеров обрабатывают
-                    // внутренние key={`inc-${inc.id}`}.
-                    <IncidentMarkers
-                        key={`layer-${filter}`}
-                        incidents={displayedIncidents}
-                        onCalloutPress={goToDetail}
-                    />
-                )}
-                {showLivestock && <LivestockMarkers livestock={livestock} />}
+                {mapReady && (
+                    <>
+                        <UrlTile
+                            urlTemplate="https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+                            maximumZ={19}
+                            zIndex={-1}
+                        />
+                        {/* Атрибуция обязательна по лицензии CARTO/OSM */}
+                        <View style={styles.tileAttribution} pointerEvents="none">
+                            <Text style={styles.tileAttributionText}>© OpenStreetMap · CARTO</Text>
+                        </View>
+                        {showIncidents && (
+                            // Ремоунт слоя ТОЛЬКО при смене фильтра: на каждое realtime-
+                            // событие пересоздавать все маркеры нельзя (джанк/гонки).
+                            // Добавление/удаление отдельных маркеров обрабатывают
+                            // внутренние key={`inc-${inc.id}`}.
+                            <IncidentMarkers
+                                key={`layer-${filter}`}
+                                incidents={displayedIncidents}
+                                onCalloutPress={goToDetail}
+                            />
+                        )}
+                        {showLivestock && <LivestockMarkers livestock={livestock} />}
 
                 {/* Route polyline (white backing layer for clarity) */}
                 <Polyline
@@ -471,6 +478,8 @@ export default function MapScreen() {
                     lineDashPattern={roadStatus === 'closed' ? [10, 6] : undefined}
                     geodesic
                 />
+                    </>
+                )}
             </MapView>
 
             <View style={styles.topStack} pointerEvents="box-none">

@@ -218,7 +218,9 @@ export default function IncidentDetailScreen() {
                                 const label = incident.ai_verified
                                     ? t('ai_verified_badge')
                                     : rejected
-                                      ? t('ai_rejected')
+                                      ? incident.is_active
+                                        ? t('ai_rejected_pending')
+                                        : t('ai_rejected')
                                       : t('ai_pending');
                                 return (
                                     <>

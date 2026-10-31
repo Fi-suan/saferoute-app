@@ -73,10 +73,8 @@ module.exports = {
           android: {
             enableMinifyInReleaseBuilds: false,
             enableShrinkResourcesInReleaseBuilds: false,
-            // react-native-maps нестабилен на новой архитектуре (Fabric):
-            // краши при загрузке карты/маркеров/тайлов (expo#5378, rn-maps#5807).
-            // Нашему стеку новая архитектура ничего не даёт — отключаем.
-            newArchEnabled: false,
+            // NOTE: newArchEnabled:false в SDK 58 НЕ работает — старая архитектура
+            // удалена в RN 0.82+. Приложение всегда работает на Fabric.
           },
         },
       ],
