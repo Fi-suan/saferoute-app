@@ -6,7 +6,7 @@ module.exports = {
   expo: {
     name: 'Sapa Zhol',
     slug: 'saferoute-app',
-    version: '1.3.1',
+    version: '1.4.0',
     orientation: 'portrait',
     icon: './assets/image.png',
     userInterfaceStyle: 'dark',

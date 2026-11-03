@@ -46,12 +46,6 @@ export default function MapTopBar({
     onToggleNavigation,
 }: MapTopBarProps) {
     const t = useT();
-    const statusLabel =
-        roadStatus === 'open'
-            ? t('road_open')
-            : roadStatus === 'caution'
-              ? t('road_caution')
-              : t('road_closed');
 
     return (
         <View style={styles.card}>
@@ -99,11 +93,10 @@ export default function MapTopBar({
                     <Text style={styles.routeText}>
                         {ROUTE_NAMES[activeRouteId] ?? 'A-17'}
                     </Text>
-                    <View style={styles.routeDivider} />
+                    {/* Только цветная точка статуса: текстовые подписи
+                        («Жол жабық» и т.п.) убраны по фидбеку — статус виден
+                        по цвету линии маршрута на карте */}
                     <View style={[styles.statusDot, { backgroundColor: STATUS_DOT[roadStatus] }]} />
-                    <Text style={styles.statusText} numberOfLines={1} ellipsizeMode="tail">
-                        {statusLabel}
-                    </Text>
                 </View>
 
                 <TouchableOpacity
@@ -206,9 +199,7 @@ const styles = StyleSheet.create({
         flexShrink: 1,
     },
     routeText: { fontSize: 13, fontWeight: '800', color: Colors.brand.primary },
-    routeDivider: { width: 1, height: 12, backgroundColor: Colors.border },
     statusDot: { width: 8, height: 8, borderRadius: 4 },
-    statusText: { fontSize: 12.5, fontWeight: '700', color: Colors.text.secondary, flexShrink: 1 },
 
     navBtn: {
         flexDirection: 'row',
