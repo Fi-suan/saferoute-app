@@ -268,8 +268,6 @@ export default function MapScreen() {
             });
             return;
         }
-        // Мотивация: за подтверждение — +5 баллов вклада
-        showToast({ text: t('toast_confirm_points'), icon: 'trophy', color: Colors.brand.primary });
         if (isResolved)
             showDialog({
                 title: t('confirm_thanks'),
@@ -669,9 +667,8 @@ export default function MapScreen() {
                 onSubmit={submitReport}
                 onSuccess={(message, queued) =>
                     showToast({
-                        // Мотивация: за каждую метку — +10 баллов вклада (см. профиль)
-                        text: queued ? message : `${message} ${t('toast_report_points')}`,
-                        icon: queued ? 'cloud-offline' : 'trophy',
+                        text: message,
+                        icon: queued ? 'cloud-offline' : 'checkmark-circle',
                         color: queued ? Colors.alert.medium : Colors.brand.primary,
                     })
                 }

@@ -358,85 +358,6 @@ export default function ProfileScreen() {
                     />
                 </View>
 
-                {/* ── ВКЛАД (мотивация: очки и уровни за метки/подтверждения) ── */}
-                {(() => {
-                    const confirmsReceived = myIncidents.reduce(
-                        (s, i) => s + (i.confirmations_count || 0),
-                        0,
-                    );
-                    const score = myIncidents.length * 10 + confirmsReceived * 5;
-                    const LEVELS = [0, 50, 150];
-                    let levelIdx = 0;
-                    for (let i = 0; i < LEVELS.length; i++) if (score >= LEVELS[i]) levelIdx = i;
-                    const nextAt = LEVELS[levelIdx + 1];
-                    const prevAt = LEVELS[levelIdx];
-                    const progress = nextAt
-                        ? Math.min(1, (score - prevAt) / (nextAt - prevAt))
-                        : 1;
-                    return (
-                        <View style={styles.card}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                <View
-                                    style={[
-                                        styles.statIcon,
-                                        { backgroundColor: Colors.brand.primary + '18' },
-                                    ]}
-                                >
-                                    <Ionicons name="trophy" size={16} color={Colors.brand.primary} />
-                                </View>
-                                <Text style={styles.cardTitle}>{t('contribution_title')}</Text>
-                                <View style={{ flex: 1 }} />
-                                <Text
-                                    style={[
-                                        styles.statValue,
-                                        { color: Colors.brand.primary, fontSize: 20 },
-                                    ]}
-                                >
-                                    {score}
-                                </Text>
-                                <Text style={styles.statLabel}>{t('contribution_score')}</Text>
-                            </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                                <Ionicons name="ribbon" size={14} color={Colors.alert.high} />
-                                <Text style={[styles.statLabel, { color: Colors.alert.high, fontWeight: '700' }]}>
-                                    {t(`level_${levelIdx}` as any)}
-                                </Text>
-                                {nextAt != null && (
-                                    <Text style={styles.statLabel}>
-                                        · {t('next_level')}: {nextAt - score} {t('contribution_score')}
-                                    </Text>
-                                )}
-                            </View>
-                            <View
-                                style={{
-                                    marginTop: 8,
-                                    height: 6,
-                                    borderRadius: 3,
-                                    backgroundColor: Colors.bg.secondary,
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <View
-                                    style={{
-                                        width: `${Math.round(progress * 100)}%`,
-                                        height: '100%',
-                                        backgroundColor: Colors.brand.primary,
-                                        borderRadius: 3,
-                                    }}
-                                />
-                            </View>
-                            <View style={{ flexDirection: 'row', gap: 16, marginTop: 10 }}>
-                                <Text style={styles.statLabel}>
-                                    {t('stat_reports')}: {myIncidents.length}
-                                </Text>
-                                <Text style={styles.statLabel}>
-                                    {t('stat_confirms_received')}: {confirmsReceived}
-                                </Text>
-                            </View>
-                        </View>
-                    );
-                })()}
-
                 {/* ── МАРШРУТТАР ───────────────────────────────────── */}
                 <SectionHeader title={t('profile_routes_section')} />
                 <View style={styles.card}>
@@ -1164,7 +1085,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     statValue: { fontSize: 22, fontWeight: '800', fontFamily: 'monospace' },
-    cardTitle: { fontSize: 14, fontWeight: '700', color: Colors.text.primary },
     statLabel: { fontSize: 11, color: Colors.text.muted, fontWeight: '500' },
 
     // Section headers (Nothing-style: point + line)
