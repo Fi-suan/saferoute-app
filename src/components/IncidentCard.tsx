@@ -1,5 +1,5 @@
 /**
- * IncidentCard — SafeRoute / Sapa Jol
+ * IncidentCard — SafeRoute / Sapa Zhol
  *
  * Переиспользуемая карточка инцидента.
  * Фича 1: показывает фото (photo_uri или photo_url) если есть.

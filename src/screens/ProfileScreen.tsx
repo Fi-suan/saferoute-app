@@ -1,5 +1,5 @@
 /**
- * ProfileScreen — SafeRoute / Sapa Jol
+ * ProfileScreen — SafeRoute / Sapa Zhol
  *
  * Дизайн вдохновлён Nothing Phone: dot-matrix числа, геометрия, монохром + зелёный акцент.
  * Структура (как в референсе): Header → Active Route card → Stats grid → Livestock → Settings
@@ -527,7 +527,7 @@ export default function ProfileScreen() {
                             />
                         </View>
                         <View style={styles.rowBody}>
-                            <Text style={styles.rowLabel}>SafeRoute · Sapa Jol</Text>
+                            <Text style={styles.rowLabel}>SafeRoute · Sapa Zhol</Text>
                             <Text style={styles.rowValue}>
                                 {t('profile_version')} {Config.VERSION}
                             </Text>
@@ -644,7 +644,7 @@ export default function ProfileScreen() {
                         ))}
                     </View>
                     <Ionicons name="leaf" size={22} color={Colors.brand.primary} />
-                    <Text style={styles.missionTitle}>Sapa Jol</Text>
+                    <Text style={styles.missionTitle}>Sapa Zhol</Text>
                     <Text style={styles.missionText}>{t('mission_text')}</Text>
                     <View style={styles.missionStats}>
                         <View style={styles.missionStat}>

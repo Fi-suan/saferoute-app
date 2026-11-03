@@ -1,5 +1,5 @@
 /**
- * Переводы SafeRoute / Sapa Jol
+ * Переводы SafeRoute / Sapa Zhol
  * Поддерживаемые языки: kk (қазақша), ru (русский)
  */
 
@@ -8,7 +8,7 @@ export type Lang = 'kk' | 'ru';
 const translations = {
     kk: {
         // ─── Карта ───────────────────────────────────────────
-        map_title: 'Sapa Jol',
+        map_title: 'Sapa Zhol',
         filter_all: 'Барлығы',
         filter_incidents: 'Белгілер',
         filter_livestock: 'Мал',
@@ -65,7 +65,7 @@ const translations = {
         photo_denied_msg: 'Фото тіркеу үшін параметрлерден камера мен фотоларға рұқсат беріңіз.',
         ai_severity_note: 'Қауіп деңгейін AI фото бойынша бағалайды — өзіңіз тауламаңыз.',
         herd_word: 'табын',
-        share_cta: 'Sapa Jol қолданбасын жүктеп алыңыз — жол қауіпсіздігі үшін',
+        share_cta: 'Sapa Zhol қолданбасын жүктеп алыңыз — жол қауіпсіздігі үшін',
         detail_photo_label: 'Фото (пайдаланушы)',
         ai_severity_score: 'AI қауіптілік бағасы',
         ai_pending_short: 'AI сараптама кезекте…',
@@ -99,7 +99,7 @@ const translations = {
         danger_zone_msg: 'Сізден 500 метр қашықтықта 3+ мал тобы анықталды. Жылдамдықты азайтыңыз.',
 
         // ─── Онбординг / Регистрация ─────────────────────────
-        onb_slide1_title: 'Sapa Jol',
+        onb_slide1_title: 'Sapa Zhol',
         onb_slide1_sub: 'Жол қауіпсіздігі жүйесі',
         onb_slide1_desc:
             'Қазақстан жолдарындағы жануарлар мен жүргізушілерді қорғауға арналған интеллектуалды жүйе.',
@@ -245,7 +245,7 @@ const translations = {
         gps_denied_title: 'Геолокация өшірулі',
         gps_denied_msg: 'Белгі қою үшін нақты орналасу қажет. Параметрлерден геолокацияны қосыңыз.',
         owner_unknown: 'Белгісіз иесі',
-        share_title: 'Sapa Jol инциденті',
+        share_title: 'Sapa Zhol инциденті',
         profile_default_name: 'Пайдаланушы',
         banner_more: 'Толығырақ',
         share_failed: 'Бөлісу мүмкін болмады',
@@ -282,7 +282,7 @@ const translations = {
     },
 
     ru: {
-        map_title: 'Sapa Jol',
+        map_title: 'Sapa Zhol',
         filter_all: 'Все',
         filter_incidents: 'Метки',
         filter_livestock: 'Скот',
@@ -336,7 +336,7 @@ const translations = {
         photo_denied_msg: 'Разрешите доступ к камере и фото в настройках, чтобы прикрепить снимок.',
         ai_severity_note: 'Уровень опасности оценит AI по фото — выбирать его вручную не нужно.',
         herd_word: 'табун',
-        share_cta: 'Скачайте приложение Sapa Jol — для безопасности на дорогах',
+        share_cta: 'Скачайте приложение Sapa Zhol — для безопасности на дорогах',
         detail_photo_label: 'Фото (пользователя)',
         ai_severity_score: 'Оценка опасности AI',
         ai_pending_short: 'AI-анализ выполняется…',
@@ -365,7 +365,7 @@ const translations = {
         danger_zone_title: '⚠️ Опасная зона',
         danger_zone_msg: 'В радиусе 500м обнаружено 3+ группы скота. Снизьте скорость.',
 
-        onb_slide1_title: 'Sapa Jol',
+        onb_slide1_title: 'Sapa Zhol',
         onb_slide1_sub: 'Система безопасности дорог',
         onb_slide1_desc:
             'Интеллектуальная система защиты животных и водителей на дорогах Казахстана.',
@@ -509,7 +509,7 @@ const translations = {
         gps_denied_title: 'Геолокация выключена',
         gps_denied_msg: 'Чтобы поставить метку, нужно точное местоположение. Включите геолокацию в настройках.',
         owner_unknown: 'Владелец неизвестен',
-        share_title: 'Инцидент Sapa Jol',
+        share_title: 'Инцидент Sapa Zhol',
         profile_default_name: 'Пользователь',
         banner_more: 'Подробнее',
         share_failed: 'Не удалось поделиться',

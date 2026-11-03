@@ -1,5 +1,5 @@
 /**
- * Device ID Service — SafeRoute / Sapa Jol
+ * Device ID Service — SafeRoute / Sapa Zhol
  *
  * Уникальный UUID устройства. Хранение: SecureStore (основное) +
  * AsyncStorage (фолбэк) — на некоторых устройствах SecureStore молча

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Generate Sapa-Jol contest results docx (Kazakh)."""
+"""Generate Sapa-Zhol contest results docx (Kazakh)."""
 import os
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
@@ -43,7 +43,7 @@ def table(headers, rows):
     return t
 
 # ── Title ──
-p('Sapa Jol (SafeRoute) — зерттеу әдістері, сынақ нәтижелері және олардың талдауы',
+p('Sapa Zhol (SafeRoute) — зерттеу әдістері, сынақ нәтижелері және олардың талдауы',
   bold=True, align=WD_ALIGN_PARAGRAPH.CENTER)
 p('NIS Павлодар · 2026 жылғы 30 қазандағы сынақтар', italic=True,
   align=WD_ALIGN_PARAGRAPH.CENTER)
@@ -54,7 +54,7 @@ p('Жүйенің сенімділігі 10 параметр бойынша те
   'эскерту қашықтығы, жеткізу уақыты, GPS дәлдігі, жалған дабыл жиілігі, офлайн '
   'жұмысы, координата жаңару жиілігі, тұрақтылығы, қауымдастық растауы және '
   'жүргізушіге берілетін уақыт.')
-p('Сынақ бір телефон (Android, Expo Go + Sapa Jol қосымшасы) мен компьютер '
+p('Сынақ бір телефон (Android, Expo Go + Sapa Zhol қосымшасы) мен компьютер '
   '(Supabase Realtime dashboard және серверлік растау функциясы) арқылы '
   'жүргізілді: телефон «бірінші жүргізуші» рөлінде, компьютер — «қалған '
   'қатысушылар» рөлінде. Әр өлшеу экранды жазба арқылы тіркеліп, деректер '
@@ -89,7 +89,7 @@ doc.add_heading('2.3. Радиусты негіздеу', level=2)
 p('1) GPS қателігі (5–15 м) және метка қоюшының қателігі (ондаған–жүздеген '
   'метр) радиусқа сіңіп кетеді. 2) Киік 80 км/сағ-қа дейін жүгіреді — 80 секунд '
   'ішінде табын 1,5 км-ге жылжуы мүмкін, 2 км радиус бұл қозғалысты қамтиды. '
-  '3) Жол белгілері қауіптен 150–300 м бұрын қойылады — Sapa Jol эскертуі одан '
+  '3) Жол белгілері қауіптен 150–300 м бұрын қойылады — Sapa Zhol эскертуі одан '
   '7–13 есе ерте беріледі. 4) Тым үлкен радиус (5+ км) «дабыл шаршауы» '
   'әсеріне әкеледі: қатыссыз дабылдар көбейгенде жүргізуші оларды елемей '
   'қалады. 2 км — қауіпсіздік қоры мен эскерту маңыздылығының тепе-теңдігі.')
@@ -198,5 +198,5 @@ for i, c in enumerate(captions, 1):
     par.add_run(f'Сурет {i}. ').bold = True
     par.add_run(c)
 
-doc.save(r'C:\Users\zhant\.gemini\antigravity\scratch\saferoute-app\Sapa-Jol-нәтижелер.docx')
+doc.save(r'C:\Users\zhant\.gemini\antigravity\scratch\saferoute-app\Sapa-Zhol-нәтижелер.docx')
 print('saved')

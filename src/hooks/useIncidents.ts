@@ -1,5 +1,5 @@
 /**
- * useIncidents Hook — SafeRoute / Sapa Jol
+ * useIncidents Hook — SafeRoute / Sapa Zhol
  *
  * Shared state через incidentStore — MapScreen и AlertsScreen видят одни данные.
  * Optimistic incidents появляются сразу, заменяются реальными от сервера.

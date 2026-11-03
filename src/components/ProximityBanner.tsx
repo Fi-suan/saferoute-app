@@ -1,5 +1,5 @@
 /**
- * ProximityBanner Component — SafeRoute / Sapa Jol
+ * ProximityBanner Component — SafeRoute / Sapa Zhol
  *
  * Анимированный баннер предупреждения о близком инциденте.
  * Вынесен из MapScreen.tsx (~20 строк inline).

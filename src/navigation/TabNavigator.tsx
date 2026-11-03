@@ -1,5 +1,5 @@
 /**
- * TabNavigator — SafeRoute / Sapa Jol
+ * TabNavigator — SafeRoute / Sapa Zhol
  *
  * Nothing Phone стиль: minimal tab bar
  * - Активная вкладка: маленькая зелёная точка снизу (не жирный bg)

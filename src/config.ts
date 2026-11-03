@@ -1,5 +1,5 @@
 /**
- * SafeRoute / Sapa Jol — App Configuration
+ * SafeRoute / Sapa Zhol — App Configuration
  *
  * Единый источник конфигурации. Не хранить BACKEND_URL в colors.ts или других местах.
  * В production — переменные передаются через app.config.js extras.

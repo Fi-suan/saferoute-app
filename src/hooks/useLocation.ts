@@ -1,5 +1,5 @@
 /**
- * useLocation Hook — SafeRoute / Sapa Jol
+ * useLocation Hook — SafeRoute / Sapa Zhol
  *
  * Отвечает за:
  * - Запрос разрешений

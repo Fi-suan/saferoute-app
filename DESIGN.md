@@ -1,4 +1,4 @@
-# Sapa Jol / SafeRoute — Design System
+# Sapa Zhol / SafeRoute — Design System
 
 Единый источник правды по дизайну. Все новые компоненты и правки UI обязаны
 соответствовать этому документу. Токены живут в `src/constants/colors.ts` —

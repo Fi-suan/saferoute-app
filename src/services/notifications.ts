@@ -1,5 +1,5 @@
 /**
- * Notifications Service — SafeRoute / Sapa Jol
+ * Notifications Service — SafeRoute / Sapa Zhol
  *
  * expo-notifications is loaded LAZILY (on first use) so it never sits on the
  * critical startup path. In Expo Go its import triggers a deprecation error

@@ -1,58 +1,59 @@
-# Sapa Jol (SafeRoute) — бриф для новой сессии
+# Sapa Zhol (SafeRoute) — бриф для новой сессии
 
-> Скопируй этот текст (или загрузи файл) в чат на chat.mistral.ai в начале новой
-> сессии — агент продолжит работу с полным контекстом проекта.
+> Скопируй этот файл в чат новой сессии (например на Linux-машине) — агент
+> продолжит с полным контекстом. Репозиторий: github.com/Fi-suan/saferoute-app.
 
 ## Что это
-React Native (Expo SDK 54) приложение: безопасность дорог и защита диких животных
-в Казахстане. Водители ставят метки об опасности (ЖКО, животные на дороге, ямы),
-другие водители в радиусе 2 км получают предупреждение, 3 подтверждения сообщества
-автоматически закрывают метку. Кампус NIS Pavlodar, конкурсный проект.
-Языки: интерфейс — казахский/русский (`src/i18n/`), обсуждение — русский.
+Expo (SDK 58, RN 0.88, new arch/Fabric) приложение «Sapa Zhol»: безопасность дорог
+Казахстана. Водители ставят метки (ДТП, животные, опасный участок) с фото; AI (Pixtral)
+проверяет фото и назначает severity; другие водители в радиусе 2 км получают
+предупреждение; 3 подтверждения = метка решена. Владельцы скота видят табуны.
+Языки интерфейса: kk/ru (`src/i18n/translations.ts`), общение — русский.
 
-## Стек и архитектура
-- Приложение: Expo (SDK 54), react-native-maps, zustand, react-navigation.
-- Бэкенд: только Supabase (Postgres + Realtime + PostgREST + RPC + Storage).
-  FastAPI удалён. Supabase URL и anon-ключ — в `src/config.ts` (публичные, зашиты
-  в приложение; это нормально). Пароль БД — в Supabase Dashboard, в код не класть.
-- Карта папок: `src/screens/` (экраны), `src/hooks/` (вся логика), `src/services/api.ts`
-  (единственная дверь в облако), `src/components/`, `src/constants/` + `src/config.ts`.
-  Полная карта — `ARCHITECTURE.md`.
-- Миграции: `supabase/migrations/001–008` (все применены к облаку).
-  006: убран публичный UPDATE у incident_reports; 007: devices только через
-  SECURITY DEFINER RPC (register_device, login_device, touch_device_location,
-  update_fcm_token) + rate-limit confirm_incident 10/5мин; 008: bucket
-  incident-photos (фото инцидентов, публичное чтение).
+⚠️ Имя бренда **Sapa Zhol**. НЕ трогать: package `kz.saferoute.app`, slug `saferoute-app`,
+префикс хэша пароля `saferoute:` (иначе все пароли сломаются), storage-ключи
+`saferoute:*`, имя файла `sapa-jol.apk` на QR-портале.
 
-## Ключевая логика
-- Тревога: 2 км (баннер), подтверждение: 500 м (диалог), 3 подтверждения = решено.
-- Анти-спам: автор метки 3 мин не получает тревогу от своей метки и не подтверждает её.
-- Офлайн: метки копятся в очереди AsyncStorage, отправляются при reconnect.
-- Метки привязаны к маршруту (route_id: a17/a1/a21/e40), фильтр по нему.
-- Realtime: один канал на приложение; рефреши защищены от гонки (seq-guard).
-- GPS: 5 с / 50 м; опрос сервера 4 с; маркеры карты ремоунтятся при изменении
-  набора (react-native-maps на Android не удаляет tracksViewChanges=false).
+## Стек
+- Карта: **@maplibre/maplibre-react-native 11.5** + стиль OpenFreeMap dark
+  (`OPENFREEMAP_DARK_STYLE` в `src/screens/map/constants.ts`). react-native-maps УДАЛЁН:
+  на Android он = Google Maps SDK, без биллинга давал только чёрный экран.
+  MapLibre: `Map`/`Camera`(ref easeTo/flyTo)/`Marker`(lngLat, дети)/`GeoJSONSource`+`Layer`.
+- Бэкенд: Supabase, project ref `iqgawigwaempfnwtqovy`, URL+anon key в `src/config.ts`.
+  Postgres напрямую: `postgresql://postgres:<pw>@db.iqgawigwaempfnwtqovy.supabase.co:5432/postgres`
+  (pw спроси у владельца; `npm i --no-save pg`). Миграции 001–013 применены.
+- EAS: аккаунт zhantorekulenbai@gmail.com, проект `@fisuan/saferoute-app`
+  (projectId в app.config.js). Сборка: `npx eas build --platform android --profile preview --non-interactive --no-wait`.
+- Edge-функции задеплоены: `verify-photo` (пишет ai_verified/ai_confidence/ai_analysis/
+  ai_severity_suggestion И **severity** метки; авто-скрытие при reject conf≥0.6),
+  `push-nearby`. Триггеры в БД. MISTRAL_API_KEY — в секретах Supabase.
+- R8 минификация в release ОТКЛЮЧЕНА (expo-build-properties) — стабильность важнее размера.
 
-## Что сделано последней сессией (коммиты в git log)
-Безопасность: devices закрыты, пароли сверяются на сервере, вход устойчив к
-формату телефона (+7/8/цифры — клиент шлёт массив хэшей-кандидатов).
-Фото: загрузка в Storage, включая из офлайн-очереди.
-Чистка: удалён backend/ (FastAPI), мёртвые хуки/экспорты, GPS-симулятор;
-i18n: все хардкоды UI → useT() (кроме OnboardingScreen — там свой словарь by design).
+## Ключевые правила продукта (не ломать)
+- Тревога 2 км (баннер, TTL 24 ч), подтверждение 500 м (диалог, TTL 5 мин),
+  3 подтверждения = решено. Rate-limit confirm: 10/5 мин на устройство.
+- Road status: closed (красная линия) = 1×sev5 ИЛИ 3×sev4 активных; caution = 2×sev4 или ДТП sev4.
+- Приватность: devices читается только через SECURITY DEFINER RPC; в метках нет
+  персональных данных автора (только reporter_device_id); login = телефон+пароль,
+  хэш = SHA256(`saferoute:${phone}:${password}`), login_device принимает кандидат-хэши.
+- Offline-очередь: фото в очереди — только photo_uri СЖАТОГО файла; base64 не хранить.
 
-## Бэклог (по важности)
-1. Supabase Auth (сейчас demo-модель «device_id = личность»; легаси-аккаунты
-   без пароля входят по одному телефону — мой аккаунт +77760216611 такой).
-2. Фоновые push (FCM; devices.fcm_token уже пишется).
-3. Предлагать пароль легаси-аккаунтам при логине.
-4. Модерация фото (публичное чтение) + отчёт о спаме.
-5. Демо-данные (7 меток в Павлодаре) вынести в сид-скрипт.
+## Демо-данные и тесты
+- `SUPABASE_DB_URL=... node scripts/mega-seed.js` — wipe ВСЕХ инцидентов (только через
+  postgres! anon DELETE молча no-op из-за RLS) + 12 аккаунтов (mega-user-01..12,
+  +77015500001..12 / pass01..12) + 15 меток ВДОЛЬ OSRM-дорог с фото (пары фото↔описание
+  в PAIRS не перемешивать — Pixtral сверяет их).
+- `node scripts/mega-test.js` — E2E (логин, приватность, подтверждения, rate-limit, геометрия). 0 багов.
+- `SUPABASE_DB_URL=... node scripts/ultra-test.js` — 100 пользователей, 9 фаз, 0 багов (самоочистка в конце).
+- Аккаунт на телефоне владельца: перерегистрируется сам; не трогай его пароль вручную.
 
-## Правила работы с проектом
-- Перед коммитом: `npx tsc --noEmit` (RAM-жадный, машина 8 ГБ — закрыть браузер).
-- Миграции применять через `pg` (`npm i --no-save pg`) прямым коннектом;
-  пароль БД брать в Supabase Dashboard → Settings → Database.
-- Не вставлять фото/тексты в код мимо `src/i18n/translations.ts` (два словаря: kk, ru).
-- APK собирается `npm run build:android` (EAS); hermesc может OOM — подчистить память.
-- Тестовые RPC-скрипты: `scripts/test-auth-rpcs.js`, `scripts/test-photo-upload.js`,
-  `scripts/confirm-runner.js` (второй пользователь для тестов), `scripts/db-inspect.js`.
+## Проверки перед пушем
+`npx tsc --noEmit` чист. После смены кода карты — EAS build + `adb install` +
+скриншот-проверка (adb путь на винде: platform-tools; на Linux — свой). Свежий APK:
+https://expo.dev/artifacts/eas/U3QEhVNsrvGTNbiA2fZl-iYhM4CJeLfVlXx2-ncMf00.apk (v1.3.0, но после
+переименования в Sapa Zhol будет новая сборка с новым именем).
+
+## Известные компромиссы (не баги)
+- ai_analysis и оптимистичные строки в БД на казахском (продукт для KZ).
+- Один слот nearbyAlert (вторая метка в 2 км перезапишет баннер).
+- «N мин назад» на экране деталей обновляется только при realtime-событиях.

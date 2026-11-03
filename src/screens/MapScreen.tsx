@@ -1,5 +1,5 @@
 /**
- * MapScreen — SafeRoute / Sapa Jol
+ * MapScreen — SafeRoute / Sapa Zhol
  *
  * Orchestrator-уровень: хуки, state, эффекты, обработчики.
  * Вся UI-разметка вынесена в src/screens/map/* (sub-components).

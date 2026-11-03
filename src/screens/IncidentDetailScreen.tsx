@@ -1,5 +1,5 @@
 /**
- * IncidentDetailScreen — SafeRoute / Sapa Jol
+ * IncidentDetailScreen — SafeRoute / Sapa Zhol
  *
  * Read-only детальный просмотр инцидента.
  * Новые фичи:
@@ -86,7 +86,7 @@ export default function IncidentDetailScreen() {
     const handleShare = async () => {
         const coordStr = `${incident.latitude.toFixed(4)}°N, ${incident.longitude.toFixed(4)}°E`;
         const shareText =
-            `⚠️ SafeRoute / Sapa Jol\n` +
+            `⚠️ SafeRoute / Sapa Zhol\n` +
             (incident.route_id && ROUTE_NAMES[incident.route_id]
                 ? `${meta.label} — ${ROUTE_NAMES[incident.route_id]}\n`
                 : `${meta.label}\n`) +

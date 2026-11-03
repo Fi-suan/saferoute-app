@@ -1,5 +1,5 @@
 /**
- * API Layer — SafeRoute / Sapa Jol
+ * API Layer — SafeRoute / Sapa Zhol
  *
  * Supabase (Postgres + PostgREST + Realtime + RPC) is the app's only backend.
  * The previous FastAPI middle layer (backend/) is retired: every function below

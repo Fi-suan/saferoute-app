@@ -4,7 +4,7 @@ const VERSION_CODE = parseInt(process.env.VERSION_CODE || '1', 10);
 
 module.exports = {
   expo: {
-    name: 'Sapa Jol',
+    name: 'Sapa Zhol',
     slug: 'saferoute-app',
     version: '1.3.0',
     orientation: 'portrait',
@@ -20,9 +20,9 @@ module.exports = {
       bundleIdentifier: 'kz.saferoute.app',
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
-          'Sapa Jol геолокацияңызды жол бойындағы жануарлар туралы ескертулер үшін пайдаланады.',
+          'Sapa Zhol геолокацияңызды жол бойындағы жануарлар туралы ескертулер үшін пайдаланады.',
         NSLocationAlwaysAndWhenInUseUsageDescription:
-          'Sapa Jol қосымша жабық кезде де ескертулер алу үшін фондық геолокацияны пайдаланады.',
+          'Sapa Zhol қосымша жабық кезде де ескертулер алу үшін фондық геолокацияны пайдаланады.',
         NSCameraUsageDescription: 'Оқиғаларды хабарлау үшін фото түсіру қажет.',
         NSPhotoLibraryUsageDescription: 'Оқиға туралы хабарламаға фото қосу үшін қажет.',
       },
@@ -77,7 +77,7 @@ module.exports = {
         'expo-location',
         {
           locationAlwaysAndWhenInUsePermission:
-            'Sapa Jol жол бойындағы жануарлар туралы ескертулер үшін фондық геолокацияны пайдаланады.',
+            'Sapa Zhol жол бойындағы жануарлар туралы ескертулер үшін фондық геолокацияны пайдаланады.',
         },
       ],
       [

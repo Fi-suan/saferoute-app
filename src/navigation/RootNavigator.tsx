@@ -1,5 +1,5 @@
 /**
- * RootNavigator — SafeRoute / Sapa Jol
+ * RootNavigator — SafeRoute / Sapa Zhol
  *
  * Stack Navigator поверх Tab Navigator.
  * IncidentDetailScreen открывается без tab bar (modal-like slide).

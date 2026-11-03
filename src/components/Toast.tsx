@@ -1,5 +1,5 @@
 /**
- * Toast — SafeRoute / Sapa Jol
+ * Toast — SafeRoute / Sapa Zhol
  *
  * Lightweight bottom toast (slide up + fade out) for non-blocking feedback,
  * e.g. after submitting a report. Use via useToast() hook.

@@ -1,5 +1,5 @@
 /**
- * Settings Hook — SafeRoute / Sapa Jol
+ * Settings Hook — SafeRoute / Sapa Zhol
  *
  * Backed by a global zustand store: language change propagates to EVERY
  * mounted component instantly (previously each useSettings() instance kept

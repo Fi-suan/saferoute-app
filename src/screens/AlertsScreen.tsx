@@ -1,5 +1,5 @@
 /**
- * AlertsScreen — SafeRoute / Sapa Jol (REFACTORED)
+ * AlertsScreen — SafeRoute / Sapa Zhol (REFACTORED)
  *
  * Использует:
  * - Переиспользуемый IncidentCard (убрано дублирование кода с MapScreen)

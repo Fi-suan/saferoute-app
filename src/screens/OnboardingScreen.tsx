@@ -1,5 +1,5 @@
 /**
- * OnboardingScreen — Sapa Jol / SafeRoute
+ * OnboardingScreen — Sapa Zhol / SafeRoute
  *
  * Two phases:
  *  1) INTRO — horizontal paging carousel (4 info slides, original circle
@@ -67,7 +67,7 @@ interface Slide {
 const SLIDES_KK: Slide[] = [
     {
         illust: 'shield',
-        title: 'Sapa Jol',
+        title: 'Sapa Zhol',
         subtitle: 'Жол қауіпсіздігі жүйесі',
         desc: 'Қазақстан жолдарындағы жануарлар мен жүргізушілерді қорғайды.',
         accent: Colors.brand.primary,
@@ -97,7 +97,7 @@ const SLIDES_KK: Slide[] = [
 const SLIDES_RU: Slide[] = [
     {
         illust: 'shield',
-        title: 'Sapa Jol',
+        title: 'Sapa Zhol',
         subtitle: 'Система безопасности дорог',
         desc: 'Защищает животных и водителей на дорогах Казахстана.',
         accent: Colors.brand.primary,

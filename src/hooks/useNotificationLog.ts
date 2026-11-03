@@ -1,5 +1,5 @@
 /**
- * useNotificationLog — SafeRoute / Sapa Jol
+ * useNotificationLog — SafeRoute / Sapa Zhol
  *
  * Persists proximity alert history to AsyncStorage.
  * Max 50 entries (FIFO, oldest dropped first).

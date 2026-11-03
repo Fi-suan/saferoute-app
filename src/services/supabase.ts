@@ -1,5 +1,5 @@
 /**
- * Supabase Client — SafeRoute / Sapa Jol
+ * Supabase Client — SafeRoute / Sapa Zhol
  *
  * Provides Realtime subscriptions to incident_reports so that
  * when one device submits a report or confirms resolution,

@@ -1,5 +1,5 @@
 /**
- * AppDialog — SafeRoute / Sapa Jol
+ * AppDialog — SafeRoute / Sapa Zhol
  *
  * Native-alert style custom dialog: icon chip, bold title, message, and a
  * vertically stacked button list separated by hairlines (like iOS alerts).

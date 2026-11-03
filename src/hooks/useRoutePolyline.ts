@@ -1,5 +1,5 @@
 /**
- * useRoutePolyline — SafeRoute / Sapa Jol
+ * useRoutePolyline — SafeRoute / Sapa Zhol
  *
  * Fetches and caches a Directions API polyline for the selected route.
  * Cache key: saferoute:polyline:{routeId}

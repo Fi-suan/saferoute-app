@@ -1,4 +1,4 @@
--- SafeRoute / Sapa Jol — Supabase backend migration
+-- SafeRoute / Sapa Zhol — Supabase backend migration
 -- Turns the cloud Postgres (previously used by FastAPI) into the app's
 -- only backend: RLS, realtime publication, RPCs, views, demo alert seed.
 -- Idempotent: safe to re-run.

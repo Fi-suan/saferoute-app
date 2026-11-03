@@ -1,5 +1,5 @@
 /**
- * ReportModal Component — SafeRoute / Sapa Jol
+ * ReportModal Component — SafeRoute / Sapa Zhol
  *
  * Форма отчёта об инциденте. Вынесена из MapScreen (~80 строк inline).
  * Добавлены:

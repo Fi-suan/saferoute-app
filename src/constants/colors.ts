@@ -1,4 +1,4 @@
-// SafeRoute / Sapa Jol — Design System
+// SafeRoute / Sapa Zhol — Design System
 // Nothing Phone dark frosted glass aesthetic
 
 export const Colors = {

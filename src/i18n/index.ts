@@ -1,5 +1,5 @@
 /**
- * i18n hook — SafeRoute / Sapa Jol
+ * i18n hook — SafeRoute / Sapa Zhol
  *
  * Usage:
  *   const t = useT();

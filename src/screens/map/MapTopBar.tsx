@@ -59,7 +59,7 @@ export default function MapTopBar({
             <View style={styles.row}>
                 <View style={styles.brand}>
                     <Ionicons name="shield-checkmark" size={18} color={Colors.brand.primary} />
-                    <Text style={styles.brandText}>Sapa Jol</Text>
+                    <Text style={styles.brandText}>Sapa Zhol</Text>
                     <View style={styles.countBadge}>
                         <Text style={styles.countBadgeText}>{incidentCount}</Text>
                     </View>
