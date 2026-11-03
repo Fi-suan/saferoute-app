@@ -336,7 +336,6 @@ const translations = {
         photo_denied_msg: 'Разрешите доступ к камере и фото в настройках, чтобы прикрепить снимок.',
         ai_severity_note: 'Уровень опасности оценит AI по фото — выбирать его вручную не нужно.',
         herd_word: 'табун',
-        stat_my_reports: 'Мои метки',
         share_cta: 'Скачайте приложение Sapa Zhol — для безопасности на дорогах',
         detail_photo_label: 'Фото (пользователя)',
         ai_severity_score: 'Оценка опасности AI',
